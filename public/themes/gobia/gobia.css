@@ -36,7 +36,7 @@
     --n-100: 17 26 44;
     --n-200: 43 54 80;
     --n-300: 85 98 122;
-    --n-400: 124 135 156;
+    --n-400: 92 104 128;
     --n-500: 168 178 194;
     --n-600: 221 227 237;
     --n-700: 238 242 247;
@@ -58,9 +58,9 @@
 
     --gb-primary-fg: #f7fafd;
 
-    --gb-success: 22 163 74;
-    --gb-warning: 180 83 9;
-    --gb-danger: 220 38 38;
+    --gb-success: 22 101 52;
+    --gb-warning: 154 69 6;
+    --gb-danger: 185 28 28;
     --gb-info: 14 116 144;
 
     --gb-shadow-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 10px 28px -18px rgb(15 23 42 / 0.2);
@@ -77,7 +77,7 @@
     --n-100: 233 240 250;
     --n-200: 203 213 228;
     --n-300: 148 163 186;
-    --n-400: 108 120 144;
+    --n-400: 138 151 175;
     --n-500: 76 88 108;
     --n-600: 34 44 60;
     --n-700: 22 30 42;
@@ -117,7 +117,7 @@
         --n-100: 233 240 250;
         --n-200: 203 213 228;
         --n-300: 148 163 186;
-        --n-400: 108 120 144;
+        --n-400: 138 151 175;
         --n-500: 76 88 108;
         --n-600: 34 44 60;
         --n-700: 22 30 42;
@@ -339,7 +339,8 @@ body.gb-body h4,
 }
 .gb-nav-item svg, .gb-nav-item .fa { width: 18px; height: 18px; flex: none; opacity: 0.9; }
 .gb-nav-item:hover { background: var(--gb-surface-2); color: var(--gb-text-strong); text-decoration: none; }
-.gb-nav-item.active { background: var(--gb-primary); color: var(--gb-primary-fg); }
+.gb-nav-item.active, .gb-nav-item.active > span, .gb-nav-item.active svg { background-color: transparent; color: var(--gb-primary-fg); }
+.gb-nav-item.active { background: var(--gb-primary); }
 .gb-nav-item .gb-nav-badge { margin-left: auto; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 999px; background: rgb(var(--gb-success) / 0.18); color: rgb(var(--gb-success)); }
 
 .gb-sidebar-foot {

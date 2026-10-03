@@ -33,7 +33,7 @@
         @endforeach
     </nav>
 @else
-    <ul class="gb-tabs" role="tablist">
+    <ul class="gb-tabs">
         @foreach($sections[$section] as $key => [$label, $route])
             <li><a href="{{ route($route) }}" class="{{ $key === $active ? 'active' : '' }}" @if($key === $active) aria-current="page" @endif>{{ $label }}</a></li>
         @endforeach

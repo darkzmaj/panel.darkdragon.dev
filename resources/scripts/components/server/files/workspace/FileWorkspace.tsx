@@ -304,7 +304,7 @@ export default () => {
             history.replace(`/server/${id}/files/edit#${encodePathSegments(activePath)}`);
         // Keep the active tab visible in the scrolling tab strip.
         root.current
-            ?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')
+            ?.querySelector<HTMLElement>('.gb-tab.active')
             ?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
     }, [activePath]);
 
@@ -863,6 +863,9 @@ export default () => {
                         <div
                             role={'separator'}
                             aria-orientation={'vertical'}
+                            aria-valuenow={sidebarWidth}
+                            aria-valuemin={MIN_SIDEBAR}
+                            aria-valuemax={MAX_SIDEBAR}
                             aria-label={'Resize file explorer'}
                             tabIndex={0}
                             onPointerDown={startResize}
@@ -878,7 +881,7 @@ export default () => {
 
                 <section css={tw`flex-1 min-w-0 flex flex-col`}>
                     <div
-                        role={'tablist'}
+                        role={'group'}
                         aria-label={'Open files'}
                         className={'gb-tabs'}
                         style={{ scrollbarWidth: 'thin' }}
@@ -886,8 +889,6 @@ export default () => {
                         {tabs.map((tab) => (
                             <div
                                 key={tab.path}
-                                role={'tab'}
-                                aria-selected={tab.path === activePath}
                                 title={tab.path}
                                 onClick={() => setActivePath(tab.path)}
                                 onAuxClick={(e) => e.button === 1 && requestClose(tab.path)}
@@ -895,6 +896,7 @@ export default () => {
                             >
                                 <button
                                     type={'button'}
+                                    aria-current={tab.path === activePath ? 'true' : undefined}
                                     onClick={() => setActivePath(tab.path)}
                                     className={'gb-tab-name'}
                                 >

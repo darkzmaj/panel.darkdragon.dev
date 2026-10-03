@@ -5,17 +5,32 @@ namespace Pterodactyl\Tests\Integration\Api\Client;
 use Pterodactyl\Models\User;
 use Illuminate\Support\Facades\Queue;
 use Pterodactyl\Services\Media\FooterService;
+use Illuminate\Support\Facades\DB;
 use Pterodactyl\Tests\Traits\Integration\BuildsTemplates;
+use Pterodactyl\Tests\Traits\Integration\RemovesAddedRows;
 
 class AppearanceAndTemplateBrowserTest extends ClientApiIntegrationTestCase
 {
     use BuildsTemplates;
+    use RemovesAddedRows;
 
     public function setUp(): void
     {
         parent::setUp();
 
         defined('LARAVEL_START') || define('LARAVEL_START', microtime(true));
+        $this->rememberHighWater();
+    }
+
+    public function tearDown(): void
+    {
+        $this->removeTemplateStorage();
+        DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        DB::table('server_template_revisions')->where('id', '>', 0)->whereNotIn('template_id', DB::table('server_templates')->select('id'))->delete();
+        DB::statement('SET FOREIGN_KEY_CHECKS=1');
+        $this->removeAddedRows();
+
+        parent::tearDown();
     }
 
     public function testThemeIsStoredPerUserAndValidated(): void

@@ -94,7 +94,7 @@ class AdminPagesTest extends HttpTestCase
             'public' => false,
         ]);
 
-        $html = $this->actingAs($admin)->get('/admin/nodes')->assertOk()->getContent();
+        $html = $this->actingAs($admin)->get('/admin/nodes?filter[name]=Node+Table+Test')->assertOk()->getContent();
 
         $this->assertStringContainsString('Node Table Test', $html);
         $this->assertStringContainsString('Maintenance', $html);

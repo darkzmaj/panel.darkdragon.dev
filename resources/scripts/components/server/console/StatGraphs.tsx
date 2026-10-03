@@ -68,10 +68,10 @@ export default () => {
     return (
         <>
             <ChartBlock title={'CPU Load'}>
-                <Line {...cpu.props} />
+                <Line {...cpu.props} aria-label={'CPU load over the last minute'} />
             </ChartBlock>
             <ChartBlock title={'Memory'}>
-                <Line {...memory.props} />
+                <Line {...memory.props} aria-label={'Memory use over the last minute'} />
             </ChartBlock>
             <ChartBlock
                 title={'Network'}
@@ -86,7 +86,7 @@ export default () => {
                     </>
                 }
             >
-                <Line {...network.props} />
+                <Line {...network.props} aria-label={'Network traffic over the last minute'} />
             </ChartBlock>
         </>
     );

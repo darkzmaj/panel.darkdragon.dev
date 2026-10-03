@@ -32,7 +32,7 @@
                     <a href="{{ route('admin.servers.view.delete', $server->id) }}">Delete</a>
                 </li>
                 <li class="tab-success">
-                    <a href="/server/{{ $server->uuidShort }}" target="_blank"><i class="fa fa-external-link"></i></a>
+                    <a href="/server/{{ $server->uuidShort }}" target="_blank" rel="noopener" aria-label="Open this instance in the panel" title="Open this instance in the panel"><i class="fa fa-external-link"></i></a>
                 </li>
             </ul>
         </div>

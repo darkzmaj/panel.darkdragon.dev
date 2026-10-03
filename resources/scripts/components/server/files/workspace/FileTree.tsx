@@ -78,8 +78,7 @@ const TreeRow = (p: RowProps) => {
         >
             <button
                 type={'button'}
-                role={'treeitem'}
-                aria-selected={p.isSelected}
+                aria-current={p.isSelected ? 'true' : undefined}
                 aria-expanded={isDirectory ? p.isOpen : undefined}
                 draggable={!!p.item && p.canMove}
                 onDragStart={(e) => p.item && beginDrag(e, { directory: p.directory, names: [p.item.name] })}
@@ -216,7 +215,7 @@ export default ({
             const isOpen = expanded.has(path);
 
             return (
-                <div key={path} role={'group'}>
+                <div key={path}>
                     <TreeRow
                         directory={directory}
                         item={item}
@@ -249,7 +248,7 @@ export default ({
     };
 
     return (
-        <div role={'tree'} aria-label={'Server files'} className={'gb-tree'}>
+        <nav aria-label={'Server files'} className={'gb-tree'}>
             <TreeRow
                 directory={'/'}
                 item={null}
@@ -272,6 +271,6 @@ export default ({
                 onDropFiles={onDropFiles}
             />
             {renderDirectory('/', 1)}
-        </div>
+        </nav>
     );
 };

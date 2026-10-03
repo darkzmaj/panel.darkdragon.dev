@@ -22,7 +22,9 @@ const _Avatar = ({ variant = 'beam', src, thumbnail, ...props }: AvatarProps & I
             className={'block w-full h-full object-cover'}
         />
     ) : (
-        <BoringAvatar colors={palette} variant={variant} {...props} />
+        <span aria-hidden style={{ display: 'contents' }}>
+            <BoringAvatar colors={palette} variant={variant} {...props} />
+        </span>
     );
 
 const _UserAvatar = ({ variant = 'beam', ...props }: Omit<Props, 'name'> & Pick<ImageProps, 'thumbnail'>) => {

@@ -29,7 +29,7 @@ const RenameServerBox = () => {
             <Form css={tw`mb-0`}>
                 <Field id={'name'} name={'name'} label={'Server Name'} type={'text'} />
                 <div css={tw`mt-6`}>
-                    <Label>Server Description</Label>
+                    <Label htmlFor={'field-description'}>Server Description</Label>
                     <FormikFieldWrapper name={'description'}>
                         <FormikField as={Textarea} name={'description'} rows={3} />
                     </FormikFieldWrapper>

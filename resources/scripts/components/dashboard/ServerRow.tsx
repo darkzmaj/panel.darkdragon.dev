@@ -113,7 +113,12 @@ export default ({ server, className }: { server: Server; className?: string }) =
             </span>
             <span className={'gb-server-name'}>
                 <span className={'gb-server-title'}>
-                    <span className={'gb-dot ' + dot} title={note?.text || power || 'offline'} />
+                    <span
+                        className={'gb-dot ' + dot}
+                        role={'img'}
+                        aria-label={note?.text || power || 'offline'}
+                        title={note?.text || power || 'offline'}
+                    />
                     <strong>{server.name}</strong>
                     {note && <span className={'gb-badge gb-badge-' + note.tone}>{note.text}</span>}
                 </span>

@@ -116,7 +116,7 @@ export default () => {
                                               grant.permissions.filter((p) => p !== 'websocket.connect').length
                                           } permissions`}
                                 </p>
-                                <p css={tw`text-xs text-neutral-500 truncate`}>
+                                <p css={tw`text-xs text-neutral-400 truncate`}>
                                     {grant.servers.map((s) => s.name).join(', ')}
                                 </p>
                             </div>

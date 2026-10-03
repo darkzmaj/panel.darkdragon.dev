@@ -112,6 +112,30 @@
     window.addEventListener('resize', function () { closeRowMenu(false); });
     window.addEventListener('scroll', function () { closeRowMenu(false); }, true);
 
+    // ---- Labels. Older admin forms put a label next to a field without linking them, or link it to an id that does
+    // not exist. Where a form group has one label and one field, link them so screen readers announce the field and a
+    // click on the label focuses it.
+    var counter = 0;
+    Array.prototype.forEach.call(document.querySelectorAll('.form-group'), function (group) {
+        var labels = Array.prototype.filter.call(group.querySelectorAll(':scope > label, :scope > .control-label'), function (l) {
+            var target = l.getAttribute('for');
+            return !target || !document.getElementById(target);
+        });
+        var fields = group.querySelectorAll('input:not([type=hidden]):not([type=radio]):not([type=checkbox]):not([type=file]), select, textarea');
+        if (labels.length !== 1 || fields.length !== 1 || labels[0].querySelector('input, select, textarea')) return;
+        var field = fields[0];
+        if (!field.id) field.id = 'gb-field-' + (++counter);
+        labels[0].setAttribute('for', field.id);
+    });
+    // Searchable selects draw their own box; give it the name of the field it replaces.
+    setTimeout(function () {
+        Array.prototype.forEach.call(document.querySelectorAll('select.select2-hidden-accessible'), function (select) {
+            var label = select.id && document.querySelector('label[for="' + select.id + '"]');
+            var box = select.parentNode.querySelector('.select2-selection');
+            if (label && box && !box.getAttribute('aria-label')) box.setAttribute('aria-label', label.textContent.trim());
+        });
+    }, 400);
+
     // ---- Theme choice (applied at once, then stored on the account)
     function markTheme() {
         var current = document.documentElement.getAttribute('data-theme-pref') || 'system';

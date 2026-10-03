@@ -111,7 +111,7 @@ export default () => {
             >
                 {ready ? (
                     <>
-                        <span className={'gb-dot ' + statusDot(power)} aria-label={power || 'offline'} />
+                        <span className={'gb-dot ' + statusDot(power)} role={'img'} aria-label={power || 'offline'} />
                         <span style={{ minWidth: 0 }}>
                             <strong
                                 style={{

@@ -91,11 +91,11 @@ class OverviewTest extends HttpTestCase
     {
         $html = $this->actingAs(User::factory()->admin()->create())->get('/admin')->getContent();
 
-        foreach (['Overview', 'Settings', 'Users', 'Nodes', 'Services'] as $entry) {
+        foreach (['Overview', 'Settings', 'Users', 'Nodes', 'Templates', 'Services', 'Updates'] as $entry) {
             $this->assertStringContainsString('<span>' . $entry . '</span>', $html, $entry);
         }
-        foreach (['Dashboard', 'Network'] as $group) {
-            $this->assertStringContainsString('<li class="header">' . $group . '</li>', $html, $group);
+        foreach (['Dashboard', 'Network', 'System'] as $group) {
+            $this->assertStringContainsString('<div class="gb-nav-label">' . $group . '</div>', $html, $group);
         }
         foreach (['Application API', 'Databases', 'Locations', 'Mounts', 'Nests'] as $moved) {
             $this->assertStringNotContainsString('<span>' . $moved . '</span>', $html, $moved . ' must not be a standalone sidebar entry');

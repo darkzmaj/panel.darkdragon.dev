@@ -24,7 +24,7 @@
                         <div class="input-group input-group-sm">
                             <input type="text" name="filter[*]" class="form-control pull-right" value="{{ request()->input()['filter']['*'] ?? '' }}" placeholder="Search Instances">
                             <div class="input-group-btn">
-                                <button type="submit" class="btn btn-default"><i class="fa fa-search"></i></button>
+                                <button type="submit" class="btn btn-default" aria-label="Search"><i class="fa fa-search"></i></button>
                                 <a href="{{ route('admin.servers.new') }}"><button type="button" class="btn btn-sm btn-primary" style="border-radius: 0 3px 3px 0;margin-left:-1px;">Create New</button></a>
                             </div>
                         </div>
@@ -62,7 +62,7 @@
                                     @endif
                                 </td>
                                 <td class="text-center">
-                                    <a class="btn btn-xs btn-default" href="/server/{{ $server->uuidShort }}"><i class="fa fa-wrench"></i></a>
+                                    <a class="btn btn-xs btn-default" href="/server/{{ $server->uuidShort }}" aria-label="Manage {{ $server->name }} in the panel" title="Manage in the panel"><i class="fa fa-wrench"></i></a>
                                 </td>
                             </tr>
                         @endforeach
