@@ -94,7 +94,7 @@
                     @if($node->maintenance_mode)
                     <div class="col-sm-12">
                         <div class="info-box bg-orange">
-                            <span class="info-box-icon"><i class="ion ion-wrench"></i></span>
+                            <span class="info-box-icon"><i class="fa fa-wrench"></i></span>
                             <div class="info-box-content" style="padding: 23px 10px 0;">
                                 <span class="info-box-text">This node is under</span>
                                 <span class="info-box-number">Maintenance</span>

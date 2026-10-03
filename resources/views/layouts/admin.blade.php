@@ -20,8 +20,7 @@
             {!! Theme::css('vendor/sweetalert/sweetalert.min.css?t={cache-version}') !!}
             {!! Theme::css('vendor/animate/animate.min.css?t={cache-version}') !!}
             {!! Theme::css('css/pterodactyl.css?t={cache-version}') !!}
-            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/ionicons/2.0.1/css/ionicons.min.css">
+            {!! Theme::css('vendor/font-awesome/css/font-awesome.min.css?t={cache-version}') !!}
 
             <!--[if lt IE 9]>
             <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
@@ -51,7 +50,7 @@
                         <ul class="nav navbar-nav">
                             <li class="user-menu">
                                 <a href="{{ route('account') }}">
-                                    <img src="{{ Auth::user()->avatar_url ?? '/assets/svgs/default-avatar.svg' }}" class="user-image" alt="User Image">
+                                    <img src="{{ Auth::user()->avatar_url ? Auth::user()->avatar_url . '&s=64' : '/assets/svgs/default-avatar.svg' }}" class="user-image" alt="User Image">
                                     <span class="hidden-xs">{{ Auth::user()->name_first }} {{ Auth::user()->name_last }}</span>
                                 </a>
                             </li>

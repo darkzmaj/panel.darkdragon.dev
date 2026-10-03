@@ -16,6 +16,7 @@ class Theme
 
     protected function getUrl($path): string
     {
-        return '/themes/pterodactyl/' . ltrim($path, '/');
+        // Tie cache busting to the Panel version so browsers fetch fresh assets after an update.
+        return str_replace('{cache-version}', substr(md5(config('app.version')), 0, 8), '/themes/pterodactyl/' . ltrim($path, '/'));
     }
 }

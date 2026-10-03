@@ -3,7 +3,6 @@ module.exports = function (api) {
     const plugins = [
         'babel-plugin-macros',
         'styled-components',
-        'react-hot-loader/babel',
         '@babel/transform-runtime',
         '@babel/transform-react-jsx',
         '@babel/proposal-class-properties',
@@ -12,6 +11,10 @@ module.exports = function (api) {
         '@babel/proposal-nullish-coalescing-operator',
         '@babel/syntax-dynamic-import',
     ];
+
+    if (!api.env('production')) {
+        plugins.push('react-hot-loader/babel');
+    }
 
     if (api.env('test')) {
         targets = { node: 'current' };

@@ -7,7 +7,7 @@ import TransitionRouter from '@/TransitionRouter';
 import SubNavigation from '@/components/elements/SubNavigation';
 import { useLocation } from 'react-router';
 import Spinner from '@/components/elements/Spinner';
-import routes from '@/routers/routes';
+import routes from '@/routers/accountRoutes';
 
 export default () => {
     const location = useLocation();
@@ -18,7 +18,7 @@ export default () => {
             {location.pathname.startsWith('/account') && (
                 <SubNavigation>
                     <div>
-                        {routes.account
+                        {routes
                             .filter((route) => !!route.name)
                             .map(({ path, name, exact = false }) => (
                                 <NavLink key={path} to={`/account/${path}`.replace('//', '/')} exact={exact}>
@@ -34,7 +34,7 @@ export default () => {
                         <Route path={'/'} exact>
                             <DashboardContainer />
                         </Route>
-                        {routes.account.map(({ path, component: Component }) => (
+                        {routes.map(({ path, component: Component }) => (
                             <Route key={path} path={`/account/${path}`.replace('//', '/')} exact>
                                 <Component />
                             </Route>

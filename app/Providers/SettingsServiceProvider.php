@@ -3,6 +3,7 @@
 namespace Pterodactyl\Providers;
 
 use Psr\Log\LoggerInterface as Log;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Contracts\Encryption\Encrypter;
@@ -12,6 +13,12 @@ use Pterodactyl\Contracts\Repository\SettingsRepositoryInterface;
 
 class SettingsServiceProvider extends ServiceProvider
 {
+    /**
+     * The cache key under which all stored settings are kept so that the database is not
+     * queried on every request. Flushed whenever a setting is written or removed.
+     */
+    public const CACHE_KEY = 'pterodactyl:settings';
+
     /**
      * An array of configuration keys to override with database values
      * if they exist.
@@ -68,9 +75,11 @@ class SettingsServiceProvider extends ServiceProvider
         }
 
         try {
-            $values = $settings->all()->mapWithKeys(function ($setting) {
-                return [$setting->key => $setting->value];
-            })->toArray();
+            $values = Cache::rememberForever(self::CACHE_KEY, function () use ($settings) {
+                return $settings->all()->mapWithKeys(function ($setting) {
+                    return [$setting->key => $setting->value];
+                })->toArray();
+            });
         } catch (QueryException $exception) {
             $log->notice('A query exception was encountered while trying to load settings from the database: ' . $exception->getMessage());
 

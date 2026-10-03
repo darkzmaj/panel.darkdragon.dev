@@ -11,22 +11,29 @@ use Pterodactyl\Services\Media\AvatarService;
 
 class AvatarController extends Controller
 {
+    public function __construct(private AvatarService $avatars)
+    {
+    }
+
     /**
-     * Serve a user's uploaded profile picture. Avatars are only available to
-     * signed in users and are never exposed through a public storage directory.
+     * Serve a user's uploaded profile picture, either the full image or, with "?s=64", a
+     * small copy for icon-sized use. Avatars are only available to signed in users and are
+     * never exposed through a public storage directory.
      */
     public function __invoke(Request $request, string $uuid): Response
     {
         $user = User::query()->where('uuid', $uuid)->firstOrFail();
         $disk = Storage::disk('local');
-        $path = AvatarService::path($user);
 
-        if (is_null($user->avatar_hash) || !$disk->exists($path)) {
+        if (is_null($user->avatar_hash) || !$disk->exists(AvatarService::path($user))) {
             abort(404);
         }
 
+        $thumbnail = (int) $request->query('s') === AvatarService::THUMBNAIL_SIZE;
+        $etag = $user->avatar_hash . ($thumbnail ? '-' . AvatarService::THUMBNAIL_SIZE : '');
+
         // The hash in the URL changes whenever the picture does, so a versioned URL can be cached indefinitely.
-        $response = new Response($disk->get($path), 200, [
+        $response = new Response('', 200, [
             'Content-Type' => 'image/png',
             'Content-Disposition' => 'inline',
             'X-Content-Type-Options' => 'nosniff',
@@ -35,9 +42,12 @@ class AvatarController extends Controller
                 ? 'private, max-age=31536000, immutable'
                 : 'private, no-cache',
         ]);
-        $response->setEtag($user->avatar_hash);
-        $response->isNotModified($request);
+        $response->setEtag($etag);
 
-        return $response;
+        if ($response->isNotModified($request)) {
+            return $response;
+        }
+
+        return $response->setContent($disk->get($this->avatars->resolve($user, $thumbnail)));
     }
 }

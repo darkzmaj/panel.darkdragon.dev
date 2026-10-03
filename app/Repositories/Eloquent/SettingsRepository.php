@@ -3,6 +3,8 @@
 namespace Pterodactyl\Repositories\Eloquent;
 
 use Pterodactyl\Models\Setting;
+use Illuminate\Support\Facades\Cache;
+use Pterodactyl\Providers\SettingsServiceProvider;
 use Pterodactyl\Contracts\Repository\SettingsRepositoryInterface;
 
 class SettingsRepository extends EloquentRepository implements SettingsRepositoryInterface
@@ -71,5 +73,6 @@ class SettingsRepository extends EloquentRepository implements SettingsRepositor
     private function clearCache(string $key)
     {
         unset(self::$cache[$key], self::$databaseMiss[$key]);
+        Cache::forget(SettingsServiceProvider::CACHE_KEY);
     }
 }

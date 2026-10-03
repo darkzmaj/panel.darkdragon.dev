@@ -99,7 +99,7 @@
         templateSelection: function (data) {
             if (typeof data.name_first === 'undefined') {
                 data = {
-                    avatar: @json($server->user->avatar_url ?? '/assets/svgs/default-avatar.svg'),
+                    avatar: @json($server->user->avatar_url ? $server->user->avatar_url . '&s=64' : '/assets/svgs/default-avatar.svg'),
                     name_first: '{{ $server->user->name_first }}',
                     name_last: '{{ $server->user->name_last }}',
                     email: '{{ $server->user->email }}',

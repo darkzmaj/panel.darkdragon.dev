@@ -68,9 +68,11 @@ export default ({ server, className }: { server: Server; className?: string }) =
         // the server is suspended.
         if (isSuspended || server.isNodeUnderMaintenance) return;
 
-        getStats().then(() => {
-            interval.current = setInterval(() => getStats(), 30000);
-        });
+        getStats();
+        interval.current = setInterval(() => {
+            // Background tabs don't need live usage numbers.
+            if (!document.hidden) getStats();
+        }, 30000);
 
         return () => {
             interval.current && clearInterval(interval.current);

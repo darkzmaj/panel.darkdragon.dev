@@ -13,7 +13,7 @@ module.exports = {
     performance: {
         hints: false,
     },
-    entry: ['react-hot-loader/patch', './resources/scripts/index.tsx'],
+    entry: isProduction ? ['./resources/scripts/index.tsx'] : ['react-hot-loader/patch', './resources/scripts/index.tsx'],
     output: {
         path: path.join(__dirname, '/public/assets'),
         filename: isProduction ? 'bundle.[chunkhash:8].js' : 'bundle.[fullhash:8].js',
@@ -115,8 +115,14 @@ module.exports = {
     ],
     optimization: {
         usedExports: true,
-        sideEffects: false,
+        // Honour the "sideEffects" flag of packages so unused re-exports in barrel files (icons, date-fns) can be dropped.
+        sideEffects: true,
         runtimeChunk: false,
+        // Don't split off tiny shared modules into their own files; each one costs a request on a cold load.
+        splitChunks: {
+            chunks: 'async',
+            minSize: 60000,
+        },
         removeEmptyChunks: true,
         minimize: isProduction,
         minimizer: [

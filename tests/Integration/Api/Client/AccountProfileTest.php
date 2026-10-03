@@ -172,6 +172,9 @@ class AccountProfileTest extends ClientApiIntegrationTestCase
             ->post('/api/client/account/avatar', ['avatar' => UploadedFile::fake()->createWithContent('../../../evil.php.png', self::pngBytes())], ['Accept' => 'application/json'])
             ->assertOk();
 
-        $this->assertSame(['avatars/' . $user->uuid . '.png'], Storage::disk('local')->allFiles());
+        $this->assertEqualsCanonicalizing(
+            ['avatars/' . $user->uuid . '.png', 'avatars/' . $user->uuid . '-64.png'],
+            Storage::disk('local')->allFiles()
+        );
     }
 }
