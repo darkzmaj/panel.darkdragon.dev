@@ -4,9 +4,9 @@ namespace Pterodactyl\Tests\Integration\Services\Templates;
 
 use Illuminate\Support\Facades\Queue;
 use Pterodactyl\Models\TemplateInstance;
+use Pterodactyl\Tests\Integration\IntegrationTestCase;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Pterodactyl\Services\Templates\TemplateNameService;
-use Pterodactyl\Tests\Integration\IntegrationTestCase;
 use Pterodactyl\Tests\Traits\Integration\BuildsTemplates;
 use Pterodactyl\Services\Templates\TemplateInstanceService;
 
