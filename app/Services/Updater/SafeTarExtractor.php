@@ -266,7 +266,7 @@ class SafeTarExtractor
         }
 
         // Runtime state and secrets are never shipped with, or overwritten by, an update.
-        if (preg_match('/^\.env(\..*)?$/', $parts[0]) || $parts[0] === 'storage' || $parts[0] === '.git') {
+        if ((preg_match('/^\.env(\..*)?$/D', $parts[0]) && $parts[0] !== '.env.example') || $parts[0] === 'storage' || $parts[0] === '.git') {
             throw new ReleaseVerificationException('The release package contains runtime or secret files that must never be shipped.');
         }
 

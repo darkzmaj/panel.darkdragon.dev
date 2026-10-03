@@ -48,6 +48,11 @@ class SafeTarExtractorTest extends TestCase
         $this->assertSame(1, $stats['files']);
     }
 
+    public function testTheEnvironmentTemplateIsAllowedButRealEnvironmentFilesAreNot(): void
+    {
+        $this->assertSame(1, $this->extract((new TarBuilder())->file('.env.example', 'APP_ENV=production')->build())['files']);
+    }
+
     public function testLongPathsUsingThePrefixFieldAreSupported(): void
     {
         $path = str_repeat('d/', 60) . 'file.txt';
