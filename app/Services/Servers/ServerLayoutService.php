@@ -173,6 +173,31 @@ class ServerLayoutService
         });
     }
 
+    /**
+     * Sets the order of the user's category buttons. Ids that are not the user's own are rejected.
+     *
+     * @param int[] $ids
+     *
+     * @throws DisplayException
+     */
+    public function reorderCategories(User $user, array $ids): void
+    {
+        $owned = DB::table('user_server_categories')->where('user_id', $user->id)->pluck('id')->all();
+        $ids = array_values(array_unique(array_map('intval', $ids)));
+        if (array_diff($ids, $owned) !== []) {
+            throw new DisplayException('You can only reorder your own categories.');
+        }
+
+        // Categories not mentioned keep their relative order after the ones that were.
+        $rest = array_values(array_diff(DB::table('user_server_categories')->where('user_id', $user->id)->orderBy('position')->orderBy('id')->pluck('id')->all(), $ids));
+
+        DB::transaction(function () use ($ids, $rest) {
+            foreach (array_merge($ids, $rest) as $position => $id) {
+                DB::table('user_server_categories')->where('id', $id)->update(['position' => $position]);
+            }
+        });
+    }
+
     public function deleteCategory(User $user, int $id): void
     {
         $this->ownedCategory($user, $id);

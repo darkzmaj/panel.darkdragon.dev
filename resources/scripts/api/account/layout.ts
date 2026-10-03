@@ -27,6 +27,9 @@ export const saveOrder = async (servers: string[]): Promise<ServerLayout> =>
 export const saveCategoryOrder = async (id: number, servers: string[]): Promise<ServerLayout> =>
     (await http.put(`/api/client/account/layout/categories/${id}/order`, { servers })).data;
 
+export const saveCategoryButtons = async (categories: number[]): Promise<ServerLayout> =>
+    (await http.put('/api/client/account/layout/categories/order', { categories })).data;
+
 export const createCategory = async (name: string, servers: string[]): Promise<ServerLayout> =>
     (await http.post('/api/client/account/layout/categories', { name, servers })).data;
 

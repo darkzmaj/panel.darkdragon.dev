@@ -13,6 +13,7 @@ import { setupInterceptors } from '@/api/interceptors';
 import AuthenticatedRoute from '@/components/elements/AuthenticatedRoute';
 import { ServerContext } from '@/state/server';
 import '@/assets/tailwind.css';
+import Toaster from '@/components/elements/Toaster';
 import Spinner from '@/components/elements/Spinner';
 
 const DashboardRouter = lazy(() => import(/* webpackChunkName: "dashboard" */ '@/routers/DashboardRouter'));
@@ -63,6 +64,7 @@ const App = () => {
             <GlobalStylesheet />
             <StoreProvider store={store}>
                 <ProgressBar />
+                <Toaster />
                 <div css={tw`mx-auto w-auto`}>
                     <Router history={history}>
                         <Switch>

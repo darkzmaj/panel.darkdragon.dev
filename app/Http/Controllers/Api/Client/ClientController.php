@@ -58,6 +58,10 @@ class ClientController extends ClientApiController
             }
         } elseif ($type === 'owner') {
             $builder = $builder->where('servers.owner_id', $user->id);
+        } elseif ($type === 'other') {
+            // Servers other people own that have been shared with this user.
+            $builder = $builder->where('servers.owner_id', '!=', $user->id)
+                ->whereIn('servers.id', $user->accessibleServers()->pluck('id')->all());
         } else {
             $builder = $builder->whereIn('servers.id', $user->accessibleServers()->pluck('id')->all());
         }

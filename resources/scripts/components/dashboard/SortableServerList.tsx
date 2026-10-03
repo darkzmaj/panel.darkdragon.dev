@@ -5,11 +5,10 @@ import ServerRow from '@/components/dashboard/ServerRow';
 
 interface Props {
     servers: Server[];
-    // When omitted the list is read-only (for example the administrator "other servers" view).
-    onReorder?: (servers: Server[]) => void;
+    onReorder: (servers: Server[]) => void;
 }
 
-const reorder = (list: Server[], from: number, to: number) => {
+const move = (list: Server[], from: number, to: number) => {
     if (from === to || to < 0 || to >= list.length) return list;
     const copy = [...list];
     copy.splice(to, 0, copy.splice(from, 1)[0]);
@@ -17,35 +16,26 @@ const reorder = (list: Server[], from: number, to: number) => {
     return copy;
 };
 
-// Server rows the user can rearrange by dragging, or with the arrow buttons for keyboard and touch use.
+// Server rows that can be rearranged. On desktop a row is dragged by its slim grip; the grip is also a focusable
+// control (arrow keys move the row) and, on touch screens where dragging is unavailable, shows move buttons.
 export default ({ servers, onReorder }: Props) => {
     const [dragging, setDragging] = useState<string | null>(null);
     const [over, setOver] = useState<string | null>(null);
+    const [armed, setArmed] = useState<string | null>(null);
+    const touch = typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches;
 
-    if (!onReorder) {
-        return (
-            <>
-                {servers.map((server, index) => (
-                    <ServerRow key={server.uuid} server={server} css={index > 0 ? tw`mt-2` : undefined} />
-                ))}
-            </>
-        );
-    }
-
-    const drop = (target: string) => {
-        const from = servers.findIndex((s) => s.uuid === dragging);
-        const to = servers.findIndex((s) => s.uuid === target);
+    const finish = () => {
         setDragging(null);
         setOver(null);
-        if (from >= 0 && to >= 0 && from !== to) onReorder(reorder(servers, from, to));
+        setArmed(null);
     };
 
     return (
-        <>
+        <ul css={tw`list-none m-0 p-0`}>
             {servers.map((server, index) => (
-                <div
+                <li
                     key={server.uuid}
-                    draggable
+                    draggable={armed === server.uuid}
                     onDragStart={(e) => {
                         e.dataTransfer.effectAllowed = 'move';
                         e.dataTransfer.setData('text/plain', server.uuid);
@@ -58,42 +48,64 @@ export default ({ servers, onReorder }: Props) => {
                     }}
                     onDrop={(e) => {
                         e.preventDefault();
-                        drop(server.uuid);
+                        const from = servers.findIndex((s) => s.uuid === dragging);
+                        finish();
+                        if (from >= 0 && from !== index) onReorder(move(servers, from, index));
                     }}
-                    onDragEnd={() => {
-                        setDragging(null);
-                        setOver(null);
-                    }}
+                    onDragEnd={finish}
                     css={[
-                        tw`flex items-stretch`,
+                        tw`flex items-stretch relative`,
                         index > 0 && tw`mt-2`,
                         dragging === server.uuid && tw`opacity-40`,
-                        over === server.uuid && dragging !== server.uuid && tw`ring-2 ring-cyan-600 rounded`,
                     ]}
                 >
-                    <div css={tw`flex flex-col justify-center mr-1 text-neutral-500`}>
+                    {over === server.uuid && dragging !== server.uuid && (
+                        <span aria-hidden css={tw`absolute left-0 right-0 h-0.5 bg-cyan-500 -top-1.5 rounded`} />
+                    )}
+                    <div css={tw`flex flex-col items-center justify-center w-5 flex-none text-neutral-600`}>
                         <button
                             type={'button'}
-                            aria-label={`Move ${server.name} up`}
-                            disabled={index === 0}
-                            onClick={() => onReorder(reorder(servers, index, index - 1))}
-                            css={tw`px-1 leading-none hover:text-neutral-100 disabled:opacity-20 focus:outline-none focus:text-cyan-400`}
+                            aria-label={`Reorder ${server.name}. Use the up and down arrow keys, or drag.`}
+                            title={'Drag to reorder'}
+                            onMouseDown={() => setArmed(server.uuid)}
+                            onMouseUp={() => setArmed(null)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                                    e.preventDefault();
+                                    onReorder(move(servers, index, index + (e.key === 'ArrowUp' ? -1 : 1)));
+                                }
+                            }}
+                            style={{ cursor: 'grab' }}
+                            css={tw`leading-none hover:text-neutral-300 focus:text-cyan-400 focus:outline-none`}
                         >
-                            &#9650;
+                            &#8942;
                         </button>
-                        <button
-                            type={'button'}
-                            aria-label={`Move ${server.name} down`}
-                            disabled={index === servers.length - 1}
-                            onClick={() => onReorder(reorder(servers, index, index + 1))}
-                            css={tw`px-1 leading-none hover:text-neutral-100 disabled:opacity-20 focus:outline-none focus:text-cyan-400`}
-                        >
-                            &#9660;
-                        </button>
+                        {touch && (
+                            <>
+                                <button
+                                    type={'button'}
+                                    aria-label={`Move ${server.name} up`}
+                                    disabled={index === 0}
+                                    onClick={() => onReorder(move(servers, index, index - 1))}
+                                    css={tw`text-xs leading-none disabled:opacity-20`}
+                                >
+                                    &#9650;
+                                </button>
+                                <button
+                                    type={'button'}
+                                    aria-label={`Move ${server.name} down`}
+                                    disabled={index === servers.length - 1}
+                                    onClick={() => onReorder(move(servers, index, index + 1))}
+                                    css={tw`text-xs leading-none disabled:opacity-20`}
+                                >
+                                    &#9660;
+                                </button>
+                            </>
+                        )}
                     </div>
                     <ServerRow server={server} css={tw`flex-1 min-w-0`} />
-                </div>
+                </li>
             ))}
-        </>
+        </ul>
     );
 };

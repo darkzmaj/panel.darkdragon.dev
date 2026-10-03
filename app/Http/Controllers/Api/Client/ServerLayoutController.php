@@ -52,6 +52,14 @@ class ServerLayoutController extends ClientApiController
         return new JsonResponse($this->layout->layout($request->user()));
     }
 
+    public function reorderCategories(ClientApiRequest $request): JsonResponse
+    {
+        $request->validate(['categories' => 'required|array|max:50', 'categories.*' => 'integer']);
+        $this->layout->reorderCategories($request->user(), $request->input('categories'));
+
+        return new JsonResponse($this->layout->layout($request->user()));
+    }
+
     public function deleteCategory(ClientApiRequest $request, int $category): JsonResponse
     {
         $this->layout->deleteCategory($request->user(), $category);

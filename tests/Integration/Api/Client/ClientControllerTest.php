@@ -24,9 +24,9 @@ class ClientControllerTest extends ClientApiIntegrationTestCase
 
         /** @var \Pterodactyl\Models\Server[] $servers */
         $servers = [
-            $this->createServerModel(['user_id' => $users[0]->id]),
-            $this->createServerModel(['user_id' => $users[1]->id]),
-            $this->createServerModel(['user_id' => $users[2]->id]),
+            $this->createServerModel(['user_id' => $users[0]->id, 'name' => 'Alpha']),
+            $this->createServerModel(['user_id' => $users[1]->id, 'name' => 'Bravo']),
+            $this->createServerModel(['user_id' => $users[2]->id, 'name' => 'Charlie']),
         ];
 
         $response = $this->actingAs($users[0])->getJson('/api/client');
@@ -103,7 +103,9 @@ class ClientControllerTest extends ClientApiIntegrationTestCase
         /** @var User $user */
         /** @var Server $server */
         [$user, $server] = $this->generateTestAccount();
-        $server2 = $this->createServerModel(['user_id' => $user->id, 'node_id' => $server->node_id]);
+        // The default listing order is alphabetical, so names are pinned to keep this test deterministic.
+        $server->update(['name' => 'Alpha']);
+        $server2 = $this->createServerModel(['user_id' => $user->id, 'node_id' => $server->node_id, 'name' => 'Bravo']);
 
         $allocation = Allocation::factory()->create(['node_id' => $server->node_id, 'server_id' => $server->id, 'ip' => '192.168.1.1', 'port' => 25565]);
         $allocation2 = Allocation::factory()->create(['node_id' => $server->node_id, 'server_id' => $server2->id, 'ip' => '192.168.1.1', 'port' => 25570]);
@@ -145,9 +147,9 @@ class ClientControllerTest extends ClientApiIntegrationTestCase
         /** @var \Pterodactyl\Models\User[] $users */
         $users = User::factory()->times(3)->create();
         $servers = [
-            $this->createServerModel(['user_id' => $users[0]->id]),
-            $this->createServerModel(['user_id' => $users[1]->id]),
-            $this->createServerModel(['user_id' => $users[2]->id]),
+            $this->createServerModel(['user_id' => $users[0]->id, 'name' => 'Alpha']),
+            $this->createServerModel(['user_id' => $users[1]->id, 'name' => 'Bravo']),
+            $this->createServerModel(['user_id' => $users[2]->id, 'name' => 'Charlie']),
         ];
 
         // Set user 0 as a subuser of server 1. Thus, we should get two servers
@@ -176,9 +178,9 @@ class ClientControllerTest extends ClientApiIntegrationTestCase
         /** @var \Pterodactyl\Models\User[] $users */
         $users = User::factory()->times(3)->create();
         $servers = [
-            $this->createServerModel(['user_id' => $users[0]->id]),
-            $this->createServerModel(['user_id' => $users[1]->id]),
-            $this->createServerModel(['user_id' => $users[2]->id]),
+            $this->createServerModel(['user_id' => $users[0]->id, 'name' => 'Alpha']),
+            $this->createServerModel(['user_id' => $users[1]->id, 'name' => 'Bravo']),
+            $this->createServerModel(['user_id' => $users[2]->id, 'name' => 'Charlie']),
         ];
 
         // Set user 0 as a subuser of server 1. Thus, we should get two servers
@@ -227,9 +229,9 @@ class ClientControllerTest extends ClientApiIntegrationTestCase
         $users[0]->update(['root_admin' => true]);
 
         $servers = [
-            $this->createServerModel(['user_id' => $users[0]->id]),
-            $this->createServerModel(['user_id' => $users[1]->id]),
-            $this->createServerModel(['user_id' => $users[2]->id]),
+            $this->createServerModel(['user_id' => $users[0]->id, 'name' => 'Alpha']),
+            $this->createServerModel(['user_id' => $users[1]->id, 'name' => 'Bravo']),
+            $this->createServerModel(['user_id' => $users[2]->id, 'name' => 'Charlie']),
             $this->createServerModel(['user_id' => $users[3]->id]),
         ];
 
@@ -262,9 +264,9 @@ class ClientControllerTest extends ClientApiIntegrationTestCase
         $users[0]->update(['root_admin' => true]);
 
         $servers = [
-            $this->createServerModel(['user_id' => $users[0]->id]),
-            $this->createServerModel(['user_id' => $users[1]->id]),
-            $this->createServerModel(['user_id' => $users[2]->id]),
+            $this->createServerModel(['user_id' => $users[0]->id, 'name' => 'Alpha']),
+            $this->createServerModel(['user_id' => $users[1]->id, 'name' => 'Bravo']),
+            $this->createServerModel(['user_id' => $users[2]->id, 'name' => 'Charlie']),
             $this->createServerModel(['user_id' => $users[3]->id]),
         ];
 

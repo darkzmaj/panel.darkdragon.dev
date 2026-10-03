@@ -4,7 +4,7 @@ import http, { getPaginationSet, PaginatedResult } from '@/api/http';
 interface QueryParams {
     query?: string;
     page?: number;
-    type?: string;
+    type?: 'owner' | 'other' | 'admin' | 'admin-all';
     category?: number;
 }
 

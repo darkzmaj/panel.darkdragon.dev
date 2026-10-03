@@ -154,6 +154,35 @@ class ServerLayoutTest extends ClientApiIntegrationTestCase
         $this->assertCount(4, $this->listed($this->user, '?type=owner'));
     }
 
+    public function testOtherFilterListsOnlyServersSharedWithTheUser(): void
+    {
+        $shared = $this->createServerModel(['name' => 'Zulu']);
+        Subuser::query()->create(['user_id' => $this->user->id, 'server_id' => $shared->id, 'permissions' => ['websocket.connect']]);
+        // Owned by someone else and not shared: never visible in any view.
+        $this->createServerModel(['name' => 'Hidden']);
+
+        $this->assertSame(['Zulu'], $this->listed($this->user, '?type=other'));
+        $this->assertNotContains('Zulu', $this->listed($this->user, '?type=owner'));
+        $this->assertNotContains('Hidden', $this->listed($this->user));
+        $this->assertContains('Zulu', $this->listed($this->user));
+    }
+
+    public function testCategoryButtonsCanBeReorderedButOnlyOwnCategories(): void
+    {
+        $a = $this->actingAs($this->user)->postJson('/api/client/account/layout/categories', ['name' => 'A'])->json('categories.0.id');
+        $b = $this->actingAs($this->user)->postJson('/api/client/account/layout/categories', ['name' => 'B'])->json('categories.1.id');
+        $foreign = $this->actingAs(User::factory()->create())->postJson('/api/client/account/layout/categories', ['name' => 'Theirs'])->json('categories.0.id');
+
+        $this->actingAs($this->user)->putJson('/api/client/account/layout/categories/order', ['categories' => [$b, $a]])->assertOk();
+        $this->actingAs($this->user)->getJson('/api/client/account/layout')
+            ->assertJsonPath('categories.0.id', $b)->assertJsonPath('categories.1.id', $a);
+
+        // Another user's category id must neither be accepted nor change anything.
+        $this->actingAs($this->user)->putJson('/api/client/account/layout/categories/order', ['categories' => [$foreign, $a, $b]])->assertStatus(400);
+        $this->actingAs($this->user)->putJson('/api/client/account/layout/categories/order', ['categories' => 'nope'])->assertUnprocessable();
+        $this->actingAs($this->user)->getJson('/api/client/account/layout')->assertJsonPath('categories.0.id', $b);
+    }
+
     public function testDeletingAServerRemovesItFromLayouts(): void
     {
         $this->actingAs($this->user)->putJson('/api/client/account/layout/order', ['servers' => $this->uuids('Alpha', 'Bravo')])->assertOk();

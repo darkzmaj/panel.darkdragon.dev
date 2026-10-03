@@ -5,7 +5,14 @@ import Input from '@/components/elements/Input';
 import Label from '@/components/elements/Label';
 import { Button } from '@/components/elements/button/index';
 import { httpErrorToHuman } from '@/api/http';
-import { createCategory, deleteCategory, LayoutCategory, ServerLayout, updateCategory } from '@/api/account/layout';
+import {
+    saveCategoryButtons,
+    createCategory,
+    deleteCategory,
+    LayoutCategory,
+    ServerLayout,
+    updateCategory,
+} from '@/api/account/layout';
 
 interface Props {
     visible: boolean;
@@ -61,6 +68,12 @@ export default ({ visible, layout, onClose, onChanged }: Props) => {
             .then(() => setBusy(false));
     };
 
+    const moveCategory = (index: number, by: number) => {
+        const ids = categories.map((c) => c.id);
+        ids.splice(index + by, 0, ids.splice(index, 1)[0]);
+        run(saveCategoryButtons(ids));
+    };
+
     const save = () =>
         run(
             selected === NEW ? createCategory(name.trim(), members) : updateCategory(selected, name.trim(), members),
@@ -80,8 +93,8 @@ export default ({ visible, layout, onClose, onChanged }: Props) => {
             <div css={tw`flex flex-col sm:flex-row`}>
                 <div css={tw`sm:w-44 flex-none sm:mr-4 mb-4 sm:mb-0`}>
                     <ul css={tw`flex sm:block overflow-x-auto`}>
-                        {categories.map((category) => (
-                            <li key={category.id} css={tw`flex-none`}>
+                        {categories.map((category, index) => (
+                            <li key={category.id} css={tw`flex-none flex items-center`}>
                                 <button
                                     type={'button'}
                                     onClick={() => select(category)}
@@ -94,6 +107,26 @@ export default ({ visible, layout, onClose, onChanged }: Props) => {
                                     ]}
                                 >
                                     {category.name}
+                                </button>
+                                <button
+                                    type={'button'}
+                                    aria-label={`Move ${category.name} earlier`}
+                                    title={'Move earlier'}
+                                    disabled={busy || index === 0}
+                                    onClick={() => moveCategory(index, -1)}
+                                    css={tw`px-1 text-neutral-500 hover:text-neutral-100 disabled:opacity-20`}
+                                >
+                                    &#9650;
+                                </button>
+                                <button
+                                    type={'button'}
+                                    aria-label={`Move ${category.name} later`}
+                                    title={'Move later'}
+                                    disabled={busy || index === categories.length - 1}
+                                    onClick={() => moveCategory(index, 1)}
+                                    css={tw`px-1 text-neutral-500 hover:text-neutral-100 disabled:opacity-20`}
+                                >
+                                    &#9660;
                                 </button>
                             </li>
                         ))}
