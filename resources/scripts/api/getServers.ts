@@ -5,6 +5,7 @@ interface QueryParams {
     query?: string;
     page?: number;
     type?: string;
+    category?: number;
 }
 
 export default ({ query, ...params }: QueryParams): Promise<PaginatedResult<Server>> => {

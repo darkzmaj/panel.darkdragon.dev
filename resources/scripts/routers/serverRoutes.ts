@@ -7,7 +7,9 @@ import { ServerRouteDefinition } from '@/routers/types';
 const FileManagerContainer = lazy(
     () => import(/* webpackChunkName: "server-pages" */ '@/components/server/files/FileManagerContainer')
 );
-const FileEditContainer = lazy(() => import('@/components/server/files/FileEditContainer'));
+const FileWorkspace = lazy(
+    () => import(/* webpackChunkName: "file-workspace" */ '@/components/server/files/workspace/FileWorkspace')
+);
 const DatabasesContainer = lazy(
     () => import(/* webpackChunkName: "server-pages" */ '@/components/server/databases/DatabasesContainer')
 );
@@ -15,9 +17,6 @@ const ScheduleContainer = lazy(
     () => import(/* webpackChunkName: "server-pages" */ '@/components/server/schedules/ScheduleContainer')
 );
 const ScheduleEditContainer = lazy(() => import('@/components/server/schedules/ScheduleEditContainer'));
-const UsersContainer = lazy(
-    () => import(/* webpackChunkName: "server-pages" */ '@/components/server/users/UsersContainer')
-);
 const BackupContainer = lazy(
     () => import(/* webpackChunkName: "server-pages" */ '@/components/server/backups/BackupContainer')
 );
@@ -52,7 +51,7 @@ export default [
         path: '/files/:action(edit|new)',
         permission: 'file.*',
         name: undefined,
-        component: FileEditContainer,
+        component: FileWorkspace,
     },
     {
         path: '/databases',
@@ -71,12 +70,6 @@ export default [
         permission: 'schedule.*',
         name: undefined,
         component: ScheduleEditContainer,
-    },
-    {
-        path: '/users',
-        permission: 'user.*',
-        name: 'Users',
-        component: UsersContainer,
     },
     {
         path: '/backups',

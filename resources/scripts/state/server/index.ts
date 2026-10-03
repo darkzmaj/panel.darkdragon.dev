@@ -2,7 +2,6 @@ import getServer, { Server } from '@/api/server/getServer';
 import { action, Action, computed, Computed, createContextStore, thunk, Thunk } from 'easy-peasy';
 import socket, { SocketStore } from './socket';
 import files, { ServerFileStore } from '@/state/server/files';
-import subusers, { ServerSubuserStore } from '@/state/server/subusers';
 import { composeWithDevTools } from 'redux-devtools-extension';
 import schedules, { ServerScheduleStore } from '@/state/server/schedules';
 import databases, { ServerDatabaseStore } from '@/state/server/databases';
@@ -78,7 +77,6 @@ const status: ServerStatusStore = {
 
 export interface ServerStore {
     server: ServerDataStore;
-    subusers: ServerSubuserStore;
     databases: ServerDatabaseStore;
     files: ServerFileStore;
     schedules: ServerScheduleStore;
@@ -94,13 +92,11 @@ export const ServerContext = createContextStore<ServerStore>(
         status,
         databases,
         files,
-        subusers,
         schedules,
         clearServerState: action((state) => {
             state.server.data = undefined;
             state.server.permissions = [];
             state.databases.data = [];
-            state.subusers.data = [];
             state.files.directory = '/';
             state.files.selectedFiles = [];
             state.schedules.data = [];

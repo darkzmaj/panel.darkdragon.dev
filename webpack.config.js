@@ -2,6 +2,7 @@ const path = require('node:path');
 const webpack = require('webpack');
 const { WebpackAssetsManifest } = require('webpack-assets-manifest');
 const TerserPlugin = require('terser-webpack-plugin');
+const MonacoWebpackPlugin = require('monaco-editor-webpack-plugin');
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -34,7 +35,14 @@ module.exports = {
                 type: 'javascript/auto',
             },
             {
+                // Monaco ships plain stylesheets; they don't need Tailwind or CSS modules.
                 test: /\.css$/,
+                include: /node_modules[\\/]monaco-editor/,
+                use: ['style-loader', 'css-loader'],
+            },
+            {
+                test: /\.css$/,
+                exclude: /node_modules[\\/]monaco-editor/,
                 use: [
                     { loader: 'style-loader' },
                     {
@@ -66,7 +74,7 @@ module.exports = {
                 },
             },
             {
-                test: /\.(woff|woff2)$/i,
+                test: /\.(woff|woff2|ttf)$/i,
                 type: 'asset/resource',
             },
             {
@@ -75,6 +83,7 @@ module.exports = {
             },
             {
                 test: /\.js$/,
+                exclude: /node_modules[\\/]monaco-editor/,
                 enforce: 'pre',
                 loader: 'source-map-loader',
             },
@@ -100,6 +109,27 @@ module.exports = {
         moment: 'moment',
     },
     plugins: [
+        // Monaco is only loaded when a file is opened in the editor (see MonacoEditor.tsx). The plugin emits its
+        // web workers as separate files and wires them up, restricted to the languages the editor offers.
+        new MonacoWebpackPlugin({
+            filename: isProduction ? 'monaco-[name].worker.[contenthash:8].js' : 'monaco-[name].worker.js',
+            languages: [
+                'css',
+                'dockerfile',
+                'html',
+                'ini',
+                'java',
+                'javascript',
+                'json',
+                'markdown',
+                'php',
+                'python',
+                'shell',
+                'typescript',
+                'xml',
+                'yaml',
+            ],
+        }),
         new webpack.EnvironmentPlugin({
             NODE_ENV: process.env.NODE_ENV || 'development',
             DEBUG: process.env.NODE_ENV !== 'production',

@@ -38,6 +38,20 @@ Route::prefix('/account')->middleware(AccountSubject::class)->group(function () 
         ->middleware('throttle:10,1')
         ->name('api:client.account.update-avatar');
     Route::delete('/avatar', [Client\AccountController::class, 'deleteAvatar'])->name('api:client.account.delete-avatar');
+    Route::prefix('/access')->group(function () {
+        Route::get('/', [Client\AccountAccessController::class, 'index'])->name('api:client.account.access');
+        Route::post('/', [Client\AccountAccessController::class, 'store'])->middleware('throttle:20,1');
+        Route::put('/{person}', [Client\AccountAccessController::class, 'update'])->middleware('throttle:20,1')->whereUuid('person');
+        Route::delete('/{person}', [Client\AccountAccessController::class, 'delete'])->whereUuid('person');
+    });
+    Route::prefix('/layout')->group(function () {
+        Route::get('/', [Client\ServerLayoutController::class, 'index'])->name('api:client.account.layout');
+        Route::put('/order', [Client\ServerLayoutController::class, 'reorder']);
+        Route::post('/categories', [Client\ServerLayoutController::class, 'storeCategory'])->middleware('throttle:30,1');
+        Route::put('/categories/{category}', [Client\ServerLayoutController::class, 'updateCategory'])->whereNumber('category');
+        Route::put('/categories/{category}/order', [Client\ServerLayoutController::class, 'reorderCategory'])->whereNumber('category');
+        Route::delete('/categories/{category}', [Client\ServerLayoutController::class, 'deleteCategory'])->whereNumber('category');
+    });
     Route::put('/password', [Client\AccountController::class, 'updatePassword'])->name('api:client.account.update-password');
 
     Route::get('/activity', Client\ActivityLogController::class)->name('api:client.account.activity');

@@ -6,6 +6,7 @@ use Pterodactyl\Models\Server;
 use Pterodactyl\Models\Permission;
 use Spatie\QueryBuilder\QueryBuilder;
 use Spatie\QueryBuilder\AllowedFilter;
+use Pterodactyl\Services\Servers\ServerLayoutService;
 use Pterodactyl\Models\Filters\MultiFieldServerFilter;
 use Pterodactyl\Transformers\Api\Client\ServerTransformer;
 use Pterodactyl\Http\Requests\Api\Client\GetServersRequest;
@@ -59,6 +60,22 @@ class ClientController extends ClientApiController
             $builder = $builder->where('servers.owner_id', $user->id);
         } else {
             $builder = $builder->whereIn('servers.id', $user->accessibleServers()->pluck('id')->all());
+        }
+
+        // The signed in user's own arrangement: their global order, or the order inside one of their categories.
+        // Both only reorder or narrow the servers already allowed above; they can never add a server.
+        if (!in_array($type, ['admin', 'admin-all'])) {
+            if ($request->filled('category')) {
+                $layout = app(ServerLayoutService::class);
+                $layout->ownedCategory($user, (int) $request->input('category'));
+                $builder->join('user_server_category_members as usm', function ($join) use ($request) {
+                    $join->on('usm.server_id', '=', 'servers.id')->where('usm.category_id', '=', (int) $request->input('category'));
+                })->orderBy('usm.position');
+            } else {
+                $builder->leftJoin('user_server_preferences as usp', function ($join) use ($user) {
+                    $join->on('usp.server_id', '=', 'servers.id')->where('usp.user_id', '=', $user->id);
+                })->orderByRaw('usp.position IS NULL')->orderBy('usp.position')->orderBy('servers.name');
+            }
         }
 
         $servers = $builder->paginate(min($request->query('per_page', 50), 100))->appends($request->query());

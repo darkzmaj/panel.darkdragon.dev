@@ -46,3 +46,4 @@ result
 *.pem
 *.key
 *.sqlite
+/storage/mock-wings
