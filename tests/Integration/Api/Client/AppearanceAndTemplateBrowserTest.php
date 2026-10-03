@@ -3,9 +3,9 @@
 namespace Pterodactyl\Tests\Integration\Api\Client;
 
 use Pterodactyl\Models\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
 use Pterodactyl\Services\Media\FooterService;
-use Illuminate\Support\Facades\DB;
 use Pterodactyl\Tests\Traits\Integration\BuildsTemplates;
 use Pterodactyl\Tests\Traits\Integration\RemovesAddedRows;
 
