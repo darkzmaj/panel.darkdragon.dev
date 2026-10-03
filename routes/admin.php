@@ -84,6 +84,23 @@ Route::group(['prefix' => 'settings'], function () {
 
 /*
 |--------------------------------------------------------------------------
+| Panel Update Routes
+|--------------------------------------------------------------------------
+|
+| Endpoint: /admin/system/updates
+|
+*/
+Route::group(['prefix' => 'system/updates'], function () {
+    Route::get('/', [Admin\System\UpdateController::class, 'index'])->name('admin.system.updates');
+    Route::get('/status', [Admin\System\UpdateController::class, 'status'])->name('admin.system.updates.status');
+    Route::get('/runs/{run}', [Admin\System\UpdateController::class, 'run'])->name('admin.system.updates.run');
+
+    Route::post('/check', [Admin\System\UpdateController::class, 'check'])->middleware('throttle:6,1')->name('admin.system.updates.check');
+    Route::post('/start', [Admin\System\UpdateController::class, 'start'])->middleware('throttle:6,1')->name('admin.system.updates.start');
+});
+
+/*
+|--------------------------------------------------------------------------
 | User Controller Routes
 |--------------------------------------------------------------------------
 |

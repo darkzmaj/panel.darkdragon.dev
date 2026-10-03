@@ -78,6 +78,14 @@
                                 <i class="fa fa-wrench"></i> <span>Settings</span>
                             </a>
                         </li>
+                        <li class="{{ ! starts_with(Route::currentRouteName(), 'admin.system') ?: 'active' }}">
+                            <a href="{{ route('admin.system.updates') }}">
+                                <i class="fa fa-cloud-download"></i> <span>Updates</span>
+                                @if(data_get(app(\Pterodactyl\Services\Updater\UpdateService::class)->cached(), 'available'))
+                                    <span class="pull-right-container"><small class="label pull-right bg-green">new</small></span>
+                                @endif
+                            </a>
+                        </li>
                         <li class="{{ ! starts_with(Route::currentRouteName(), 'admin.api') ?: 'active' }}">
                             <a href="{{ route('admin.api.index')}}">
                                 <i class="fa fa-gamepad"></i> <span>Application API</span>

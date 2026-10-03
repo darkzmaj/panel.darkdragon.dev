@@ -15,21 +15,17 @@
 @section('content')
 <div class="row">
     <div class="col-xs-12">
-        <div class="box
-            @if($version->isLatestPanel())
-                box-success
-            @else
-                box-danger
-            @endif
-        ">
+        @php($update = app(\Pterodactyl\Services\Updater\UpdateService::class)->cached())
+        <div class="box {{ data_get($update, 'available') ? 'box-warning' : 'box-success' }}">
             <div class="box-header with-border">
                 <h3 class="box-title">System Information</h3>
             </div>
             <div class="box-body">
-                @if ($version->isLatestPanel())
-                    You are running Pterodactyl Panel version <code>{{ config('app.version') }}</code>. Your panel is up-to-date!
+                You are running Panel version <code>{{ config('app.version') }}</code> (based on Pterodactyl {{ config('app.upstream_version') }}).
+                @if(data_get($update, 'available'))
+                    Version <code>{{ data_get($update, 'release.version') }}</code> is available. <a href="{{ route('admin.system.updates') }}">Review and install the update</a>.
                 @else
-                    Your panel is <strong>not up-to-date!</strong> The latest version is <a href="https://github.com/Pterodactyl/Panel/releases/v{{ $version->getPanel() }}" target="_blank"><code>{{ $version->getPanel() }}</code></a> and you are currently running version <code>{{ config('app.version') }}</code>. You can find instructions on how to update your panel <a href="https://pterodactyl.io/panel/1.0/updating.html">here</a>.
+                    <a href="{{ route('admin.system.updates') }}">Check for updates</a>.
                 @endif
             </div>
         </div>

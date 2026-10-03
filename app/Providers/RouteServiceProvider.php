@@ -36,9 +36,9 @@ class RouteServiceProvider extends ServiceProvider
         Route::model('database', Database::class);
 
         $this->routes(function () {
-            // Branding images are shown to guests and served with public cache headers, so
+            // Branding images and update progress are shown to guests and cacheable, so
             // they are deliberately kept out of the "web" group to avoid starting a session.
-            Route::group([], base_path('routes/branding.php'));
+            Route::group([], base_path('routes/public.php'));
 
             Route::middleware('web')->group(function () {
                 Route::middleware(['auth.session', RequireTwoFactorAuthentication::class])

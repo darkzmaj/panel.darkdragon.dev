@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# Privileged helper for the Panel updater. Install root-owned at /usr/local/sbin/gobia-update-helper (mode 0755)
+# and allow only the Panel's PHP user to run it through sudo (see docs/updates.md).
+#
+# It accepts exactly three verbs and nothing else:
+#   activate <version>   atomically point <root>/current at releases/<version>
+#   restart-workers      restart the queue worker service
+#   reload-php           reload PHP-FPM so opcache drops the old release
+#
+# Every value is validated here; the caller cannot supply a path, a command or a service name.
+set -euo pipefail
+umask 022
+
+CONF=/etc/gobia-update-helper.conf
+if [ ! -f "$CONF" ] || [ "$(stat -c %u "$CONF")" != "0" ] || [ -n "$(find "$CONF" -perm /022)" ]; then
+    echo "$CONF must exist, be owned by root and not be group/world writable" >&2
+    exit 78
+fi
+# shellcheck disable=SC1090
+source "$CONF"   # defines PANEL_ROOT, PANEL_USER, WORKER_SERVICE, PHP_FPM_SERVICE
+
+VERSION_RE='^[0-9]{1,4}\.[0-9]{1,4}\.[0-9]{1,4}-gobia\.[0-9]{1,4}$'
+
+case "${1:-}" in
+    activate)
+        [ "$#" -eq 2 ] || { echo "usage: activate <version>" >&2; exit 64; }
+        version="$2"
+        [[ "$version" =~ $VERSION_RE ]] || { echo "invalid version" >&2; exit 65; }
+
+        release="$PANEL_ROOT/releases/$version"
+        [ -d "$release" ] && [ ! -L "$release" ] || { echo "no such release" >&2; exit 66; }
+        [ "$(tr -d '[:space:]' < "$release/VERSION")" = "$version" ] || { echo "release VERSION mismatch" >&2; exit 67; }
+        [ -f "$release/artisan" ] || { echo "release is incomplete" >&2; exit 67; }
+        [ "$(stat -c %U "$release")" = "$PANEL_USER" ] || { echo "release has unexpected owner" >&2; exit 68; }
+
+        ln -sfn "releases/$version" "$PANEL_ROOT/current.new"
+        mv -Tf "$PANEL_ROOT/current.new" "$PANEL_ROOT/current"
+        ;;
+    restart-workers)
+        [ "$#" -eq 1 ] || exit 64
+        systemctl restart "$WORKER_SERVICE"
+        ;;
+    reload-php)
+        [ "$#" -eq 1 ] || exit 64
+        systemctl reload "$PHP_FPM_SERVICE"
+        ;;
+    *)
+        echo "unknown verb" >&2
+        exit 64
+        ;;
+esac

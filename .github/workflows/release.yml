@@ -1,0 +1,67 @@
+name: Release
+
+# Releases are deliberate: push a tag such as v1.15.1-gobia.2 on main. Nothing is published for ordinary commits.
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+-gobia.[0-9]+"
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Checks
+    uses: ./.github/workflows/ci.yml
+
+  release:
+    name: Build and publish
+    needs: checks
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Tag must match VERSION
+        run: |
+          if [ "${GITHUB_REF_NAME}" != "v$(tr -d '[:space:]' < VERSION)" ]; then
+            echo "Tag ${GITHUB_REF_NAME} does not match VERSION $(cat VERSION)" >&2
+            exit 1
+          fi
+
+      - name: Tag must be on main
+        run: git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: bcmath, curl, gd, mbstring, openssl, pdo, tokenizer, xml, zip, sodium
+          tools: composer:v2
+          coverage: none
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+
+      - run: yarn install --frozen-lockfile
+      - run: yarn build:production
+
+      - name: Build, checksum and sign the package
+        env:
+          GOBIA_RELEASE_SIGNING_KEY: ${{ secrets.GOBIA_RELEASE_SIGNING_KEY }}
+        run: scripts/release/build-release.sh dist
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          V="$(tr -d '[:space:]' < VERSION)"
+          gh release create "${GITHUB_REF_NAME}" \
+            "dist/${V}/panel-${V}.tar.gz" \
+            "dist/${V}/panel-${V}.tar.gz.sha256" \
+            "dist/${V}/release.json" \
+            --title "${V}" --generate-notes --verify-tag

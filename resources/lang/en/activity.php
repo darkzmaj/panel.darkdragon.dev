@@ -20,6 +20,11 @@ return [
             'fail' => 'Failed SFTP log in',
         ],
     ],
+    'admin' => [
+        'system' => [
+            'update-started' => 'Started a Panel update from :from to :to',
+        ],
+    ],
     'user' => [
         'user' => [
             'create' => 'Created a new user :email',
