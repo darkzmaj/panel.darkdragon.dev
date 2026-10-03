@@ -34,7 +34,7 @@ if [ -n "${RELEASE_EXTRA_DIR:-}" ]; then cp -r "$RELEASE_EXTRA_DIR"/. "$STAGE"/;
 
 # Runtime dependencies only. Scripts are skipped because they need an application key; discovery runs below.
 (cd "$STAGE" && composer install --no-dev --optimize-autoloader --classmap-authoritative --no-interaction --no-progress --no-scripts ${COMPOSER_EXTRA_ARGS:-})
-(cd "$STAGE" && APP_KEY="base64:$(php -r 'echo base64_encode(random_bytes(32));')" php artisan package:discover --ansi >/dev/null)
+(cd "$STAGE" && APP_KEY="base64:$(php -r 'echo base64_encode(random_bytes(32));')" APP_ENV=production CACHE_DRIVER=file QUEUE_CONNECTION=sync SESSION_DRIVER=file DB_CONNECTION=mysql php artisan package:discover --ansi)
 
 # Runtime state and anything that must never be shipped or that the updater refuses.
 rm -rf "$STAGE/vendor/bin" "$STAGE/storage" "$STAGE/node_modules" "$STAGE/.git" "$STAGE/.env" "$STAGE/.env.ci"

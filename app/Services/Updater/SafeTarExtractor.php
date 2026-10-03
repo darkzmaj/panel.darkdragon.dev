@@ -80,7 +80,11 @@ class SafeTarExtractor
                     throw new ReleaseVerificationException('The release package contains an unsupported entry type (links and special files are not allowed).');
                 }
 
-                $relative = $this->sanitize($name);
+                $relative = $this->sanitize($name, $type === '5');
+                if ($relative === '') {
+                    // The archive root ("./") that tar writes first.
+                    continue;
+                }
                 $target = $root . '/' . $relative;
 
                 if ($type === '5') {
@@ -228,7 +232,7 @@ class SafeTarExtractor
     /**
      * Normalizes an archive path and rejects anything that is not a plain relative path.
      */
-    private function sanitize(string $name): string
+    private function sanitize(string $name, bool $allowRoot = false): string
     {
         if ($name === '' || str_contains($name, "\0") || str_contains($name, '\\')) {
             throw new ReleaseVerificationException('The release package contains an invalid path.');
@@ -251,6 +255,10 @@ class SafeTarExtractor
                 throw new ReleaseVerificationException('The release package contains an invalid path component.');
             }
             $parts[] = $part;
+        }
+
+        if ($parts === [] && $allowRoot) {
+            return '';
         }
 
         if ($parts === []) {

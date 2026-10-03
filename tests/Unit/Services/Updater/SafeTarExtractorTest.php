@@ -41,6 +41,13 @@ class SafeTarExtractorTest extends TestCase
         $this->assertSame('<?php', file_get_contents($this->dir . '/out/app/a.php'));
     }
 
+    public function testTheArchiveRootEntryWrittenByTarIsAccepted(): void
+    {
+        $stats = $this->extract((new TarBuilder())->dir('.')->file('./a.txt', 'x')->build());
+
+        $this->assertSame(1, $stats['files']);
+    }
+
     public function testLongPathsUsingThePrefixFieldAreSupported(): void
     {
         $path = str_repeat('d/', 60) . 'file.txt';
