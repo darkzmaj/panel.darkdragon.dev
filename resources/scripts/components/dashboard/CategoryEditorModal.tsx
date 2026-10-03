@@ -229,13 +229,18 @@ export default ({ visible, layout, onClose, onChanged }: Props) => {
                                 <input
                                     type={'checkbox'}
                                     checked={members.includes(server.uuid)}
-                                    onChange={(e) =>
+                                    onChange={(e) => {
+                                        // Read the value now: React 16 recycles the event object before a state updater runs,
+                                        // so `e.currentTarget` is null by then and the whole editor used to crash.
+                                        const checked = e.currentTarget.checked;
                                         setMembers((m) =>
-                                            e.currentTarget.checked
-                                                ? [...m, server.uuid]
+                                            checked
+                                                ? m.includes(server.uuid)
+                                                    ? m
+                                                    : [...m, server.uuid]
                                                 : m.filter((u) => u !== server.uuid)
-                                        )
-                                    }
+                                        );
+                                    }}
                                 />
                                 <span>{server.name}</span>
                             </label>

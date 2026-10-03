@@ -93,7 +93,11 @@ export default ({ visible, servers, grant, saving, error, onCancel, onSave }: Pr
                         <Input
                             type={'checkbox'}
                             checked={selected.includes(server.uuid)}
-                            onChange={(e) => setSelected((s) => toggle(s, server.uuid, e.currentTarget.checked))}
+                            onChange={(e) => {
+                                // Read the value before the updater runs: React recycles the event object by then.
+                                const checked = e.currentTarget.checked;
+                                setSelected((s) => toggle(s, server.uuid, checked));
+                            }}
                         />
                         <span css={tw`ml-3 text-sm`}>{server.name}</span>
                     </label>
@@ -129,13 +133,14 @@ export default ({ visible, servers, grant, saving, error, onCancel, onSave }: Pr
                                 <Input
                                     type={'checkbox'}
                                     checked={all}
-                                    onChange={(e) =>
+                                    onChange={(e) => {
+                                        const checked = e.currentTarget.checked;
                                         setPermissions((p) =>
-                                            e.currentTarget.checked
+                                            checked
                                                 ? [...p, ...group.keys.filter((k) => !p.includes(k))]
                                                 : p.filter((k) => !group.keys.includes(k))
-                                        )
-                                    }
+                                        );
+                                    }}
                                 />
                                 <span css={tw`ml-3 text-sm uppercase`}>{group.key}</span>
                             </label>
@@ -146,8 +151,9 @@ export default ({ visible, servers, grant, saving, error, onCancel, onSave }: Pr
                                         type={'checkbox'}
                                         checked={permissions.includes(permission)}
                                         onChange={(e) => {
+                                            const checked = e.currentTarget.checked;
                                             setFull(false);
-                                            setPermissions((p) => toggle(p, permission, e.currentTarget.checked));
+                                            setPermissions((p) => toggle(p, permission, checked));
                                         }}
                                     />
                                     <span css={tw`ml-3 text-xs`}>{permission.split('.')[1].replace(/_/g, ' ')}</span>

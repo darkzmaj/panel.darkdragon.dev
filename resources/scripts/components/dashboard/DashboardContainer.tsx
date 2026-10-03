@@ -153,8 +153,18 @@ export default () => {
                     if (deleted !== undefined && filter.kind === 'category' && filter.id === deleted) {
                         setFilter({ kind: 'all' });
                     }
-                    // Membership changes alter what a category view lists, so refetch both.
-                    fresh ? mutateLayout(fresh, false) : mutateLayout();
+                    // Membership changes alter what a category view lists, so refetch both. After a deletion the server
+                    // has no layout to hand back, so drop the category from what is on screen first and then confirm.
+                    if (fresh) {
+                        mutateLayout(fresh, false);
+                    } else if (deleted !== undefined && layout) {
+                        mutateLayout(
+                            { ...layout, categories: layout.categories.filter((c) => c.id !== deleted) },
+                            true
+                        );
+                    } else {
+                        mutateLayout();
+                    }
                     mutate();
                 }}
             />
