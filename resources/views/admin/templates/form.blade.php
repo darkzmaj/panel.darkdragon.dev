@@ -34,6 +34,7 @@
         @if($exists)
             <li><a href="#tab-instances" data-toggle="tab">Instances</a></li>
             <li><a href="#tab-revisions" data-toggle="tab">Revisions</a></li>
+            <li><a href="#tab-sftp" data-toggle="tab">SFTP</a></li>
         @endif
     </ul>
 </div>
@@ -290,6 +291,8 @@
                     </div>
                 </div>
 
+                <div class="tab-pane" id="tab-sftp" data-extra></div>
+
                 <div class="tab-pane" id="tab-revisions" data-extra>
                     <div class="box box-primary">
                         <div class="box-header with-border"><h3 class="box-title">Revisions</h3></div>
@@ -415,7 +418,13 @@
              data-list-url="{{ route('admin.templates.files', $template->id) }}"
              data-read-url="{{ route('admin.templates.files.read', $template->id) }}"
              data-write-url="{{ route('admin.templates.files.write', $template->id) }}"
+             data-upload-url="{{ route('admin.templates.files.upload', $template->id) }}"
+             data-folder-url="{{ route('admin.templates.files.folder', $template->id) }}"
+             data-move-url="{{ route('admin.templates.files.move', $template->id) }}"
+             data-download-url="{{ route('admin.templates.files.download', $template->id) }}"
+             data-publish-url="{{ route('admin.templates.publish', $template->id) }}"
              data-delete-url="{{ route('admin.templates.files.delete', $template->id) }}"
+             data-sftp-url="{{ route('admin.templates.sftp', $template->id) }}"
              data-csrf="{{ csrf_token() }}" style="display:none"></div>
         {!! app(\Pterodactyl\Services\Helpers\AssetHashService::class)->js('template-editor.js') !!}
     @else

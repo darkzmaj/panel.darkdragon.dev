@@ -53,9 +53,13 @@ class DaemonFileRepository extends DaemonRepository
      * Save new contents to a given file. This works for both creating and updating
      * a file.
      *
+     * The content may be a string or a readable stream, so large files (jars, maps) are never held in memory.
+     *
+     * @param string|resource $content
+     *
      * @throws DaemonConnectionException
      */
-    public function putContent(string $path, string $content): ResponseInterface
+    public function putContent(string $path, $content): ResponseInterface
     {
         Assert::isInstanceOf($this->server, Server::class);
 
@@ -65,6 +69,8 @@ class DaemonFileRepository extends DaemonRepository
                 [
                     'query' => ['file' => $path],
                     'body' => $content,
+                    // A large file takes as long as it takes; the connection timeout still applies.
+                    'timeout' => is_resource($content) ? 0 : config('pterodactyl.guzzle.timeout'),
                 ]
             );
         } catch (TransferException $exception) {

@@ -19,6 +19,7 @@ class TemplateControllerTest extends HttpTestCase
     public function setUp(): void
     {
         parent::setUp();
+        $this->useTemplateStorage();
 
         defined('LARAVEL_START') || define('LARAVEL_START', microtime(true));
         $this->rememberHighWater();
@@ -126,30 +127,63 @@ class TemplateControllerTest extends HttpTestCase
         $this->assertNotSame(99999, $template->id);
     }
 
-    public function testFilesCanBeManagedAndTraversalIsRefused(): void
+    public function testFilesCanBeEditedPublishedMovedAndDownloaded(): void
     {
         $admin = User::factory()->admin()->create();
         $template = $this->makeTemplate();
-        $base = "/admin/templates/view/{$template->id}/files";
+        $base = "/admin/templates/view/{$template->id}";
 
-        $this->actingAs($admin)->putJson($base, ['path' => 'plugins/a.yml', 'content' => "a: 1\n"])->assertOk()->assertJsonPath('revision', 2);
-        $this->actingAs($admin)->getJson($base)->assertOk()->assertJsonPath('data.0.path', 'plugins/a.yml');
-        $this->actingAs($admin)->getJson($base . '/content?path=plugins/a.yml')->assertOk()->assertJsonPath('content', "a: 1\n");
+        $this->actingAs($admin)->putJson("$base/files", ['path' => 'plugins/a.yml', 'content' => "a: 1\n"])->assertOk();
+        $listing = $this->actingAs($admin)->getJson("$base/files")->assertOk();
+        $listing->assertJsonPath('status.dirty', true)->assertJsonPath('status.added', 1)->assertJsonPath('status.revision', 1);
+        $this->assertContains('plugins/a.yml', collect($listing->json('data'))->pluck('path')->all());
+        $this->actingAs($admin)->getJson("$base/files/content?path=plugins/a.yml")->assertOk()->assertJsonPath('content', "a: 1\n");
 
-        foreach (['../../.env', '/etc/passwd', 'a/../../b', '%2e%2e/x', 'a\\b', 'C:/x', '.pterodactyl/x'] as $path) {
-            $this->actingAs($admin)->putJson($base, ['path' => $path, 'content' => 'x'])->assertStatus(400);
-            $this->actingAs($admin)->getJson($base . '/content?path=' . rawurlencode($path))->assertStatus(400);
-        }
+        // Raw uploads are not limited by PHP's upload settings and may be binary.
+        $binary = random_bytes(5000);
+        $this->actingAs($admin)->call('PUT', "$base/files/upload?path=" . rawurlencode('plugins/Essentials.jar'), [], [], [], ['CONTENT_TYPE' => 'application/octet-stream'], $binary)->assertOk();
+        $this->actingAs($admin)->getJson("$base/files/content?path=plugins/Essentials.jar")->assertOk()->assertJsonPath('binary', true);
+        $this->actingAs($admin)->get("$base/files/download?path=" . rawurlencode('plugins/Essentials.jar'))->assertOk();
 
-        // Nothing but the one legitimate file exists, and reading a file that is not part of the template is a clean error.
-        $this->assertSame(1, $template->files()->count());
-        $this->actingAs($admin)->getJson($base . '/content?path=missing.yml')->assertStatus(400);
+        $this->actingAs($admin)->postJson("$base/files/folder", ['path' => 'world/region'])->assertCreated();
+        $this->actingAs($admin)->postJson("$base/files/move", ['from' => 'plugins/a.yml', 'to' => 'world/a.yml'])->assertOk();
+        $this->actingAs($admin)->postJson("$base/files/move", ['from' => 'world', 'to' => 'world/region/inside'])->assertStatus(400);
 
-        $this->actingAs($admin)->deleteJson($base, ['path' => 'plugins/a.yml'])->assertOk();
+        // Nothing is published until asked; then a revision is recorded.
         $this->assertSame(0, $template->files()->count());
+        $this->actingAs($admin)->postJson("$base/publish")->assertOk()->assertJsonPath('created_revision', true)->assertJsonPath('revision', 2);
+        $this->assertSame(['plugins/Essentials.jar', 'world/a.yml'], $template->files()->pluck('path')->all());
+        $this->actingAs($admin)->postJson("$base/publish")->assertOk()->assertJsonPath('created_revision', false);
+
+        $this->actingAs($admin)->deleteJson("$base/files", ['path' => 'world'])->assertOk();
+        $this->actingAs($admin)->getJson("$base/files")->assertJsonPath('status.deleted', 1);
     }
 
-    public function testFilesOfOneTemplateAreNotReadableThroughAnother(): void
+    public function testTraversalAndUnsafePathsAreRefusedOnEveryFileEndpoint(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $template = $this->makeTemplate();
+        $base = "/admin/templates/view/{$template->id}";
+        $this->actingAs($admin)->putJson("$base/files", ['path' => 'ok.txt', 'content' => 'ok'])->assertOk();
+
+        foreach (['../../.env', '/etc/passwd', 'a/../../b', '%2e%2e/x', '%252e%252e/x', 'a\\b', 'C:/x', '.pterodactyl/x', "a\0b", './x', 'a//b'] as $path) {
+            $q = rawurlencode($path);
+            $this->actingAs($admin)->putJson("$base/files", ['path' => $path, 'content' => 'x'])->assertStatus(400);
+            $this->actingAs($admin)->getJson("$base/files/content?path=$q")->assertStatus(400);
+            $this->actingAs($admin)->call('PUT', "$base/files/upload?path=$q", [], [], [], ['HTTP_ACCEPT' => 'application/json'], 'x')->assertStatus(400);
+            $this->actingAs($admin)->postJson("$base/files/folder", ['path' => $path])->assertStatus(400);
+            $this->actingAs($admin)->postJson("$base/files/move", ['from' => 'ok.txt', 'to' => $path])->assertStatus(400);
+            $this->actingAs($admin)->postJson("$base/files/move", ['from' => $path, 'to' => 'x.txt'])->assertStatus(400);
+            $this->actingAs($admin)->getJson("$base/files/download?path=$q")->assertStatus(400);
+            $this->actingAs($admin)->deleteJson("$base/files", ['path' => $path])->assertStatus(400);
+        }
+
+        // Only the one legitimate file exists, and a missing file is a clean error.
+        $this->assertSame(['ok.txt'], collect(app(\Pterodactyl\Services\Templates\TemplateFileStore::class)->scan($template))->pluck('path')->all());
+        $this->actingAs($admin)->getJson("$base/files/content?path=missing.yml")->assertStatus(400);
+    }
+
+    public function testFilesOfOneTemplateAreNotReachableThroughAnother(): void
     {
         $admin = User::factory()->admin()->create();
         $one = $this->makeTemplate(['name' => 'One']);
@@ -157,6 +191,7 @@ class TemplateControllerTest extends HttpTestCase
         app(\Pterodactyl\Services\Templates\TemplateService::class)->putFile($one, 'secret.txt', 'one');
 
         $this->actingAs($admin)->getJson("/admin/templates/view/{$two->id}/files/content?path=secret.txt")->assertStatus(400);
+        $this->actingAs($admin)->getJson("/admin/templates/view/{$two->id}/files/download?path=secret.txt")->assertStatus(400);
     }
 
     public function testAnInstanceCanBeQueuedFromTheAdminPanel(): void

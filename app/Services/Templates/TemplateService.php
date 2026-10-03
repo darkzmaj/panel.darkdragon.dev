@@ -216,9 +216,10 @@ class TemplateService
                 ]);
             }
             foreach ($source->files as $file) {
-                $this->files->write($copy, $this->files->readFile($file));
                 $copy->files()->create(['path' => $file->path, 'size' => $file->size, 'sha256' => $file->sha256]);
             }
+            $this->files->copyTemplate($source, $copy);
+            $copy->forceFill(['published_at' => $source->published_at])->save();
 
             $this->record($copy->refresh());
 
@@ -245,49 +246,127 @@ class TemplateService
     }
 
     /**
-     * Adds or replaces a file and records a new revision.
+     * Saves text into the working tree. Nothing is published, and no revision is created, until publish() is called.
      *
      * @throws DisplayException
      */
-    public function putFile(ServerTemplate $template, string $path, string $content): ServerTemplateFile
+    public function putFile(ServerTemplate $template, string $path, string $content): void
     {
-        $path = $this->files->normalizePath($path);
-        $existing = $template->files()->where('path', $path)->first();
-        if (!$existing && $template->files()->count() >= TemplateFileStore::MAX_FILES) {
-            throw new DisplayException('A template can hold at most ' . TemplateFileStore::MAX_FILES . ' files.');
-        }
-        // A file and a directory cannot share a path: "a" and "a/b" are mutually exclusive.
-        foreach ($template->files as $other) {
-            if ($other->path !== $path && (str_starts_with($other->path, $path . '/') || str_starts_with($path, $other->path . '/'))) {
-                throw new DisplayException('That path conflicts with the existing file or folder "' . $other->path . '".');
-            }
-        }
-        $total = $template->files->where('path', '!=', $path)->sum('size') + strlen($content);
-        if ($total > TemplateFileStore::MAX_TOTAL_BYTES) {
-            throw new DisplayException('A template can hold at most ' . (TemplateFileStore::MAX_TOTAL_BYTES / 1048576) . ' MiB of files.');
-        }
+        $this->files->writeText($template, $path, $content);
+        $this->touchWorkingTree($template);
+    }
 
-        [$hash, $size] = $this->files->write($template, $content);
+    /**
+     * @param resource $stream
+     *
+     * @throws DisplayException
+     */
+    public function uploadFile(ServerTemplate $template, string $path, $stream, ?int $declaredSize = null): int
+    {
+        $written = $this->files->writeStream($template, $path, $stream, $declaredSize);
+        $this->touchWorkingTree($template);
 
-        return $this->connection->transaction(function () use ($template, $path, $hash, $size) {
-            $file = $template->files()->updateOrCreate(['path' => $path], ['sha256' => $hash, 'size' => $size]);
-            $this->commit($template->refresh());
-
-            return $file;
-        });
+        return $written;
     }
 
     /**
      * @throws DisplayException
      */
+    public function makeFolder(ServerTemplate $template, string $path): void
+    {
+        $this->files->makeFolder($template, $path);
+        $this->touchWorkingTree($template);
+    }
+
+    /**
+     * Removes a file or folder from the working tree.
+     *
+     * @throws DisplayException
+     */
     public function deleteFile(ServerTemplate $template, string $path): void
     {
-        $path = $this->files->normalizePath($path);
-        $deleted = $template->files()->where('path', $path)->delete();
-        if (!$deleted) {
-            throw new DisplayException('That file does not exist in this template.');
+        $this->files->remove($template, $path);
+        $this->touchWorkingTree($template);
+    }
+
+    /**
+     * @throws DisplayException
+     */
+    public function moveFile(ServerTemplate $template, string $from, string $to): void
+    {
+        $this->files->move($template, $from, $to);
+        $this->touchWorkingTree($template);
+    }
+
+    /**
+     * Records that the working tree changed (the admin page shows this, and SFTP sessions call it when they end).
+     */
+    public function touchWorkingTree(ServerTemplate $template): void
+    {
+        $template->forceFill(['working_changed_at' => now()])->save();
+    }
+
+    /**
+     * What differs between the working tree and the latest published revision.
+     *
+     * @return array{added: string[], modified: string[], deleted: string[], dirty: bool, working: array<int, array{path: string, size: int, type: string, modified: int}>}
+     */
+    public function workingStatus(ServerTemplate $template): array
+    {
+        $working = $this->files->scan($template);
+        $published = $template->files()->get()->keyBy('path');
+        $publishedAt = $template->published_at?->timestamp ?? 0;
+
+        $added = $modified = [];
+        $seen = [];
+        foreach ($working as $entry) {
+            if ($entry['type'] !== 'file') {
+                continue;
+            }
+            $seen[$entry['path']] = true;
+            $known = $published->get($entry['path']);
+            if (!$known) {
+                $added[] = $entry['path'];
+            } elseif ($known->size !== $entry['size'] || $entry['modified'] >= $publishedAt) {
+                // Same size and not touched since publishing means unchanged; otherwise compare the content.
+                $hash = hash_file('sha256', $this->files->resolve($template, $entry['path']));
+                if ($hash !== $known->sha256) {
+                    $modified[] = $entry['path'];
+                }
+            }
         }
-        $this->commit($template->refresh());
+        $deleted = $published->keys()->reject(fn ($path) => isset($seen[$path]))->values()->all();
+
+        return [
+            'added' => $added,
+            'modified' => $modified,
+            'deleted' => $deleted,
+            'dirty' => $added || $modified || $deleted,
+            'working' => $working,
+        ];
+    }
+
+    /**
+     * Publishes the working tree: every file is stored as an immutable blob, the published file list is replaced, and a
+     * new revision is recorded if anything actually changed. Existing servers are never touched.
+     *
+     * @throws DisplayException
+     */
+    public function publish(ServerTemplate $template): ServerTemplate
+    {
+        $manifest = $this->files->snapshotWorkingTree($template);
+
+        return $this->connection->transaction(function () use ($template, $manifest) {
+            $template->files()->delete();
+            foreach ($manifest as $file) {
+                $template->files()->create($file);
+            }
+            $template->forceFill(['published_at' => now()])->save();
+            $template->unsetRelation('files');
+            $this->commit($template->refresh());
+
+            return $template->refresh();
+        });
     }
 
     /**

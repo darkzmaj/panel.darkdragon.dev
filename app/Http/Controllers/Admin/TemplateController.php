@@ -14,8 +14,10 @@ use Pterodactyl\Models\ServerTemplate;
 use Pterodactyl\Models\TemplateInstance;
 use Pterodactyl\Exceptions\DisplayException;
 use Pterodactyl\Http\Controllers\Controller;
+use Pterodactyl\Models\TemplateSftpCredential;
 use Pterodactyl\Services\Templates\TemplateService;
 use Pterodactyl\Services\Templates\TemplateFileStore;
+use Pterodactyl\Services\Templates\TemplateSftpService;
 use Pterodactyl\Services\Templates\TemplateInstanceService;
 
 class TemplateController extends Controller
@@ -25,6 +27,7 @@ class TemplateController extends Controller
         private TemplateService $templates,
         private TemplateFileStore $files,
         private TemplateInstanceService $instances,
+        private TemplateSftpService $sftp,
     ) {
     }
 
@@ -121,11 +124,25 @@ class TemplateController extends Controller
         return redirect()->route('admin.templates');
     }
 
-    /* ---- Files (JSON, used by the editor on the Files tab) ---- */
+    /* ---- Files (JSON, used by the editor on the Files tab). They work on the working tree; publish() makes a revision. ---- */
 
     public function files(ServerTemplate $template): JsonResponse
     {
-        return new JsonResponse(['data' => $template->files->map(fn ($f) => ['path' => $f->path, 'size' => $f->size])->values()]);
+        $status = $this->templates->workingStatus($template);
+
+        return new JsonResponse([
+            'data' => array_map(fn ($e) => ['path' => $e['path'], 'size' => $e['size'], 'type' => $e['type'], 'modified' => $e['modified']], $status['working']),
+            'status' => [
+                'dirty' => $status['dirty'],
+                'added' => count($status['added']),
+                'modified' => count($status['modified']),
+                'deleted' => count($status['deleted']),
+                'revision' => $template->revision,
+                'published_at' => $template->published_at?->toIso8601String(),
+                'working_changed_at' => $template->working_changed_at?->toIso8601String(),
+            ],
+            'limits' => $this->files->limits(),
+        ]);
     }
 
     /**
@@ -134,12 +151,20 @@ class TemplateController extends Controller
     public function readFile(Request $request, ServerTemplate $template): JsonResponse
     {
         $path = $this->files->normalizePath((string) $request->query('path'));
-        $file = $template->files()->where('path', $path)->first();
-        if (!$file) {
+        $absolute = $this->files->resolve($template, $path);
+        if (!is_file($absolute)) {
             throw new DisplayException('That file does not exist in this template.');
         }
+        $size = filesize($absolute);
+        if ($size > $this->files->limits()['max_edit_bytes']) {
+            throw new DisplayException('This file is ' . $this->files->human($size) . ' and is too large to edit in the browser. Download or replace it instead.');
+        }
+        $content = (string) file_get_contents($absolute);
+        if (str_contains($content, "\0") || !mb_check_encoding($content, 'UTF-8')) {
+            return new JsonResponse(['path' => $path, 'binary' => true, 'size' => $size]);
+        }
 
-        return new JsonResponse(['path' => $file->path, 'content' => $this->files->readFile($file)]);
+        return new JsonResponse(['path' => $path, 'binary' => false, 'size' => $size, 'content' => $content]);
     }
 
     /**
@@ -148,9 +173,45 @@ class TemplateController extends Controller
     public function writeFile(Request $request, ServerTemplate $template): JsonResponse
     {
         $data = $request->validate(['path' => 'required|string|max:255', 'content' => 'present|nullable|string']);
-        $file = $this->templates->putFile($template, $data['path'], $data['content'] ?? '');
+        $this->templates->putFile($template, $data['path'], $data['content'] ?? '');
 
-        return new JsonResponse(['path' => $file->path, 'size' => $file->size, 'revision' => $template->refresh()->revision]);
+        return new JsonResponse(['path' => $this->files->normalizePath($data['path']), 'status' => 'saved']);
+    }
+
+    /**
+     * Receives a file as the raw request body, so size is limited by the template limits and not by PHP's upload settings.
+     *
+     * @throws DisplayException
+     */
+    public function uploadFile(Request $request, ServerTemplate $template): JsonResponse
+    {
+        $stream = $request->getContent(true);
+        $declared = $request->header('Content-Length') !== null ? (int) $request->header('Content-Length') : null;
+        $size = $this->templates->uploadFile($template, (string) $request->query('path'), $stream, $declared);
+
+        return new JsonResponse(['path' => $this->files->normalizePath((string) $request->query('path')), 'size' => $size]);
+    }
+
+    /**
+     * @throws DisplayException
+     */
+    public function makeFolder(Request $request, ServerTemplate $template): JsonResponse
+    {
+        $data = $request->validate(['path' => 'required|string|max:255']);
+        $this->templates->makeFolder($template, $data['path']);
+
+        return new JsonResponse(['path' => $this->files->normalizePath($data['path'])], 201);
+    }
+
+    /**
+     * @throws DisplayException
+     */
+    public function moveFile(Request $request, ServerTemplate $template): JsonResponse
+    {
+        $data = $request->validate(['from' => 'required|string|max:255', 'to' => 'required|string|max:255']);
+        $this->templates->moveFile($template, $data['from'], $data['to']);
+
+        return new JsonResponse(['from' => $data['from'], 'to' => $data['to']]);
     }
 
     /**
@@ -160,7 +221,93 @@ class TemplateController extends Controller
     {
         $this->templates->deleteFile($template, (string) $request->input('path'));
 
-        return new JsonResponse(['revision' => $template->refresh()->revision]);
+        return new JsonResponse(['status' => 'deleted']);
+    }
+
+    /**
+     * @throws DisplayException
+     */
+    public function downloadFile(Request $request, ServerTemplate $template): \Symfony\Component\HttpFoundation\BinaryFileResponse
+    {
+        $absolute = $this->files->resolve($template, (string) $request->query('path'));
+        if (!is_file($absolute)) {
+            throw new DisplayException('That file does not exist in this template.');
+        }
+
+        return response()->download($absolute, basename($absolute));
+    }
+
+    /**
+     * @throws DisplayException
+     */
+    public function publish(ServerTemplate $template): JsonResponse
+    {
+        $before = $template->revision;
+        $template = $this->templates->publish($template);
+
+        return new JsonResponse(['revision' => $template->revision, 'created_revision' => $template->revision > $before]);
+    }
+
+    /* ---- SFTP credentials ---- */
+
+    public function sftp(Request $request, ServerTemplate $template): JsonResponse
+    {
+        $configured = (string) config('gobia_templates.sftp.service_token') !== '';
+
+        return new JsonResponse([
+            'enabled' => $configured,
+            'host' => config('gobia_templates.sftp.host') ?: $request->getHost(),
+            'port' => (int) config('gobia_templates.sftp.port'),
+            'max_days' => (int) config('gobia_templates.sftp.max_credential_days'),
+            'credentials' => $template->sftpCredentials()->get()->map(fn (TemplateSftpCredential $c) => [
+                'id' => $c->id,
+                'label' => $c->label,
+                'username' => $c->username,
+                'permission' => $c->permission,
+                'status' => $c->status(),
+                'created_at' => $c->created_at?->toIso8601String(),
+                'expires_at' => $c->expires_at?->toIso8601String(),
+                'last_used_at' => $c->last_used_at?->toIso8601String(),
+                'last_used_ip' => $c->last_used_ip,
+            ])->values(),
+            'events' => \Illuminate\Support\Facades\DB::table('template_sftp_events')
+                ->where('template_id', $template->id)->orderByDesc('id')->limit(15)
+                ->get(['event', 'username', 'ip', 'detail', 'created_at']),
+        ]);
+    }
+
+    /**
+     * The secret is in this response and nowhere else, ever again.
+     *
+     * @throws DisplayException
+     */
+    public function createSftp(Request $request, ServerTemplate $template): JsonResponse
+    {
+        $data = $request->validate([
+            'label' => 'nullable|string|max:80',
+            'permission' => 'required|in:rw,ro',
+            'expires_in_days' => 'nullable|integer|min:1|max:3650',
+        ]);
+
+        [$credential, $password] = $this->sftp->create($template, $request->user(), $data['permission'], $data['expires_in_days'] ?? null, $data['label'] ?? null);
+
+        return new JsonResponse([
+            'id' => $credential->id,
+            'username' => $credential->username,
+            'password' => $password,
+            'permission' => $credential->permission,
+            'host' => config('gobia_templates.sftp.host') ?: $request->getHost(),
+            'port' => (int) config('gobia_templates.sftp.port'),
+            'expires_at' => $credential->expires_at?->toIso8601String(),
+        ], 201);
+    }
+
+    public function revokeSftp(ServerTemplate $template, TemplateSftpCredential $credential): JsonResponse
+    {
+        abort_unless($credential->template_id === $template->id, 404);
+        $this->sftp->revoke($credential);
+
+        return new JsonResponse(['status' => 'revoked']);
     }
 
     /* ---- Instances ---- */

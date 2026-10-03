@@ -22,6 +22,7 @@ class TemplateServiceTest extends IntegrationTestCase
     public function setUp(): void
     {
         parent::setUp();
+        $this->useTemplateStorage();
         $this->service = app(TemplateService::class);
     }
 
@@ -101,27 +102,93 @@ class TemplateServiceTest extends IntegrationTestCase
         $this->assertTrue($byEnv['SERVER_JARFILE']['overridable']);
     }
 
-    public function testFilesAreStoredAddressedByChecksumAndRevisioned(): void
+    public function testEditsGoToTheWorkingTreeAndPublishingCreatesRevisions(): void
     {
         $template = $this->makeTemplate();
+        $store = app(TemplateFileStore::class);
 
         $this->service->putFile($template, 'plugins/config.yml', "a: 1\n");
         $template->refresh();
-        $this->assertSame(2, $template->revision);
 
+        // Saving a file does not publish anything: the published list is empty and there is no new revision.
+        $this->assertSame(1, $template->revision);
+        $this->assertSame(0, $template->files()->count());
+        $status = $this->service->workingStatus($template);
+        $this->assertTrue($status['dirty']);
+        $this->assertSame(['plugins/config.yml'], $status['added']);
+
+        $this->service->publish($template);
+        $template->refresh();
+        $this->assertSame(2, $template->revision);
         $file = $template->files()->first();
         $this->assertSame(hash('sha256', "a: 1\n"), $file->sha256);
-        $this->assertSame("a: 1\n", app(TemplateFileStore::class)->readFile($file));
+        $this->assertSame("a: 1\n", $store->read($template, $file->sha256));
+        $this->assertFalse($this->service->workingStatus($template)['dirty']);
 
-        // Replacing the content creates another revision, and the previous one still refers to the old blob.
+        // Publishing again without changes does not create another revision.
+        $this->service->publish($template);
+        $this->assertSame(2, $template->refresh()->revision);
+
+        // Editing shows up as modified, and the old revision keeps pointing at the old content.
         $this->service->putFile($template, 'plugins/config.yml', "a: 2\n");
+        $this->assertSame(['plugins/config.yml'], $this->service->workingStatus($template)['modified']);
+        $this->service->publish($template);
         $template->refresh();
         $this->assertSame(3, $template->revision);
         $this->assertSame(hash('sha256', "a: 1\n"), $this->service->revision($template, 2)->snapshot['files'][0]['sha256']);
-        $this->assertSame("a: 1\n", app(TemplateFileStore::class)->read($template, hash('sha256', "a: 1\n")));
+        $this->assertSame("a: 1\n", $store->read($template, hash('sha256', "a: 1\n")));
 
         $this->service->deleteFile($template, 'plugins/config.yml');
+        $this->assertSame(['plugins/config.yml'], $this->service->workingStatus($template)['deleted']);
+        $this->service->publish($template);
         $this->assertSame(0, $template->files()->count());
+        $this->assertSame(4, $template->refresh()->revision);
+    }
+
+    public function testBinaryFilesAndFoldersAreSupported(): void
+    {
+        $template = $this->makeTemplate();
+        $store = app(TemplateFileStore::class);
+
+        $binary = random_bytes(300000) . "\0\1\2";
+        $stream = fopen('php://temp', 'r+');
+        fwrite($stream, $binary);
+        rewind($stream);
+        $this->assertSame(strlen($binary), $this->service->uploadFile($template, 'plugins/Essentials.jar', $stream, strlen($binary)));
+        $this->service->makeFolder($template, 'world/region');
+        $this->service->putFile($template, 'server.properties', "motd=hi\n");
+
+        $this->service->publish($template);
+        $paths = $template->refresh()->files()->pluck('path')->all();
+        $this->assertSame(['plugins/Essentials.jar', 'server.properties'], $paths);
+        $jar = $template->files()->where('path', 'plugins/Essentials.jar')->first();
+        $this->assertSame($binary, $store->read($template, $jar->sha256));
+        // The empty folder exists in the working tree but a folder alone is not published.
+        $this->assertTrue(is_dir($store->workDirectory($template) . '/world/region'));
+    }
+
+    public function testFilesCanBeMovedAndRenamed(): void
+    {
+        $template = $this->makeTemplate();
+        $this->service->putFile($template, 'config.yml', 'a');
+        $this->service->makeFolder($template, 'plugins/MyPlugin');
+
+        $this->service->moveFile($template, 'config.yml', 'plugins/MyPlugin/config.yml');
+        $this->assertSame(['plugins', 'plugins/MyPlugin', 'plugins/MyPlugin/config.yml'], collect(app(TemplateFileStore::class)->scan($template))->pluck('path')->all());
+
+        // A folder cannot be moved into itself, and nothing is overwritten.
+        $this->expectException(DisplayException::class);
+        $this->service->moveFile($template, 'plugins', 'plugins/MyPlugin/inside');
+    }
+
+    public function testMovingOntoAnExistingFileIsRefused(): void
+    {
+        $template = $this->makeTemplate();
+        $this->service->putFile($template, 'a.txt', 'a');
+        $this->service->putFile($template, 'b.txt', 'b');
+
+        $this->expectException(DisplayException::class);
+        $this->service->moveFile($template, 'a.txt', 'b.txt');
     }
 
     /**
@@ -173,21 +240,66 @@ class TemplateServiceTest extends IntegrationTestCase
         $this->service->putFile($template, 'plugins', 'x');
     }
 
-    public function testFileContentRules(): void
+    public function testAFileCannotBecomeAFolder(): void
+    {
+        $template = $this->makeTemplate();
+        $this->service->putFile($template, 'plugins', 'x');
+
+        $this->expectException(DisplayException::class);
+        $this->service->putFile($template, 'plugins/a.yml', 'x');
+    }
+
+    public function testEditorContentRules(): void
     {
         $template = $this->makeTemplate();
 
-        foreach (["bin\0ary", "\xff\xfe invalid utf8", str_repeat('x', TemplateFileStore::MAX_FILE_BYTES + 1)] as $content) {
+        foreach (["bin\0ary", "\xff\xfe invalid utf8", str_repeat('x', app(TemplateFileStore::class)->limits()['max_edit_bytes'] + 1)] as $content) {
             try {
                 $this->service->putFile($template, 'f.txt', $content);
                 $this->fail('Expected content to be refused.');
             } catch (DisplayException) {
-                $this->assertSame(0, $template->files()->count());
+                $this->assertFalse(is_file(app(TemplateFileStore::class)->workDirectory($template) . '/f.txt'));
             }
         }
     }
 
-    public function testAPlantedSymlinkInTheStoreIsNotFollowed(): void
+    public function testUploadsAreLimitedWhileReading(): void
+    {
+        config(['gobia_templates.limits.max_file_bytes' => 1000]);
+        $template = $this->makeTemplate();
+        $stream = fopen('php://temp', 'r+');
+        fwrite($stream, str_repeat('x', 5000));
+        rewind($stream);
+
+        try {
+            $this->service->uploadFile($template, 'big.bin', $stream);
+            $this->fail('Expected the upload to be refused.');
+        } catch (DisplayException) {
+            $store = app(TemplateFileStore::class);
+            $this->assertFalse(is_file($store->workDirectory($template) . '/big.bin'));
+            $this->assertSame([], glob($store->workDirectory($template) . '/*.upload-*') ?: []);
+        }
+    }
+
+    public function testTheTotalSizeAndFileCountAreLimited(): void
+    {
+        config(['gobia_templates.limits.max_total_bytes' => 100, 'gobia_templates.limits.max_files' => 2]);
+        $template = $this->makeTemplate();
+        $this->service->putFile($template, 'a.txt', str_repeat('a', 60));
+
+        try {
+            $this->service->putFile($template, 'b.txt', str_repeat('b', 60));
+            $this->fail('Expected the total size limit to apply.');
+        } catch (DisplayException $e) {
+            $this->assertStringContainsString('of files', $e->getMessage());
+        }
+
+        $this->service->putFile($template, 'b.txt', 'b');
+        $this->expectException(DisplayException::class);
+        $this->service->putFile($template, 'c.txt', 'c');
+    }
+
+    public function testAPlantedSymlinkInTheWorkingTreeIsNeitherListedNorFollowed(): void
     {
         if (DIRECTORY_SEPARATOR === '\\') {
             $this->markTestSkipped('Creating symlinks needs elevated rights on Windows.');
@@ -195,18 +307,51 @@ class TemplateServiceTest extends IntegrationTestCase
 
         $template = $this->makeTemplate();
         $store = app(TemplateFileStore::class);
-        [$hash] = $store->write($template, 'real');
+        $this->service->putFile($template, 'real.txt', 'real');
 
         $secret = tempnam(sys_get_temp_dir(), 'secret');
         file_put_contents($secret, 'outside');
-        $link = $store->baseDirectory($template) . '/' . hash('sha256', 'outside');
+        symlink($secret, $store->workDirectory($template) . '/link.txt');
+        symlink(sys_get_temp_dir(), $store->workDirectory($template) . '/dirlink');
+
+        try {
+            $this->assertSame(['real.txt'], collect($store->scan($template))->pluck('path')->all());
+            foreach (['link.txt', 'dirlink/anything'] as $path) {
+                try {
+                    $store->resolve($template, $path);
+                    $this->fail('A symlink must not be resolvable: ' . $path);
+                } catch (DisplayException) {
+                    $this->addToAssertionCount(1);
+                }
+            }
+            $this->service->publish($template);
+            $this->assertSame(['real.txt'], $template->refresh()->files()->pluck('path')->all());
+        } finally {
+            @unlink($secret);
+        }
+    }
+
+    public function testAPlantedSymlinkInTheBlobStoreIsNotFollowed(): void
+    {
+        if (DIRECTORY_SEPARATOR === '\\') {
+            $this->markTestSkipped('Creating symlinks needs elevated rights on Windows.');
+        }
+
+        $template = $this->makeTemplate();
+        $store = app(TemplateFileStore::class);
+        $this->service->putFile($template, 'real.txt', 'real');
+        $this->service->publish($template);
+
+        $secret = tempnam(sys_get_temp_dir(), 'secret');
+        file_put_contents($secret, 'outside');
+        $link = $store->blobDirectory($template) . '/' . hash('sha256', 'outside');
         symlink($secret, $link);
 
         try {
             $store->read($template, hash('sha256', 'outside'));
             $this->fail('A symlink must not be readable.');
         } catch (DisplayException) {
-            $this->assertSame('real', $store->read($template, $hash));
+            $this->assertSame('real', $store->read($template, hash('sha256', 'real')));
         } finally {
             @unlink($link);
             @unlink($secret);
@@ -218,6 +363,7 @@ class TemplateServiceTest extends IntegrationTestCase
         $node = $this->makeNode();
         $template = $this->makeTemplate(['placement_mode' => 'allowed_nodes', 'allowed_nodes' => [$node->id]]);
         $this->service->putFile($template, 'motd.txt', 'hello');
+        $this->service->publish($template);
 
         $copy = $this->service->duplicate($template->refresh());
 
@@ -226,7 +372,8 @@ class TemplateServiceTest extends IntegrationTestCase
         $this->assertSame('lobby-copy', $copy->slug);
         $this->assertSame(1, $copy->revision);
         $this->assertSame([$node->id], $copy->allowedNodes()->pluck('nodes.id')->all());
-        $this->assertSame('hello', app(TemplateFileStore::class)->readFile($copy->files()->first()));
+        $this->assertSame('hello', app(TemplateFileStore::class)->read($copy, $copy->files()->first()->sha256));
+        $this->assertSame('hello', file_get_contents(app(TemplateFileStore::class)->workDirectory($copy) . '/motd.txt'));
         $this->assertCount(2, $this->service->snapshot($copy)['variables']);
     }
 

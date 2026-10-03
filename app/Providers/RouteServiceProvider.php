@@ -67,6 +67,11 @@ class RouteServiceProvider extends ServiceProvider
                 ->prefix('/api/remote')
                 ->scopeBindings()
                 ->group(base_path('routes/api-remote.php'));
+
+            // Endpoints for the template SFTP process (shared service token, closed when none is configured).
+            Route::middleware(['throttle:600,1', \Pterodactyl\Http\Middleware\Api\RequireSftpServiceToken::class])
+                ->prefix('/api/internal')
+                ->group(base_path('routes/api-internal.php'));
         });
     }
 

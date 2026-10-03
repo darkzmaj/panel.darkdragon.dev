@@ -40,6 +40,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
  * @property bool $temporary
  * @property int|null $ttl_minutes
  * @property bool $allow_instance_delete
+ * @property \Illuminate\Support\Carbon|null $published_at
+ * @property \Illuminate\Support\Carbon|null $working_changed_at
  * @property Egg $egg
  * @property Nest $nest
  * @property Node|null $node
@@ -57,7 +59,7 @@ class ServerTemplate extends Model
 
     protected $table = 'server_templates';
 
-    protected $guarded = ['id', 'uuid', 'revision', 'created_at', 'updated_at'];
+    protected $guarded = ['id', 'uuid', 'revision', 'published_at', 'working_changed_at', 'created_at', 'updated_at'];
 
     protected $casts = [
         'id' => 'int',
@@ -82,6 +84,8 @@ class ServerTemplate extends Model
         'temporary' => 'bool',
         'ttl_minutes' => 'int',
         'allow_instance_delete' => 'bool',
+        'published_at' => 'datetime',
+        'working_changed_at' => 'datetime',
     ];
 
     public function getRouteKeyName(): string
@@ -136,6 +140,14 @@ class ServerTemplate extends Model
     public function revisions(): HasMany
     {
         return $this->hasMany(ServerTemplateRevision::class, 'template_id')->orderByDesc('revision');
+    }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany<TemplateSftpCredential, $this>
+     */
+    public function sftpCredentials(): HasMany
+    {
+        return $this->hasMany(TemplateSftpCredential::class, 'template_id')->orderByDesc('id');
     }
 
     /**

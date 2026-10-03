@@ -33,6 +33,7 @@ class TemplateProvisioningServiceTest extends IntegrationTestCase
     public function setUp(): void
     {
         parent::setUp();
+        $this->useTemplateStorage();
 
         \Illuminate\Support\Facades\Queue::fake();
 
@@ -94,6 +95,7 @@ class TemplateProvisioningServiceTest extends IntegrationTestCase
         $template = $this->makeTemplate(['placement_mode' => 'fixed_node', 'node_id' => $node->id, 'additional_allocations' => 1]);
         $service->putFile($template, 'plugins/config.yml', "motd: hi\n");
         $service->putFile($template, 'server.properties', "a=b\n");
+        $service->publish($template);
         $template->refresh();
 
         $this->server->shouldReceive('create')->once()->with(false);

@@ -237,6 +237,15 @@ Route::group(['prefix' => 'templates'], function () {
     Route::get('/view/{template:id}/files/content', [Admin\TemplateController::class, 'readFile'])->name('admin.templates.files.read');
     Route::put('/view/{template:id}/files', [Admin\TemplateController::class, 'writeFile'])->name('admin.templates.files.write');
     Route::delete('/view/{template:id}/files', [Admin\TemplateController::class, 'deleteFile'])->name('admin.templates.files.delete');
+    Route::put('/view/{template:id}/files/upload', [Admin\TemplateController::class, 'uploadFile'])->name('admin.templates.files.upload');
+    Route::post('/view/{template:id}/files/folder', [Admin\TemplateController::class, 'makeFolder'])->name('admin.templates.files.folder');
+    Route::post('/view/{template:id}/files/move', [Admin\TemplateController::class, 'moveFile'])->name('admin.templates.files.move');
+    Route::get('/view/{template:id}/files/download', [Admin\TemplateController::class, 'downloadFile'])->name('admin.templates.files.download');
+    Route::post('/view/{template:id}/publish', [Admin\TemplateController::class, 'publish'])->name('admin.templates.publish');
+
+    Route::get('/view/{template:id}/sftp', [Admin\TemplateController::class, 'sftp'])->name('admin.templates.sftp');
+    Route::post('/view/{template:id}/sftp', [Admin\TemplateController::class, 'createSftp'])->middleware('throttle:20,1');
+    Route::delete('/view/{template:id}/sftp/{credential}', [Admin\TemplateController::class, 'revokeSftp'])->whereNumber('credential');
 
     Route::post('/view/{template:id}/instances', [Admin\TemplateController::class, 'createInstance'])->name('admin.templates.instances');
     Route::get('/view/{template:id}/instances/{instance:uuid}', [Admin\TemplateController::class, 'instanceStatus'])->name('admin.templates.instances.status');

@@ -6,6 +6,7 @@ use Ramsey\Uuid\Uuid;
 use Illuminate\Support\Arr;
 use Pterodactyl\Models\ApiKey;
 use Pterodactyl\Models\EggVariable;
+use Illuminate\Support\Facades\Cache;
 use Pterodactyl\Models\ServerTemplate;
 use Pterodactyl\Models\TemplateInstance;
 use Pterodactyl\Exceptions\DisplayException;
@@ -26,6 +27,7 @@ class TemplateInstanceService
     public function __construct(
         private ValidationFactory $validator,
         private ServerDeletionService $deletion,
+        private TemplateNameService $names,
     ) {
     }
 
@@ -57,6 +59,11 @@ class TemplateInstanceService
             }
         }
 
+        // A name containing a placeholder (for example "Hub %number%") is expanded under a lock together with creating the
+        // instance, so two requests made at the same moment cannot be handed the same number.
+        $lock = $this->names->hasPlaceholders($data['name']) ? Cache::lock('template-instance-name', 15) : null;
+        $lock?->block(10);
+
         try {
             $instance = TemplateInstance::query()->create([
                 'uuid' => Uuid::uuid4()->toString(),
@@ -64,7 +71,7 @@ class TemplateInstanceService
                 'template_revision' => $template->revision,
                 'owner_id' => $data['owner_id'],
                 'api_key_id' => $key?->id,
-                'name' => $data['name'],
+                'name' => $this->names->expand($data['name']),
                 'state' => TemplateInstance::STATE_QUEUED,
                 'attempts' => 0,
                 'overrides' => array_filter([
@@ -78,6 +85,8 @@ class TemplateInstanceService
         } catch (UniqueConstraintViolationException) {
             // A concurrent request with the same key won the race.
             return [$this->assertSameRequest($this->findByKey($template, $idempotencyKey), $hash), false];
+        } finally {
+            $lock?->release();
         }
 
         ProvisionTemplateInstanceJob::dispatch($instance);

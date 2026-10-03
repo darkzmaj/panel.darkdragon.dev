@@ -33,6 +33,9 @@ class TemplateProvisioningService
     public const INSTALL_TIMEOUT_SECONDS = 900;
     public const POLL_SECONDS = 5;
 
+    /** Files up to this size are sent from memory; larger ones are streamed. */
+    public const INLINE_BYTES = 4 * 1024 * 1024;
+
     public function __construct(
         private TemplateService $templates,
         private TemplateFileStore $files,
@@ -280,7 +283,15 @@ class TemplateProvisioningService
         $created = [];
         foreach ($snapshot['files'] as $file) {
             $path = $this->files->normalizePath($file['path']);
-            $content = $this->files->read($instance->template, $file['sha256']);
+            // Small files are sent as text; anything larger is streamed from the stored blob.
+            $blob = $this->files->blobPath($instance->template, $file['sha256']);
+            $stream = null;
+            if ($file['size'] <= self::INLINE_BYTES) {
+                $content = $this->files->read($instance->template, $file['sha256']);
+            } else {
+                $stream = fopen($blob, 'rb');
+                $content = $stream;
+            }
 
             $parent = '/';
             $segments = explode('/', $path);
@@ -294,7 +305,13 @@ class TemplateProvisioningService
                 $parent = $directory;
             }
 
-            $this->daemonFiles->putContent(rtrim($parent, '/') . '/' . $name, $content);
+            try {
+                $this->daemonFiles->putContent(rtrim($parent, '/') . '/' . $name, $content);
+            } finally {
+                if (is_resource($stream)) {
+                    fclose($stream);
+                }
+            }
         }
 
         // Health check: the node must still know the server before it is declared usable.

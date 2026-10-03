@@ -113,20 +113,36 @@ trait BuildsTemplates
         return app(TemplateService::class)->create($this->templateInput($override));
     }
 
+    /** Template files of a test live in their own temporary directory, never in the real storage. */
+    protected ?string $templateStorage = null;
+
+    protected function useTemplateStorage(): void
+    {
+        $this->templateStorage = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'gobia-tpl-' . bin2hex(random_bytes(6));
+        config(['gobia_templates.storage' => $this->templateStorage]);
+    }
+
     protected function removeTemplateStorage(): void
     {
-        $root = storage_path('app/private/templates');
-        if (!is_dir($root)) {
+        $directory = $this->templateStorage;
+        $this->templateStorage = null;
+        if (!$directory || !str_starts_with($directory, sys_get_temp_dir()) || !is_dir($directory)) {
             return;
         }
-        foreach (glob($root . '/*/blobs/*') ?: [] as $file) {
-            @unlink($file);
-        }
-        foreach (glob($root . '/*/blobs') ?: [] as $dir) {
-            @rmdir($dir);
-        }
-        foreach (glob($root . '/*') ?: [] as $dir) {
-            @rmdir($dir);
-        }
+
+        $remove = function (string $path) use (&$remove): void {
+            if (is_link($path) || is_file($path)) {
+                @unlink($path);
+
+                return;
+            }
+            foreach (scandir($path) ?: [] as $name) {
+                if ($name !== '.' && $name !== '..') {
+                    $remove($path . DIRECTORY_SEPARATOR . $name);
+                }
+            }
+            @rmdir($path);
+        };
+        $remove($directory);
     }
 }

@@ -11,8 +11,8 @@ use Pterodactyl\Models\TemplateInstance;
 use Pterodactyl\Services\Acl\Api\AdminAcl;
 use Pterodactyl\Jobs\ProvisionTemplateInstanceJob;
 use Pterodactyl\Tests\Traits\Integration\BuildsTemplates;
-use Pterodactyl\Tests\Traits\Integration\RemovesAddedRows;
 use Pterodactyl\Repositories\Wings\DaemonServerRepository;
+use Pterodactyl\Tests\Traits\Integration\RemovesAddedRows;
 use Pterodactyl\Tests\Integration\Api\Application\ApplicationApiIntegrationTestCase;
 
 class TemplateInstanceApiTest extends ApplicationApiIntegrationTestCase
@@ -30,6 +30,7 @@ class TemplateInstanceApiTest extends ApplicationApiIntegrationTestCase
     public function setUp(): void
     {
         parent::setUp();
+        $this->useTemplateStorage();
 
         $this->rememberHighWater();
         Queue::fake();

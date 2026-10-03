@@ -24,6 +24,12 @@ class TemplatePlacementServiceTest extends IntegrationTestCase
         return app(TemplatePlacementService::class);
     }
 
+    public function setUp(): void
+    {
+        parent::setUp();
+        $this->useTemplateStorage();
+    }
+
     public function tearDown(): void
     {
         $this->removeTemplateStorage();
