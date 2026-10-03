@@ -14,10 +14,10 @@ class FooterService
      */
     public function build(): array
     {
-        $site = rtrim((string) config('gobia.site_url'), '/');
+        $site = rtrim((string) config('gobia_ui.site_url'), '/');
 
         $columns = [];
-        foreach ((array) config('gobia.footer') as $title => $links) {
+        foreach ((array) config('gobia_ui.footer') as $title => $links) {
             $columns[] = [
                 'title' => (string) $title,
                 'links' => array_map(fn (array $link) => [
@@ -29,9 +29,9 @@ class FooterService
         }
 
         return [
-            'tagline_strong' => (string) config('gobia.tagline_strong'),
-            'tagline' => (string) config('gobia.tagline'),
-            'discord_url' => config('gobia.discord_url') ?: null,
+            'tagline_strong' => (string) config('gobia_ui.tagline_strong'),
+            'tagline' => (string) config('gobia_ui.tagline'),
+            'discord_url' => config('gobia_ui.discord_url') ?: null,
             'columns' => $columns,
         ];
     }

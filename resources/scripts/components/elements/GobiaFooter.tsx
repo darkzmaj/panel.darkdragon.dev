@@ -3,7 +3,7 @@ import { useStoreState } from 'easy-peasy';
 import { ApplicationStore } from '@/state';
 
 // A replica of the gobia.cloud footer (same markup and classes as resources/views/partials/gobia/footer.blade.php).
-// Link targets come from config/gobia.php through the site settings.
+// Link targets come from config/gobia_ui.php through the site settings.
 const GobiaFooter = () => {
     const footer = useStoreState((state: ApplicationStore) => state.settings.data?.footer);
     if (!footer) return null;
