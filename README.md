@@ -56,3 +56,7 @@ git tag v<new>-gobia.1 && git push origin main --tags     # CI builds and publis
 ```
 
 Performance measurements: [`docs/performance-baseline.md`](docs/performance-baseline.md), [`docs/performance-after.md`](docs/performance-after.md).
+
+## Server templates
+
+Network -> Templates lets administrators define blueprints (software, resources, placement, variables, files, lifecycle) and create servers from them in the admin area or through a narrowly scoped Application API endpoint, with queued provisioning and idempotency keys. See [`docs/server-templates.md`](docs/server-templates.md). Phase 2 navigation measurements: [`docs/performance-phase2-hardening.md`](docs/performance-phase2-hardening.md).

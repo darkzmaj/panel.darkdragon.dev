@@ -38,3 +38,9 @@ Production bundle (uncompressed) after the change: `bundle` 529 KB, `server-page
 when the file workspace opens.
 
 Not measured: render counts per navigation (no profiler run was done), gzip sizes.
+
+## Admin template editor
+
+The admin Files tab for server templates is a separate webpack entry (`template-editor`, about 140 KB uncompressed, includes
+React). It is only loaded on the template editor page; the Monaco chunk it shares with the file workspace is fetched when the
+Files tab is first shown. Neither is referenced by the panel's main bundle, so the dashboard, account and login pages are unaffected.
