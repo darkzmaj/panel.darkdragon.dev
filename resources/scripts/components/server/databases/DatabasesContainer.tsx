@@ -9,6 +9,8 @@ import CreateDatabaseButton from '@/components/server/databases/CreateDatabaseBu
 import Can from '@/components/elements/Can';
 import useFlash from '@/plugins/useFlash';
 import tw from 'twin.macro';
+import { Database } from 'lucide-react';
+import EmptyState from '@/components/elements/EmptyState';
 import Fade from '@/components/elements/Fade';
 import ServerContentBlock from '@/components/elements/ServerContentBlock';
 import { useDeepMemoize } from '@/plugins/useDeepMemoize';
@@ -53,11 +55,14 @@ export default () => {
                                 />
                             ))
                         ) : (
-                            <p css={tw`text-center text-sm text-neutral-300`}>
+                            <EmptyState
+                                icon={Database}
+                                title={databaseLimit > 0 ? 'No databases yet' : 'Databases are turned off'}
+                            >
                                 {databaseLimit > 0
-                                    ? 'It looks like you have no databases.'
-                                    : 'Databases cannot be created for this server.'}
-                            </p>
+                                    ? 'Create a database for plugins and mods that need one.'
+                                    : 'This instance is not allowed to create databases.'}
+                            </EmptyState>
                         )}
                         <Can action={'database.create'}>
                             <div css={tw`mt-6 flex items-center justify-end`}>

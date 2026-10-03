@@ -6,6 +6,8 @@ import CreateBackupButton from '@/components/server/backups/CreateBackupButton';
 import FlashMessageRender from '@/components/FlashMessageRender';
 import BackupRow from '@/components/server/backups/BackupRow';
 import tw from 'twin.macro';
+import { Archive } from 'lucide-react';
+import EmptyState from '@/components/elements/EmptyState';
 import getServerBackups, { Context as ServerBackupContext } from '@/api/swr/getServerBackups';
 import { ServerContext } from '@/state/server';
 import ServerContentBlock from '@/components/elements/ServerContentBlock';
@@ -41,11 +43,11 @@ const BackupContainer = () => {
                         // Don't show any error messages if the server has no backups and the user cannot
                         // create additional ones for the server.
                         !backupLimit ? null : (
-                            <p css={tw`text-center text-sm text-neutral-300`}>
+                            <EmptyState icon={Archive} title={page > 1 ? 'No more backups' : 'No backups yet'}>
                                 {page > 1
-                                    ? "Looks like we've run out of backups to show you, try going back a page."
-                                    : 'It looks like there are no backups currently stored for this server.'}
-                            </p>
+                                    ? 'There are no backups on this page, try going back a page.'
+                                    : 'Create a backup to keep a restorable copy of this instance.'}
+                            </EmptyState>
                         )
                     ) : (
                         items.map((backup, index) => (
@@ -55,9 +57,9 @@ const BackupContainer = () => {
                 }
             </Pagination>
             {backupLimit === 0 && (
-                <p css={tw`text-center text-sm text-neutral-300`}>
-                    Backups cannot be created for this server because the backup limit is set to 0.
-                </p>
+                <EmptyState icon={Archive} title={'Backups are turned off'}>
+                    The backup limit for this instance is set to 0, so backups cannot be created.
+                </EmptyState>
             )}
             <Can action={'backup.create'}>
                 <div css={tw`mt-6 sm:flex items-center justify-end`}>

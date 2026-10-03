@@ -199,7 +199,10 @@ export default () => {
 
     return (
         <div className={classNames(styles.terminal, 'relative')}>
-            <SpinnerOverlay visible={!connected} size={'large'} />
+            {/* The terminal stays dark in both themes, so its loading overlay uses the dark palette too. */}
+            <div style={{ display: 'contents', ['--n-100' as string]: '230 237 246', ['--n-900' as string]: '7 11 17' }}>
+                <SpinnerOverlay visible={!connected} size={'large'} />
+            </div>
             <div
                 className={classNames(styles.container, styles.overflows_container, { 'rounded-b': !canSendCommands })}
             >

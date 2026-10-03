@@ -3,6 +3,7 @@ import ContentBox from '@/components/elements/ContentBox';
 import SpinnerOverlay from '@/components/elements/SpinnerOverlay';
 import FlashMessageRender from '@/components/FlashMessageRender';
 import PageContentBlock from '@/components/elements/PageContentBlock';
+import PageHeader from '@/components/elements/PageHeader';
 import tw from 'twin.macro';
 import GreyRowBox from '@/components/elements/GreyRowBox';
 import { useSSHKeys } from '@/api/account/ssh-keys';
@@ -26,8 +27,9 @@ export default () => {
 
     return (
         <PageContentBlock title={'SSH Keys'}>
+            <PageHeader title={'SSH keys'} subtitle={'Public keys that may sign in to your instances over SFTP.'} />
             <FlashMessageRender byKey={'account'} />
-            <div css={tw`md:flex flex-nowrap my-10`}>
+            <div css={tw`md:flex flex-nowrap mb-10`}>
                 <ContentBox title={'Add SSH Key'} css={tw`flex-none w-full md:w-1/2`}>
                     <CreateSSHKeyForm />
                 </ContentBox>

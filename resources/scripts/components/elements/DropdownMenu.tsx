@@ -1,6 +1,4 @@
 import React, { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
-import styled from 'styled-components/macro';
-import tw from 'twin.macro';
 import Popover from '@/components/elements/Popover';
 
 interface Props {
@@ -8,16 +6,19 @@ interface Props {
     renderToggle: (onClick: (e: React.MouseEvent<any, MouseEvent>) => void) => React.ReactChild;
 }
 
-export const DropdownButtonRow = styled.button.attrs({ role: 'menuitem' })<{ danger?: boolean }>`
-    ${tw`p-2 flex items-center rounded w-full text-neutral-500`};
-    transition: 150ms all ease;
-
-    &:hover,
-    &:focus {
-        ${(props) => (props.danger ? tw`text-red-700 bg-red-100` : tw`text-neutral-700 bg-neutral-100`)};
-        outline: none;
-    }
-`;
+// A menu entry; the look comes from the shared .gb-menu-item style so every menu in the Panel matches.
+export const DropdownButtonRow = ({
+    danger,
+    className,
+    ...props
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & { danger?: boolean }) => (
+    <button
+        type={'button'}
+        role={'menuitem'}
+        className={'gb-menu-item' + (danger ? ' danger' : '') + (className ? ' ' + className : '')}
+        {...props}
+    />
+);
 
 export interface DropdownMenuHandle {
     // Opens (or closes) the menu next to its toggle, for example from a right click on the row.
@@ -45,13 +46,7 @@ const DropdownMenu = forwardRef<DropdownMenuHandle, Props>(({ children, renderTo
                 setAnchor(e.currentTarget as HTMLElement);
                 setOpen((v) => !v);
             })}
-            <Popover
-                anchor={anchor}
-                open={open}
-                onClose={close}
-                align={'end'}
-                className={'w-48 bg-white p-2 rounded border border-neutral-700 shadow-lg text-neutral-500'}
-            >
+            <Popover anchor={anchor} open={open} onClose={close} align={'end'} className={'gb-menu'}>
                 <div onClick={close}>{children}</div>
             </Popover>
         </div>

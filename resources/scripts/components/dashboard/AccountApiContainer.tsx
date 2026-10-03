@@ -9,6 +9,7 @@ import deleteApiKey from '@/api/account/deleteApiKey';
 import FlashMessageRender from '@/components/FlashMessageRender';
 import { format } from 'date-fns';
 import PageContentBlock from '@/components/elements/PageContentBlock';
+import PageHeader from '@/components/elements/PageHeader';
 import tw from 'twin.macro';
 import GreyRowBox from '@/components/elements/GreyRowBox';
 import { Dialog } from '@/components/elements/dialog';
@@ -43,8 +44,9 @@ export default () => {
 
     return (
         <PageContentBlock title={'Account API'}>
+            <PageHeader title={'API credentials'} subtitle={'Keys for scripts and tools that act as you.'} />
             <FlashMessageRender byKey={'account'} />
-            <div css={tw`md:flex flex-nowrap my-10`}>
+            <div css={tw`md:flex flex-nowrap mb-10`}>
                 <ContentBox title={'Create API Key'} css={tw`flex-none w-full md:w-1/2`}>
                     <CreateApiKeyForm onKeyCreated={(key) => setKeys((s) => [...s!, key])} />
                 </ContentBox>
@@ -60,8 +62,8 @@ export default () => {
                         All requests using the <Code>{deleteIdentifier}</Code> key will be invalidated.
                     </Dialog.Confirm>
                     {keys.length === 0 ? (
-                        <p css={tw`text-center text-sm`}>
-                            {loading ? 'Loading...' : 'No API keys exist for this account.'}
+                        <p css={tw`text-center text-sm text-neutral-300 py-6`}>
+                            {loading ? 'Loading...' : 'No API keys yet. Create one to get started.'}
                         </p>
                     ) : (
                         keys.map((key, index) => (

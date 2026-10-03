@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ActivityLogFilters, useActivityLogs } from '@/api/account/activity';
 import { useFlashKey } from '@/plugins/useFlash';
 import PageContentBlock from '@/components/elements/PageContentBlock';
+import PageHeader from '@/components/elements/PageHeader';
 import FlashMessageRender from '@/components/FlashMessageRender';
 import { Link } from 'react-router-dom';
 import PaginationFooter from '@/components/elements/table/PaginationFooter';
@@ -32,6 +33,7 @@ export default () => {
 
     return (
         <PageContentBlock title={'Account Activity Log'}>
+            <PageHeader title={'Activity'} subtitle={'Sign-ins and changes made to your account.'} />
             <FlashMessageRender byKey={'account'} />
             {(filters.filters?.event || filters.filters?.ip) && (
                 <div className={'flex justify-end mb-2'}>

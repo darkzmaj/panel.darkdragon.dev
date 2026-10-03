@@ -411,7 +411,6 @@ body.gb-body h4,
     padding: 24px;
     box-shadow: var(--gb-shadow-card);
 }
-.gb-card + .gb-card { margin-top: 16px; }
 .gb-card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
 .gb-card-title { margin: 0; font-size: 18px; font-weight: 600; font-family: var(--gb-font-display); color: var(--gb-text-strong); }
 .gb-card-sub { margin: 4px 0 0; color: var(--gb-text-2); font-size: 14px; }
@@ -862,3 +861,10 @@ div.gb-file-details { cursor: default; }
 .gb-editor-bar { display: flex; flex: none; align-items: center; height: 40px; padding: 0 8px; border-bottom: 1px solid var(--gb-border-muted); background: var(--gb-bg); font-size: 12px; color: var(--gb-text-3); }
 .gb-drawer-mask { position: absolute; inset: 0; z-index: 10; background: var(--gb-overlay); }
 .gb-drawer { position: absolute; top: 0; bottom: 0; left: 0; z-index: 20; display: flex; flex-direction: column; width: 18rem; max-width: 85%; background: var(--gb-surface); border-right: 1px solid var(--gb-border-muted); box-shadow: var(--gb-shadow-pop); }
+
+/* ------------------------------------------------------------------ empty states */
+.gb-emptystate { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 40px 20px; border: 1px dashed var(--gb-border); border-radius: var(--gb-radius-lg); background: var(--gb-surface); text-align: center; }
+.gb-emptystate > span { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin-bottom: 4px; border-radius: 12px; background: var(--gb-surface-2); color: var(--gb-text-2); }
+.gb-emptystate svg { width: 22px; height: 22px; }
+.gb-emptystate strong { font-size: 16px; color: var(--gb-text-strong); }
+.gb-emptystate p { margin: 0; max-width: 46ch; color: var(--gb-text-2); font-size: 14px; line-height: 1.5; }

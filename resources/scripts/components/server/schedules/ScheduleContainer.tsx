@@ -10,6 +10,8 @@ import EditScheduleModal from '@/components/server/schedules/EditScheduleModal';
 import Can from '@/components/elements/Can';
 import useFlash from '@/plugins/useFlash';
 import tw from 'twin.macro';
+import { CalendarClock } from 'lucide-react';
+import EmptyState from '@/components/elements/EmptyState';
 import GreyRowBox from '@/components/elements/GreyRowBox';
 import { Button } from '@/components/elements/button/index';
 import ServerContentBlock from '@/components/elements/ServerContentBlock';
@@ -45,9 +47,9 @@ export default () => {
             ) : (
                 <>
                     {schedules.length === 0 ? (
-                        <p css={tw`text-sm text-center text-neutral-300`}>
-                            There are no schedules configured for this server.
-                        </p>
+                        <EmptyState icon={CalendarClock} title={'No schedules yet'}>
+                            Schedules run commands and power actions for you at set times.
+                        </EmptyState>
                     ) : (
                         schedules.map((schedule) => (
                             <GreyRowBox
