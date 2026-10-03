@@ -1,4 +1,4 @@
-import { ExclamationIcon, ShieldExclamationIcon } from '@heroicons/react/outline';
+import { ShieldAlert, TriangleAlert } from 'lucide-react';
 import React from 'react';
 import classNames from 'classnames';
 
@@ -9,21 +9,23 @@ interface AlertProps {
 }
 
 export default ({ type, className, children }: AlertProps) => {
+    const tone = type === 'danger' ? 'var(--gb-danger)' : 'var(--gb-warning)';
+
     return (
         <div
-            className={classNames(
-                'flex items-center border-l-8 text-gray-50 rounded-md shadow px-4 py-3',
-                {
-                    ['border-red-500 bg-red-500/25']: type === 'danger',
-                    ['border-yellow-500 bg-yellow-500/25']: type === 'warning',
-                },
-                className
-            )}
+            className={classNames('flex items-center px-4 py-3 text-sm', className)}
+            style={{
+                border: `1px solid rgb(${tone} / 0.35)`,
+                background: `rgb(${tone} / 0.1)`,
+                borderRadius: 'var(--gb-radius-md)',
+                color: 'var(--gb-text-strong)',
+            }}
+            role={'alert'}
         >
             {type === 'danger' ? (
-                <ShieldExclamationIcon className={'w-6 h-6 text-red-400 mr-2'} />
+                <ShieldAlert className={'w-5 h-5 mr-3 flex-none'} style={{ color: `rgb(${tone})` }} aria-hidden />
             ) : (
-                <ExclamationIcon className={'w-6 h-6 text-yellow-500 mr-2'} />
+                <TriangleAlert className={'w-5 h-5 mr-3 flex-none'} style={{ color: `rgb(${tone})` }} aria-hidden />
             )}
             {children}
         </div>

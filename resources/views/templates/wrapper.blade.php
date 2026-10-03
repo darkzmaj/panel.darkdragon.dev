@@ -10,7 +10,7 @@
             <meta name="csrf-token" content="{{ csrf_token() }}">
             <meta name="robots" content="noindex">
             @include('partials.favicons')
-            <meta name="theme-color" content="#0e4688">
+            <meta name="theme-color" content="#0a0f17">
         @show
 
         @section('user-data')
@@ -26,11 +26,13 @@
             @endif
         @show
 
+        @include('partials.gobia.head')
+
         @yield('assets')
 
         @include('layouts.scripts')
     </head>
-    <body class="{{ $css['body'] ?? 'bg-neutral-50' }}">
+    <body class="gb-body">
         @section('content')
             @yield('above-container')
             @yield('container')

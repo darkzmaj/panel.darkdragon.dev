@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Actions, useStoreActions } from 'easy-peasy';
 import tw from 'twin.macro';
+import PageHeader from '@/components/elements/PageHeader';
 import useSWR from 'swr';
 import { useLocation } from 'react-router-dom';
 import { Server } from '@/api/server/getServer';
@@ -87,7 +88,8 @@ export default () => {
 
     return (
         <PageContentBlock title={'Dashboard'}>
-            <div css={tw`mb-3`}>
+            <PageHeader title={'Instances'} subtitle={'Everything you own or have been given access to.'} />
+            <div css={tw`mb-4`}>
                 {layoutError ? (
                     <p css={tw`text-sm text-red-300`}>
                         Could not load your categories.{' '}
@@ -120,7 +122,9 @@ export default () => {
                         items.length > 0 ? (
                             <SortableServerList servers={items} onReorder={reorder} />
                         ) : (
-                            <p css={tw`text-center text-sm text-neutral-400 py-10`}>{EMPTY[filter.kind]}</p>
+                            <p className={'gb-list'} css={tw`text-center text-sm text-neutral-400 py-10`}>
+                                {EMPTY[filter.kind]}
+                            </p>
                         )
                     }
                 </Pagination>
@@ -130,7 +134,11 @@ export default () => {
                 visible={editing}
                 layout={layout}
                 onClose={() => setEditing(false)}
-                onChanged={(fresh) => {
+                onChanged={(fresh, deleted) => {
+                    // Leave a deleted category first: the list below must never be refetched for an id that no longer exists.
+                    if (deleted !== undefined && filter.kind === 'category' && filter.id === deleted) {
+                        setFilter({ kind: 'all' });
+                    }
                     // Membership changes alter what a category view lists, so refetch both.
                     fresh ? mutateLayout(fresh, false) : mutateLayout();
                     mutate();

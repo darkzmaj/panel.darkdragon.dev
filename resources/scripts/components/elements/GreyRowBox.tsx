@@ -1,12 +1,24 @@
 import styled from 'styled-components/macro';
 import tw from 'twin.macro';
 
+// A bordered row on a surface, for lists of records (backups, API keys, SSH keys...).
 export default styled.div<{ $hoverable?: boolean }>`
-    ${tw`flex rounded no-underline text-neutral-200 items-center bg-neutral-700 p-4 border border-transparent transition-colors duration-150 overflow-hidden`};
+    ${tw`flex no-underline items-center p-4 overflow-hidden`};
+    color: var(--gb-text);
+    background: var(--gb-surface);
+    border: 1px solid var(--gb-border-muted);
+    border-radius: var(--gb-radius-lg);
+    transition: border-color var(--gb-duration) var(--gb-ease), background var(--gb-duration) var(--gb-ease);
 
-    ${(props) => props.$hoverable !== false && tw`hover:border-neutral-500`};
+    ${(props) => props.$hoverable !== false && `&:hover { border-color: rgb(var(--n-500)); }`};
 
     & .icon {
-        ${tw`rounded-full w-16 flex items-center justify-center bg-neutral-500 p-3`};
+        ${tw`flex items-center justify-center flex-none`};
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        border: 1px solid var(--gb-border-muted);
+        background: var(--gb-bg);
+        color: var(--gb-primary);
     }
 `;

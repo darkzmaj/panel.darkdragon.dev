@@ -1,9 +1,6 @@
 import React, { useEffect } from 'react';
-import ContentContainer from '@/components/elements/ContentContainer';
-import { CSSTransition } from 'react-transition-group';
-import tw from 'twin.macro';
-import Copyright from '@/components/elements/Copyright';
 import FlashMessageRender from '@/components/FlashMessageRender';
+import tw from 'twin.macro';
 
 export interface PageContentBlockProps {
     title?: string;
@@ -11,6 +8,7 @@ export interface PageContentBlockProps {
     showFlashKey?: string;
 }
 
+// The body of a page inside the application shell. The shell provides the width, padding and footer.
 const PageContentBlock: React.FC<PageContentBlockProps> = ({ title, showFlashKey, className, children }) => {
     useEffect(() => {
         if (title) {
@@ -19,17 +17,10 @@ const PageContentBlock: React.FC<PageContentBlockProps> = ({ title, showFlashKey
     }, [title]);
 
     return (
-        <CSSTransition timeout={150} classNames={'fade'} appear in>
-            <>
-                <ContentContainer css={tw`my-4 sm:my-10`} className={className}>
-                    {showFlashKey && <FlashMessageRender byKey={showFlashKey} css={tw`mb-4`} />}
-                    {children}
-                </ContentContainer>
-                <ContentContainer css={tw`mb-4`}>
-                    <Copyright css={tw`text-center text-neutral-500 text-xs`} />
-                </ContentContainer>
-            </>
-        </CSSTransition>
+        <div className={className}>
+            {showFlashKey && <FlashMessageRender byKey={showFlashKey} css={tw`mb-4`} />}
+            {children}
+        </div>
     );
 };
 

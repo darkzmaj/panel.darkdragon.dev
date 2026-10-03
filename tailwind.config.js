@@ -1,17 +1,14 @@
 const colors = require('tailwindcss/colors');
 
-const gray = {
-    50: 'hsl(216, 33%, 97%)',
-    100: 'hsl(214, 15%, 91%)',
-    200: 'hsl(210, 16%, 82%)',
-    300: 'hsl(211, 13%, 65%)',
-    400: 'hsl(211, 10%, 53%)',
-    500: 'hsl(211, 12%, 43%)',
-    600: 'hsl(209, 14%, 37%)',
-    700: 'hsl(209, 18%, 30%)',
-    800: 'hsl(209, 20%, 25%)',
-    900: 'hsl(210, 24%, 16%)',
-};
+// Every neutral / brand colour is a CSS variable defined in public/themes/gobia/gobia.css, one set for light and one
+// for dark. Components keep using classes like `bg-neutral-800` and `text-neutral-200`; what they mean (card surface,
+// secondary text, ...) is decided per theme by the tokens, so no component needs to know which theme is active.
+const STEPS = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900];
+const ramp = (channel) =>
+    Object.fromEntries(STEPS.map((step) => [step, `rgb(var(--${channel}-${step}) / <alpha-value>)`]));
+
+const neutral = ramp('n');
+const brand = ramp('p');
 
 module.exports = {
     content: [
@@ -20,16 +17,24 @@ module.exports = {
     theme: {
         extend: {
             fontFamily: {
-                header: ['"IBM Plex Sans"', '"Roboto"', 'system-ui', 'sans-serif'],
+                sans: ['"Manrope"', 'system-ui', '-apple-system', '"Segoe UI"', 'Roboto', 'sans-serif'],
+                header: ['"Space Grotesk"', '"Manrope"', 'system-ui', 'sans-serif'],
             },
             colors: {
-                black: '#131a20',
-                // "primary" and "neutral" are deprecated, prefer the use of "blue" and "gray"
-                // in new code.
-                primary: colors.blue,
-                gray: gray,
-                neutral: gray,
-                cyan: colors.cyan,
+                black: 'rgb(var(--n-black) / <alpha-value>)',
+                // "primary" and "neutral" are deprecated, prefer the use of "blue" and "gray" in new code.
+                primary: brand,
+                gray: neutral,
+                neutral,
+                // The interface accent used to be cyan; it is the Gobia blue now.
+                cyan: brand,
+                blue: brand,
+                // Status colours keep their hue but follow the theme for contrast.
+                red: colors.red,
+            },
+            borderRadius: {
+                gb: 'var(--gb-radius-md)',
+                'gb-lg': 'var(--gb-radius-lg)',
             },
             fontSize: {
                 '2xs': '0.625rem',
@@ -37,8 +42,8 @@ module.exports = {
             transitionDuration: {
                 250: '250ms',
             },
-            borderColor: theme => ({
-                default: theme('colors.neutral.400', 'currentColor'),
+            borderColor: () => ({
+                default: 'var(--gb-border)',
             }),
         },
     },

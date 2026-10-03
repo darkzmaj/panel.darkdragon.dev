@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { Dialog as HDialog } from '@headlessui/react';
 import { Button } from '@/components/elements/button/index';
-import { XIcon } from '@heroicons/react/solid';
+import { X } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { DialogContext, IconPosition, RenderDialogProps, styles } from './';
 
@@ -72,7 +72,10 @@ export default ({
                         open={open}
                         onClose={onDialogClose}
                     >
-                        <div className={'fixed inset-0 bg-gray-900/50 z-40'} />
+                        <div
+                            className={'fixed inset-0 z-40'}
+                            style={{ background: 'var(--gb-overlay)', backdropFilter: 'blur(6px)' }}
+                        />
                         <div className={'fixed inset-0 overflow-y-auto z-50'}>
                             <div
                                 ref={container}
@@ -116,7 +119,7 @@ export default ({
                                                 onClick={onClose}
                                                 className={'group'}
                                             >
-                                                <XIcon className={styles.close_icon} />
+                                                <X className={styles.close_icon} aria-hidden />
                                             </Button.Text>
                                         </div>
                                     )}

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import tw, { TwStyle } from 'twin.macro';
+import tw from 'twin.macro';
 import styled from 'styled-components/macro';
 
 export type FlashMessageType = 'success' | 'info' | 'warning' | 'error';
@@ -10,39 +10,22 @@ interface Props {
     type?: FlashMessageType;
 }
 
-const styling = (type?: FlashMessageType): TwStyle | string => {
-    switch (type) {
-        case 'error':
-            return tw`bg-red-600 border-red-800`;
-        case 'info':
-            return tw`bg-primary-600 border-primary-800`;
-        case 'success':
-            return tw`bg-green-600 border-green-800`;
-        case 'warning':
-            return tw`bg-yellow-600 border-yellow-800`;
-        default:
-            return '';
-    }
-};
-
-const getBackground = (type?: FlashMessageType): TwStyle | string => {
-    switch (type) {
-        case 'error':
-            return tw`bg-red-500`;
-        case 'info':
-            return tw`bg-primary-500`;
-        case 'success':
-            return tw`bg-green-500`;
-        case 'warning':
-            return tw`bg-yellow-500`;
-        default:
-            return '';
-    }
-};
+// Status colours are channel tokens, so each one stays readable in both themes.
+const tone = (type?: FlashMessageType) =>
+    type === 'error'
+        ? 'var(--gb-danger)'
+        : type === 'success'
+        ? 'var(--gb-success)'
+        : type === 'warning'
+        ? 'var(--gb-warning)'
+        : 'var(--p-500)';
 
 const Container = styled.div<{ $type?: FlashMessageType }>`
-    ${tw`p-2 border items-center leading-normal rounded flex w-full text-sm text-white`};
-    ${(props) => styling(props.$type)};
+    ${tw`p-3 items-center leading-normal flex w-full text-sm`};
+    border: 1px solid rgb(${(props) => tone(props.$type)} / 0.35);
+    background: rgb(${(props) => tone(props.$type)} / 0.1);
+    border-radius: var(--gb-radius-md);
+    color: var(--gb-text-strong);
 `;
 Container.displayName = 'MessageBox.Container';
 
@@ -51,10 +34,8 @@ const MessageBox = ({ title, children, type }: Props) => (
         {title && (
             <span
                 className={'title'}
-                css={[
-                    tw`flex rounded-full uppercase px-2 py-1 text-xs font-bold mr-3 leading-none`,
-                    getBackground(type),
-                ]}
+                css={tw`flex rounded-full uppercase px-2 py-1 text-xs font-bold mr-3 leading-none`}
+                style={{ background: `rgb(${tone(type)} / 0.2)`, color: `rgb(${tone(type)})` }}
             >
                 {title}
             </span>

@@ -1,13 +1,13 @@
 import React, { useContext, useEffect } from 'react';
-import { CheckIcon, ExclamationIcon, InformationCircleIcon, ShieldExclamationIcon } from '@heroicons/react/outline';
+import { Check, Info, ShieldAlert, TriangleAlert } from 'lucide-react';
 import classNames from 'classnames';
 import { DialogContext, DialogIconProps, styles } from './';
 
 const icons = {
-    danger: ShieldExclamationIcon,
-    warning: ExclamationIcon,
-    success: CheckIcon,
-    info: InformationCircleIcon,
+    danger: ShieldAlert,
+    warning: TriangleAlert,
+    success: Check,
+    info: Info,
 };
 
 export default ({ type, position, className }: DialogIconProps) => {

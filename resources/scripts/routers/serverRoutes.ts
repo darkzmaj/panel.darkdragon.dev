@@ -1,4 +1,5 @@
 import lazyWithPreload from '@/plugins/lazyWithPreload';
+import { Activity, Archive, Clock, Database, Folder, Network, Play, Settings, SquareTerminal } from 'lucide-react';
 import ServerConsole from '@/components/server/console/ServerConsoleContainer';
 import { ServerRouteDefinition } from '@/routers/types';
 
@@ -38,6 +39,7 @@ export default [
         path: '/',
         permission: null,
         name: 'Console',
+        icon: SquareTerminal,
         component: ServerConsole,
         exact: true,
     },
@@ -45,6 +47,7 @@ export default [
         path: '/files',
         permission: 'file.*',
         name: 'Files',
+        icon: Folder,
         component: FileManagerContainer,
         preload: FileManagerContainer.preload,
         idle: true,
@@ -60,6 +63,7 @@ export default [
         path: '/databases',
         permission: 'database.*',
         name: 'Databases',
+        icon: Database,
         component: DatabasesContainer,
         preload: DatabasesContainer.preload,
         idle: true,
@@ -68,6 +72,7 @@ export default [
         path: '/schedules',
         permission: 'schedule.*',
         name: 'Schedules',
+        icon: Clock,
         component: ScheduleContainer,
         preload: ScheduleContainer.preload,
         idle: true,
@@ -84,6 +89,7 @@ export default [
         path: '/backups',
         permission: 'backup.*',
         name: 'Backups',
+        icon: Archive,
         component: BackupContainer,
         preload: BackupContainer.preload,
         idle: true,
@@ -92,6 +98,7 @@ export default [
         path: '/network',
         permission: 'allocation.*',
         name: 'Network',
+        icon: Network,
         component: NetworkContainer,
         preload: NetworkContainer.preload,
         idle: true,
@@ -100,6 +107,7 @@ export default [
         path: '/startup',
         permission: 'startup.*',
         name: 'Startup',
+        icon: Play,
         component: StartupContainer,
         preload: StartupContainer.preload,
         idle: true,
@@ -108,6 +116,7 @@ export default [
         path: '/settings',
         permission: ['settings.*', 'file.sftp'],
         name: 'Settings',
+        icon: Settings,
         component: SettingsContainer,
         preload: SettingsContainer.preload,
         idle: true,
@@ -116,6 +125,7 @@ export default [
         path: '/activity',
         permission: 'activity.*',
         name: 'Activity',
+        icon: Activity,
         component: ServerActivityLogContainer,
         preload: ServerActivityLogContainer.preload,
         idle: true,

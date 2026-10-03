@@ -115,6 +115,18 @@ class AccountController extends ClientApiController
     }
 
     /**
+     * Store the interface theme (system, dark or light) so it follows the user between devices.
+     */
+    public function updateAppearance(Request $request): JsonResponse
+    {
+        $data = $request->validate(['theme' => 'required|string|in:system,dark,light']);
+
+        $request->user()->forceFill(['theme' => $data['theme']])->save();
+
+        return new JsonResponse(['theme' => $data['theme']]);
+    }
+
+    /**
      * Remove the authenticated user's profile picture.
      */
     public function deleteAvatar(Request $request): JsonResponse

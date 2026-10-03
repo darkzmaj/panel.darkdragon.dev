@@ -3,34 +3,42 @@
 }
 
 .panel {
-    @apply relative bg-gray-600 rounded max-w-xl w-full mx-auto shadow-lg text-left;
-    @apply ring-4 ring-gray-800 ring-opacity-80;
+    @apply relative max-w-xl w-full mx-auto text-left;
+    background: var(--gb-surface);
+    border: 1px solid var(--gb-border-muted);
+    border-radius: var(--gb-radius-xl);
+    box-shadow: var(--gb-shadow-modal);
 }
 
 .title {
-    @apply font-header text-xl font-medium mb-2 text-gray-50 pr-4;
+    @apply font-header text-xl font-semibold mb-2 pr-4;
+    color: var(--gb-text-strong);
 }
 
 .close_icon {
-    @apply w-5 h-5 group-hover:rotate-90 transition-transform duration-100;
+    @apply w-5 h-5;
 }
 
 .dialog_icon {
     @apply flex items-center justify-center w-10 h-10 rounded-full mr-4;
 
     &.danger {
-        @apply bg-red-500 text-red-50;
+        background: rgb(var(--gb-danger) / 0.16);
+        color: rgb(var(--gb-danger));
     }
 
     &.warning {
-        @apply bg-yellow-600 text-yellow-50;
+        background: rgb(var(--gb-warning) / 0.16);
+        color: rgb(var(--gb-warning));
     }
 
     &.success {
-        @apply bg-green-600 text-green-50;
+        background: rgb(var(--gb-success) / 0.16);
+        color: rgb(var(--gb-success));
     }
 
     &.info {
-        @apply bg-primary-500 text-primary-50;
+        background: var(--gb-primary-soft);
+        color: var(--gb-primary);
     }
 }

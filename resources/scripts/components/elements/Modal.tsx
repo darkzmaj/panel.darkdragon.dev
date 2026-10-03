@@ -22,7 +22,9 @@ export interface ModalProps extends RequiredModalProps {
 
 export const ModalMask = styled.div`
     ${tw`fixed z-50 overflow-auto flex w-full inset-0`};
-    background: rgba(0, 0, 0, 0.7);
+    background: var(--gb-overlay);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
 `;
 
 const ModalContainer = styled.div<{ alignTop?: boolean }>`
@@ -42,15 +44,20 @@ const ModalContainer = styled.div<{ alignTop?: boolean }>`
     margin-bottom: auto;
 
     & > .close-icon {
-        ${tw`absolute right-0 p-2 text-white cursor-pointer opacity-50 transition-all duration-150 ease-linear hover:opacity-100`};
-        top: -2.5rem;
+        ${tw`absolute p-2 cursor-pointer transition-all duration-150 ease-linear`};
+        top: 14px;
+        right: 14px;
+        z-index: 2;
+        color: var(--gb-text-2);
+        border-radius: var(--gb-radius-sm);
 
         &:hover {
-            ${tw`transform rotate-90`}
+            color: var(--gb-text-strong);
+            background: var(--gb-surface-2);
         }
 
         & > svg {
-            ${tw`w-6 h-6`};
+            ${tw`w-5 h-5`};
         }
     }
 `;
@@ -123,14 +130,24 @@ const Modal: React.FC<ModalProps> = ({
                         <Fade timeout={150} appear in>
                             <div
                                 css={tw`absolute w-full h-full rounded flex items-center justify-center`}
-                                style={{ background: 'hsla(211, 10%, 53%, 0.35)', zIndex: 9999 }}
+                                style={{
+                                    background: 'var(--gb-overlay)',
+                                    zIndex: 9999,
+                                    borderRadius: 'var(--gb-radius-xl)',
+                                }}
                             >
                                 <Spinner />
                             </div>
                         </Fade>
                     )}
                     <div
-                        css={tw`bg-neutral-800 p-3 sm:p-4 md:p-6 rounded shadow-md overflow-y-scroll transition-all duration-150`}
+                        css={tw`p-4 sm:p-6 overflow-y-auto transition-all duration-150`}
+                        style={{
+                            background: 'var(--gb-surface)',
+                            border: '1px solid var(--gb-border-muted)',
+                            borderRadius: 'var(--gb-radius-xl)',
+                            boxShadow: 'var(--gb-shadow-modal)',
+                        }}
                     >
                         {children}
                     </div>

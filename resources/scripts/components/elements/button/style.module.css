@@ -1,19 +1,31 @@
 .button {
     @apply px-4 py-2 inline-flex items-center justify-center;
-    @apply rounded text-base font-semibold transition-all duration-100;
-    @apply focus:ring-[3px] focus:ring-offset-2 focus:ring-offset-gray-700 focus:ring-opacity-50;
+    @apply text-sm font-semibold transition-all duration-100;
+    border-radius: var(--gb-radius-md);
+    min-height: var(--gb-control-h);
+    border: 1px solid transparent;
+
+    &:focus-visible {
+        outline: 2px solid var(--gb-focus);
+        outline-offset: 2px;
+    }
 
     /* Sizing Controls */
     &.small {
-        @apply px-4 py-0 h-8 font-normal text-sm focus:ring-2;
+        @apply px-3 py-0 text-sm;
+        min-height: var(--gb-control-h-sm);
+        border-radius: 8px;
     }
 
     &.large {
         @apply px-5 py-3;
+        min-height: var(--gb-control-h-lg);
     }
 
     &.secondary {
-        @apply text-gray-50 bg-transparent;
+        background: transparent;
+        color: var(--gb-text-strong);
+        border-color: var(--gb-border);
 
         &:disabled {
             background: transparent !important;
@@ -22,52 +34,75 @@
 
     &:disabled {
         @apply cursor-not-allowed;
+        opacity: 0.55;
     }
 
     &.square {
-        @apply p-0 w-12 h-12;
+        @apply p-0;
+        width: var(--gb-control-h);
+        height: var(--gb-control-h);
 
         &.small {
-            @apply w-8 h-8;
+            width: var(--gb-control-h-sm);
+            height: var(--gb-control-h-sm);
         }
     }
 }
 
 .primary {
-    @apply bg-blue-600 text-blue-50;
-    @apply hover:bg-blue-500 active:bg-blue-500 focus:ring-blue-400 focus:ring-opacity-75;
+    background: var(--gb-primary);
+    color: var(--gb-primary-fg);
 
-    &.secondary {
-        @apply hover:bg-blue-600 active:bg-blue-600;
+    &:hover:not(:disabled),
+    &:active:not(:disabled) {
+        background: var(--gb-primary-hover);
     }
 
-    &:disabled {
-        @apply bg-blue-500/75 text-blue-200/75;
+    &.secondary {
+        &:hover:not(:disabled),
+        &:active:not(:disabled) {
+            background: var(--gb-primary);
+            color: var(--gb-primary-fg);
+        }
     }
 }
 
 .text {
-    @apply bg-gray-500 text-gray-50;
-    @apply hover:bg-gray-400 active:bg-gray-400 focus:ring-gray-300 focus:ring-opacity-50;
+    background: var(--gb-surface-2);
+    color: var(--gb-text-strong);
+    border-color: var(--gb-border-muted);
 
-    &.secondary {
-        @apply hover:bg-gray-500 active:bg-gray-500;
+    &:hover:not(:disabled),
+    &:active:not(:disabled) {
+        background: rgb(var(--n-600));
     }
 
-    &:disabled {
-        @apply bg-gray-500/75 text-gray-200/75;
+    &.secondary {
+        &:hover:not(:disabled),
+        &:active:not(:disabled) {
+            background: var(--gb-surface-2);
+        }
     }
 }
 
 .danger {
-    @apply bg-red-600 text-gray-50;
-    @apply hover:bg-red-500 active:bg-red-500 focus:ring-red-400 focus:ring-opacity-75;
+    background: rgb(var(--gb-danger));
+    color: var(--gb-primary-fg);
 
-    &.secondary {
-        @apply hover:bg-red-600 active:bg-red-600;
+    &:hover:not(:disabled),
+    &:active:not(:disabled) {
+        filter: brightness(1.08);
     }
 
-    &:disabled {
-        @apply bg-red-600/75 text-red-50/75;
+    &.secondary {
+        background: transparent;
+        color: rgb(var(--gb-danger));
+        border-color: rgb(var(--gb-danger) / 0.5);
+
+        &:hover:not(:disabled),
+        &:active:not(:disabled) {
+            background: rgb(var(--gb-danger));
+            color: var(--gb-primary-fg);
+        }
     }
 }

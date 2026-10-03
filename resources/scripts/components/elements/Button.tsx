@@ -10,80 +10,74 @@ interface Props {
     isSecondary?: boolean;
 }
 
+// One button family: solid blue (primary), surface with border (secondary / grey), red for destructive actions.
+const solid = (rgb: string) => css`
+    background: ${rgb};
+    border-color: transparent;
+    color: var(--gb-primary-fg);
+
+    &:hover:not(:disabled) {
+        filter: brightness(1.08);
+    }
+`;
+
 const ButtonStyle = styled.button<Omit<Props, 'isLoading'>>`
-    ${tw`relative inline-block rounded p-2 uppercase tracking-wide text-sm transition-all duration-150 border`};
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    gap: 8px;
+    border: 1px solid var(--gb-border);
+    border-radius: var(--gb-radius-md);
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.1;
+    white-space: nowrap;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background var(--gb-duration) var(--gb-ease), border-color var(--gb-duration) var(--gb-ease),
+        filter var(--gb-duration) var(--gb-ease);
 
-    ${(props) =>
-        ((!props.isSecondary && !props.color) || props.color === 'primary') &&
-        css<Props>`
-            ${(props) => !props.isSecondary && tw`bg-primary-500 border-primary-600 border text-primary-50`};
+    ${(props) => (!props.size || props.size === 'small') && tw`h-10 px-4`};
+    ${(props) => props.size === 'xsmall' && tw`h-8 px-3 text-xs`};
+    ${(props) => props.size === 'large' && tw`h-12 px-6`};
+    ${(props) => props.size === 'xlarge' && tw`h-12 px-6 w-full`};
 
-            &:hover:not(:disabled) {
-                ${tw`bg-primary-600 border-primary-700`};
-            }
-        `};
-
+    /* Default (no colour): the blue primary button. */
+    ${(props) => ((!props.isSecondary && !props.color) || props.color === 'primary') && solid('var(--gb-primary)')};
+    ${(props) => props.color === 'green' && solid('rgb(var(--gb-success))')};
+    ${(props) => props.color === 'red' && solid('rgb(var(--gb-danger))')};
     ${(props) =>
         props.color === 'grey' &&
         css`
-            ${tw`border-neutral-600 bg-neutral-500 text-neutral-50`};
+            background: var(--gb-surface-2);
+            border-color: var(--gb-border);
+            color: var(--gb-text-strong);
 
             &:hover:not(:disabled) {
-                ${tw`bg-neutral-600 border-neutral-700`};
+                background: rgb(var(--n-600));
             }
         `};
 
-    ${(props) =>
-        props.color === 'green' &&
-        css<Props>`
-            ${tw`border-green-600 bg-green-500 text-green-50`};
-
-            &:hover:not(:disabled) {
-                ${tw`bg-green-600 border-green-700`};
-            }
-
-            ${(props) =>
-                props.isSecondary &&
-                css`
-                    &:active:not(:disabled) {
-                        ${tw`bg-green-600 border-green-700`};
-                    }
-                `};
-        `};
-
-    ${(props) =>
-        props.color === 'red' &&
-        css<Props>`
-            ${tw`border-red-600 bg-red-500 text-red-50`};
-
-            &:hover:not(:disabled) {
-                ${tw`bg-red-600 border-red-700`};
-            }
-
-            ${(props) =>
-                props.isSecondary &&
-                css`
-                    &:active:not(:disabled) {
-                        ${tw`bg-red-600 border-red-700`};
-                    }
-                `};
-        `};
-
-    ${(props) => props.size === 'xsmall' && tw`px-2 py-1 text-xs`};
-    ${(props) => (!props.size || props.size === 'small') && tw`px-4 py-2`};
-    ${(props) => props.size === 'large' && tw`p-4 text-sm`};
-    ${(props) => props.size === 'xlarge' && tw`p-4 w-full`};
-
+    /* Secondary: a surface with a border. Coloured secondary buttons fill on hover. */
     ${(props) =>
         props.isSecondary &&
         css<Props>`
-            ${tw`border-neutral-600 bg-transparent text-neutral-200`};
+            background: var(--gb-surface);
+            border-color: var(--gb-border);
+            color: var(--gb-text-strong);
 
             &:hover:not(:disabled) {
-                ${tw`border-neutral-500 text-neutral-100`};
-                ${(props) => props.color === 'red' && tw`bg-red-500 border-red-600 text-red-50`};
-                ${(props) => props.color === 'primary' && tw`bg-primary-500 border-primary-600 text-primary-50`};
-                ${(props) => props.color === 'green' && tw`bg-green-500 border-green-600 text-green-50`};
+                background: ${(p) =>
+                    p.color === 'red'
+                        ? 'rgb(var(--gb-danger))'
+                        : p.color === 'green'
+                        ? 'rgb(var(--gb-success))'
+                        : p.color === 'primary'
+                        ? 'var(--gb-primary)'
+                        : 'var(--gb-surface-2)'};
+                border-color: ${(p) => (p.color ? 'transparent' : 'var(--gb-border)')};
+                color: ${(p) => (p.color ? 'var(--gb-primary-fg)' : 'var(--gb-text-strong)')};
             }
         `};
 

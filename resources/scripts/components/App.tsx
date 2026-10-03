@@ -6,7 +6,6 @@ import { store } from '@/state';
 import { SiteSettings } from '@/state/settings';
 import ProgressBar from '@/components/elements/ProgressBar';
 import { NotFound } from '@/components/elements/ScreenBlock';
-import tw from 'twin.macro';
 import GlobalStylesheet from '@/assets/css/GlobalStylesheet';
 import { history } from '@/components/history';
 import { setupInterceptors } from '@/api/interceptors';
@@ -31,6 +30,7 @@ interface ExtendedWindow extends Window {
         root_admin: boolean;
         use_totp: boolean;
         language: string;
+        theme?: 'system' | 'dark' | 'light';
         updated_at: string;
         created_at: string;
         /* eslint-enable camelcase */
@@ -48,6 +48,7 @@ const App = () => {
             email: PterodactylUser.email,
             avatarUrl: PterodactylUser.avatar_url,
             language: PterodactylUser.language,
+            theme: PterodactylUser.theme || 'system',
             rootAdmin: PterodactylUser.root_admin,
             useTotp: PterodactylUser.use_totp,
             createdAt: new Date(PterodactylUser.created_at),
@@ -65,7 +66,7 @@ const App = () => {
             <StoreProvider store={store}>
                 <ProgressBar />
                 <Toaster />
-                <div css={tw`mx-auto w-auto`}>
+                <div>
                     <Router history={history}>
                         <Switch>
                             <Route path={'/auth'}>

@@ -1,9 +1,12 @@
 import styled from 'styled-components/macro';
-import tw from 'twin.macro';
 
+// `isLight` is kept for the older call sites; the theme decides the colour now.
 const Label = styled.label<{ isLight?: boolean }>`
-    ${tw`block text-xs uppercase text-neutral-200 mb-1 sm:mb-2`};
-    ${(props) => props.isLight && tw`text-neutral-700`};
+    display: block;
+    margin-bottom: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--gb-text-strong);
 `;
 
 export default Label;

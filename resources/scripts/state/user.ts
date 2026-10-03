@@ -9,6 +9,7 @@ export interface UserData {
     email: string;
     avatarUrl: string | null;
     language: string;
+    theme: 'system' | 'dark' | 'light';
     rootAdmin: boolean;
     useTotp: boolean;
     createdAt: Date;

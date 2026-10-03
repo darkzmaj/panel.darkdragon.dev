@@ -1,14 +1,8 @@
 import styled from 'styled-components/macro';
-import { breakpoint } from '@/theme';
-import tw from 'twin.macro';
 
+// Pages are laid out by the application shell; this only keeps content from growing without bound on huge screens.
 const ContentContainer = styled.div`
-    max-width: 1200px;
-    ${tw`mx-4`};
-
-    ${breakpoint('xl')`
-        ${tw`mx-auto`};
-    `};
+    max-width: var(--gb-container);
 `;
 ContentContainer.displayName = 'ContentContainer';
 

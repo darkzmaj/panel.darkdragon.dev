@@ -157,6 +157,7 @@ class User extends Model implements
         'external_id' => null,
         'root_admin' => false,
         'language' => 'en',
+        'theme' => 'system',
         'use_totp' => false,
         'totp_secret' => null,
     ];
@@ -174,6 +175,7 @@ class User extends Model implements
         'password' => 'sometimes|nullable|string',
         'root_admin' => 'boolean',
         'language' => 'string',
+        'theme' => 'sometimes|in:system,dark,light',
         'use_totp' => 'boolean',
         'totp_secret' => 'nullable|string',
     ];

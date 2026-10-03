@@ -33,7 +33,7 @@ return [
     |
     */
 
-    'name' => env('APP_NAME', 'Pterodactyl'),
+    'name' => env('APP_NAME', 'Gobia Cloud'),
 
     /*
     |--------------------------------------------------------------------------
