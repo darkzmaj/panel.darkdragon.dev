@@ -20,7 +20,7 @@ export interface UserStore {
     setUserData: Action<UserStore, UserData>;
     updateUserData: Action<UserStore, Partial<UserData>>;
     updateUserEmail: Thunk<UserStore, { email: string; password: string }, any, UserStore, Promise<void>>;
-    updateUsername: Thunk<UserStore, string, any, UserStore, Promise<void>>;
+    updateUsername: Thunk<UserStore, { username: string; password: string }, any, UserStore, Promise<void>>;
     uploadAvatar: Thunk<UserStore, File, any, UserStore, Promise<void>>;
     removeAvatar: Thunk<UserStore, void, any, UserStore, Promise<void>>;
 }
@@ -43,7 +43,7 @@ const user: UserStore = {
     }),
 
     updateUsername: thunk(async (actions, payload) => {
-        actions.updateUserData({ username: await updateAccountUsername(payload) });
+        actions.updateUserData({ username: await updateAccountUsername(payload.username, payload.password) });
     }),
 
     uploadAvatar: thunk(async (actions, payload) => {

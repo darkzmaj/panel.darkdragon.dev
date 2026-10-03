@@ -32,7 +32,7 @@ Route::prefix('/account')->middleware(AccountSubject::class)->group(function () 
         ->middleware('throttle')
         ->name('api:client.account.update-email');
     Route::put('/username', [Client\AccountController::class, 'updateUsername'])
-        ->middleware('throttle:10,1')
+        ->middleware('throttle:5,1')
         ->name('api:client.account.update-username');
     Route::post('/avatar', [Client\AccountController::class, 'updateAvatar'])
         ->middleware('throttle:10,1')

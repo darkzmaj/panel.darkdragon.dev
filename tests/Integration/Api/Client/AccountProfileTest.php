@@ -32,7 +32,7 @@ class AccountProfileTest extends ClientApiIntegrationTestCase
         $user = User::factory()->create();
 
         $this->actingAs($user)
-            ->putJson('/api/client/account/username', ['username' => 'New.Name-42'])
+            ->putJson('/api/client/account/username', ['username' => 'New.Name-42', 'password' => 'password'])
             ->assertOk()
             ->assertJson(['username' => 'new.name-42']);
 
@@ -45,20 +45,56 @@ class AccountProfileTest extends ClientApiIntegrationTestCase
         $user = User::factory()->create();
         $other = User::factory()->create();
 
-        foreach (['-bad', 'bad-', 'has space', 'a', str_repeat('a', 200), $other->username] as $username) {
+        // The endpoint allows five attempts a minute, so stay below that.
+        foreach (['-bad', 'bad-', 'has space', str_repeat('a', 200), $other->username] as $username) {
             $this->actingAs($user)
-                ->putJson('/api/client/account/username', ['username' => $username])
+                ->putJson('/api/client/account/username', ['username' => $username, 'password' => 'password'])
                 ->assertUnprocessable();
         }
 
         $this->assertSame($user->username, $user->fresh()->username);
     }
 
+    public function testUsernameChangeRequiresTheCurrentPassword(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->putJson('/api/client/account/username', ['username' => 'sneaky.name', 'password' => 'wrong'])->assertStatus(400);
+        $this->actingAs($user)->putJson('/api/client/account/username', ['username' => 'sneaky.name'])->assertStatus(400);
+        $this->actingAs($user)->putJson('/api/client/account/username', ['username' => 'sneaky.name', 'password' => ['password']])->assertStatus(400);
+
+        $this->assertSame($user->username, $user->fresh()->username);
+        $this->assertDatabaseMissing('activity_logs', ['event' => 'user:account.username-changed', 'actor_id' => $user->id]);
+    }
+
+    public function testUsernameChangesAreRateLimited(): void
+    {
+        $user = User::factory()->create();
+
+        foreach (['first.name', 'second.name', 'third.name'] as $name) {
+            $this->actingAs($user)->putJson('/api/client/account/username', ['username' => $name, 'password' => 'password'])->assertOk();
+        }
+
+        $this->actingAs($user)->putJson('/api/client/account/username', ['username' => 'fourth.name', 'password' => 'password'])->assertStatus(429);
+        $this->assertSame('third.name', $user->fresh()->username);
+    }
+
+    public function testResubmittingTheCurrentUsernameDoesNotUseUpTheLimit(): void
+    {
+        $user = User::factory()->create();
+
+        foreach (range(1, 4) as $ignored) {
+            $this->actingAs($user)->putJson('/api/client/account/username', ['username' => $user->username, 'password' => 'password'])->assertOk();
+        }
+
+        $this->actingAs($user)->putJson('/api/client/account/username', ['username' => 'actually.new', 'password' => 'password'])->assertOk();
+    }
+
     public function testUsernameChangeKeepsOwnership(): void
     {
         [$user, $server] = $this->generateTestAccount();
 
-        $this->actingAs($user)->putJson('/api/client/account/username', ['username' => 'renamed.user'])->assertOk();
+        $this->actingAs($user)->putJson('/api/client/account/username', ['username' => 'renamed.user', 'password' => 'password'])->assertOk();
 
         $this->assertSame($user->id, $server->fresh()->owner_id);
         $this->actingAs($user->fresh())->getJson('/api/client/servers/' . $server->uuid)->assertOk();

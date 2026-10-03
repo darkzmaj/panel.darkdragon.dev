@@ -25,6 +25,11 @@ class AccountController extends ClientApiController
     private const EMAIL_UPDATE_THROTTLE = 60 * 60 * 24;
 
     /**
+     * Usernames are login names that other people see in activity logs, so they may only change a few times a day.
+     */
+    private const USERNAME_UPDATE_LIMIT = 3;
+
+    /**
      * AccountController constructor.
      */
     public function __construct(
@@ -75,10 +80,18 @@ class AccountController extends ClientApiController
      */
     public function updateUsername(UpdateUsernameRequest $request): JsonResponse
     {
+        $key = 'user:update-username:' . $request->user()->uuid;
+        if (RateLimiter::tooManyAttempts($key, self::USERNAME_UPDATE_LIMIT)) {
+            throw new TooManyRequestsHttpException(message: 'Your username has been changed too many times today. Please try again later.');
+        }
+
         $original = $request->user()->username;
         $user = $this->updateService->handle($request->user(), $request->validated());
 
         if ($original !== $user->username) {
+            // Only real changes count; submitting the current username again is a no-op.
+            RateLimiter::hit($key, self::EMAIL_UPDATE_THROTTLE);
+
             Activity::event('user:account.username-changed')
                 ->property(['old' => $original, 'new' => $user->username])
                 ->log();

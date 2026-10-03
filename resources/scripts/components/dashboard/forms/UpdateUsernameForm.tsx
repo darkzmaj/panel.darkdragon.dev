@@ -11,6 +11,7 @@ import { Button } from '@/components/elements/button/index';
 
 interface Values {
     username: string;
+    password: string;
 }
 
 const schema = Yup.object().shape({
@@ -22,6 +23,7 @@ const schema = Yup.object().shape({
             'Usernames must start and end with a letter or number and may only contain letters, numbers, dashes, underscores, and periods.'
         )
         .required(),
+    password: Yup.string().required('You must provide your current account password.'),
 });
 
 export default () => {
@@ -30,10 +32,10 @@ export default () => {
 
     const { clearFlashes, addFlash } = useStoreActions((actions: Actions<ApplicationStore>) => actions.flashes);
 
-    const submit = ({ username }: Values, { setSubmitting }: FormikHelpers<Values>) => {
+    const submit = (values: Values, { resetForm, setSubmitting }: FormikHelpers<Values>) => {
         clearFlashes('account:username');
 
-        updateUsername(username)
+        updateUsername(values)
             .then(() =>
                 addFlash({
                     type: 'success',
@@ -49,7 +51,10 @@ export default () => {
                     message: httpErrorToHuman(error),
                 })
             )
-            .then(() => setSubmitting(false));
+            .then(() => {
+                resetForm();
+                setSubmitting(false);
+            });
     };
 
     return (
@@ -57,7 +62,7 @@ export default () => {
             onSubmit={submit}
             validationSchema={schema}
             enableReinitialize
-            initialValues={{ username: user!.username }}
+            initialValues={{ username: user!.username, password: '' }}
         >
             {({ isSubmitting, isValid, dirty }) => (
                 <React.Fragment>
@@ -70,6 +75,14 @@ export default () => {
                             label={'Username'}
                             description={'Usernames are stored in lowercase and must be unique.'}
                         />
+                        <div css={tw`mt-6`}>
+                            <Field
+                                id={'confirm_username_password'}
+                                type={'password'}
+                                name={'password'}
+                                label={'Confirm Password'}
+                            />
+                        </div>
                         <div css={tw`mt-6`}>
                             <Button disabled={isSubmitting || !isValid || !dirty}>Update Username</Button>
                         </div>
