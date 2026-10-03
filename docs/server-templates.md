@@ -32,20 +32,73 @@ changed**. A server records the revision it was created from and is never modifi
 instance request stores the revision that was current when it was accepted and is built from that snapshot, even if the
 template is edited before the job runs (or the instance is retried later).
 
-### Files
+### Files, working tree and publishing
 
-File content is stored under `storage/app/private/templates/<uuid>/blobs/<sha256>`, outside the web root and not
-tracked by Git. Blobs are addressed by checksum, so a revision's files never change after they are written. The path a
-user types is only metadata and is never used to build a path on the Panel's disk.
+A template has two file sets:
+
+* **Working files** (`<storage>/<uuid>/work/`): a normal directory tree that admins edit in the browser or over SFTP.
+  Editing never changes what servers receive.
+* **Published revisions**: immutable snapshots. **Publish** copies the working tree into content-addressed blobs
+  (`<storage>/<uuid>/blobs/<sha256>`), records a manifest (`server_template_files`) and creates a new revision *only if
+  the content differs from the current revision*. Deleting or renaming in the working tree is reflected by the next
+  publish. Instances always deploy from a published revision, so a server that already exists is never changed.
+
+The Panel marks the working tree as changed (`working_changed_at`) when an admin edits it or when an SFTP session that
+could write ends; the Files tab shows "N added / changed / removed" computed by comparing the tree with the published
+manifest, and enables **Publish changes**. File content is never stored in the database and everything lives outside
+the web root.
+
+Any payload is allowed: jars, plugins, maps/worlds, resource packs, scripts, configuration. Binary files are stored
+as-is and streamed to Wings (never loaded into memory). Defaults (`config/gobia_templates.php`, overridable by env):
+1 GiB per file, 8 GiB and 10,000 files per template. Only files up to 2 MiB open in the browser editor (Monaco, with the
+same pre-save validation as the server file manager); larger files can be uploaded and downloaded.
 
 Path rules (`TemplateFileStore::normalizePath`): relative only; no `.` / `..` / empty segments; no backslashes, drive
-letters, control characters or NUL; no percent-encoded characters at all (this also rejects double encoding); no
-reserved names (`.pterodactyl`, `.wings`, `.env`, `.htaccess`, `.htpasswd`); max 255 characters; a path cannot be both a
-file and a folder. Content must be UTF-8 text without NUL, max 1 MiB per file, 200 files and 20 MiB per template. When a
-blob is read, its checksum is re-verified and symlinks are refused.
+letters, control characters or NUL; no percent-encoded characters; no reserved names (`.pterodactyl`, `.wings`, `.env`,
+`.htaccess`, `.htpasswd`); at most 255 characters; a path cannot be both a file and a folder. Blob checksums are
+re-verified on read and symlinks are refused.
 
-The admin **Files** tab reuses the file workspace's Monaco editor and its pre-save validation: invalid JSON / YAML /
-TOML / XML cannot be saved (see `docs/performance-phase2-hardening.md` for the editor chunking).
+## Template SFTP
+
+A separate Node service (`services/template-sftp`, library `ssh2`) lets tools such as FileZilla or CI upload to a
+template's **working files**. It never touches the database or the Panel's disk outside the template's directory.
+
+Setup:
+
+```bash
+cd services/template-sftp && npm ci --omit=dev
+# Panel .env:   GOBIA_SFTP_SERVICE_TOKEN=<32+ random characters>   GOBIA_SFTP_HOST=sftp.example.com   GOBIA_SFTP_PORT=2223
+# Service env:  PANEL_URL=https://panel.example.com SFTP_SERVICE_TOKEN=<same token> TEMPLATE_STORAGE=<same path as the Panel>
+#               SFTP_PORT=2223 SFTP_BIND=0.0.0.0 SFTP_HOST_KEY=/etc/gobia/sftp_host_key   (generated on first start if missing)
+node server.js        # run it under systemd or another supervisor
+```
+
+Admin side (template -> **SFTP** tab): create a credential with a label, **read/write** or **read only** access and an
+expiry (max 90 days). The password is generated, shown **once** and stored only as a hash. The list shows created,
+expires, last used (time and IP) and status; credentials can be revoked at any time. Recent logins, failures, rate limit
+hits and sessions are listed from the event log.
+
+How a login works: the service sends username, password and client IP to `/api/internal/template-sftp/authenticate`
+(bearer service token, at least 32 characters; the route is closed when no token is configured). The Panel checks the
+hash, expiry and revocation, rate limits failures per username (10) and per IP, and answers with the template folder,
+permission and limits. Everything after that is enforced by the service itself:
+
+* the session is jailed to `<storage>/<uuid>/work`; every path is resolved and checked against the jail, symlinks are
+  never followed or created, and cross-template access is impossible because the root is chosen from the credential;
+* read-only credentials cannot write, rename or delete; size, file count and total size limits apply to uploads;
+* the Panel is told when a session ends (`/api/internal/template-sftp/session`) so the working tree is marked changed.
+
+SFTP only changes working files. Run **Publish changes** to create a revision; instances created before that keep the
+previous revision.
+
+## `%number%` in instance names
+
+A template (or a Create Instance request) may use `%number%` in the name, e.g. `SloBlock Hub %number%`. It becomes the
+highest number already used by a real server or an unfinished instance matching the same pattern, plus one, starting at
+1. Gaps are not reused (1, 2, 4 gives 5); database ids are never used. Only whole-name matches count, other text in the
+pattern is matched literally, and a repeated placeholder gets the same number. An idempotent retry does not consume a new
+number. The Create Instance screen proposes the name and lets the user edit it. Other placeholders (`%node%`,
+`%location%`, `%date%`) can be added to `TemplateNameService::expand()`.
 
 ## Placement
 
@@ -131,7 +184,7 @@ GET /api/application/templates/{template}/instances/{instance}     → poll `sta
 ## Admin interface
 
 *Network → Templates*: list, and a tabbed editor — General, Software, Resources, Placement, Variables, Files,
-Lifecycle, Instances (create + live progress + retry), Revisions (history, duplicate, enable/disable, delete).
+Lifecycle, SFTP, Instances (create + live progress + retry), Revisions (history, duplicate, enable/disable, delete).
 Validation reuses the Panel's rules: the egg must belong to the nest, the image must be one of the egg's images,
 variable values must satisfy the egg variable's own rules. A template with instance history cannot be deleted
 (disable it instead); duplicates start disabled.
@@ -141,6 +194,7 @@ variable values must satisfy the egg variable's own rules. A template with insta
 * Wings reports installation completion to the Panel; the pipeline polls the database for it. If Wings never calls
   back, the instance fails after 15 minutes.
 * `database_limit`, `allocation_limit` and `backup_limit` of `0` mean *none*, matching the existing server form.
+* SFTP uses password authentication only (no keys yet) and one service instance per storage directory.
 * Old template blobs are kept (revisions need them); there is no garbage collection of blobs for deleted revisions yet.
 * No bulk operations, scheduled instance creation or per-user quotas.
 * Health verification means "Wings still knows the server"; it does not wait for the game process to accept connections.
