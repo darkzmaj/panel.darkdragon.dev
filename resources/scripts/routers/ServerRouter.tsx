@@ -8,6 +8,8 @@ import { ServerContext } from '@/state/server';
 import { CSSTransition } from 'react-transition-group';
 import Can from '@/components/elements/Can';
 import Spinner from '@/components/elements/Spinner';
+import RouteSuspense from '@/components/elements/RouteSuspense';
+import { invalidateServerRequests } from '@/state/server';
 import { NotFound, ServerError } from '@/components/elements/ScreenBlock';
 import { httpErrorToHuman } from '@/api/http';
 import { useStoreState } from 'easy-peasy';
@@ -58,9 +60,24 @@ export default () => {
         });
 
         return () => {
+            // A response for this server that arrives after leaving it must not populate the next one.
+            invalidateServerRequests();
             clearServerState();
         };
     }, [match.params.id]);
+
+    // Once a server is open, fetch the other pages' shared chunk when the browser is idle so first visits feel instant.
+    // Heavy routes (the Monaco workspace) are intentionally excluded: they load on demand or on hover.
+    useEffect(() => {
+        if (!uuid) return;
+        const run = () => routes.filter((r) => r.idle && r.preload).forEach((r) => r.preload?.());
+        const w = window as Window & { requestIdleCallback?: (cb: () => void) => number };
+        const handle = w.requestIdleCallback ? w.requestIdleCallback(run) : window.setTimeout(run, 1500);
+
+        return () => {
+            if (!w.requestIdleCallback) window.clearTimeout(handle);
+        };
+    }, [uuid]);
 
     return (
         <React.Fragment key={'server-router'}>
@@ -81,12 +98,23 @@ export default () => {
                                     .map((route) =>
                                         route.permission ? (
                                             <Can key={route.path} action={route.permission} matchAny>
-                                                <NavLink to={to(route.path, true)} exact={route.exact}>
+                                                <NavLink
+                                                    to={to(route.path, true)}
+                                                    exact={route.exact}
+                                                    onMouseEnter={() => route.preload?.()}
+                                                    onFocus={() => route.preload?.()}
+                                                >
                                                     {route.name}
                                                 </NavLink>
                                             </Can>
                                         ) : (
-                                            <NavLink key={route.path} to={to(route.path, true)} exact={route.exact}>
+                                            <NavLink
+                                                key={route.path}
+                                                to={to(route.path, true)}
+                                                exact={route.exact}
+                                                onMouseEnter={() => route.preload?.()}
+                                                onFocus={() => route.preload?.()}
+                                            >
                                                 {route.name}
                                             </NavLink>
                                         )
@@ -111,9 +139,9 @@ export default () => {
                                 <Switch location={location}>
                                     {routes.map(({ path, permission, component: Component }) => (
                                         <PermissionRoute key={path} permission={permission} path={to(path)} exact>
-                                            <Spinner.Suspense>
+                                            <RouteSuspense>
                                                 <Component />
-                                            </Spinner.Suspense>
+                                            </RouteSuspense>
                                         </PermissionRoute>
                                     ))}
                                     <Route path={'*'} component={NotFound} />

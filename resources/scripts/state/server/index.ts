@@ -7,6 +7,13 @@ import schedules, { ServerScheduleStore } from '@/state/server/schedules';
 import databases, { ServerDatabaseStore } from '@/state/server/databases';
 import isEqual from 'react-fast-compare';
 
+let latestRequest = 0;
+
+/** Marks any in-flight server request as stale, so a late response cannot overwrite what is on screen. */
+export const invalidateServerRequests = () => {
+    latestRequest++;
+};
+
 export type ServerStatus = 'offline' | 'starting' | 'stopping' | 'running' | null;
 
 interface ServerDataStore {
@@ -37,7 +44,11 @@ const server: ServerDataStore = {
     }),
 
     getServer: thunk(async (actions, payload) => {
+        const request = ++latestRequest;
         const [server, permissions] = await getServer(payload);
+
+        // The user already moved on to another server (or left): this response is stale and must not be shown.
+        if (request !== latestRequest) return;
 
         actions.setServer(server);
         actions.setPermissions(permissions);

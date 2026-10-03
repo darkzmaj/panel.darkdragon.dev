@@ -7,6 +7,10 @@ export interface RouteDefinition {
     name: string | undefined;
     component: React.ComponentType;
     exact?: boolean;
+    // Fetches the route's chunk ahead of time. Optional because eagerly bundled routes have nothing to fetch.
+    preload?: () => void;
+    // Whether the chunk may be fetched while the browser is idle (leave false for heavy routes).
+    idle?: boolean;
 }
 
 export interface ServerRouteDefinition extends RouteDefinition {
