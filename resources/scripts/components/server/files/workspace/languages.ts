@@ -2,7 +2,6 @@
 // labelled before the editor chunk has loaded. Unknown files are plain text.
 const BY_EXTENSION: Record<string, string> = {
     json: 'json',
-    jsonc: 'json',
     yml: 'yaml',
     yaml: 'yaml',
     properties: 'properties',

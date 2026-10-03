@@ -15,13 +15,35 @@ export class Websocket extends EventEmitter {
     // and 0 minutes to expiry.
     private token = '';
 
+    private attempts = 0;
+
+    private timer: ReturnType<typeof setTimeout> | null = null;
+
+    private static readonly MAX_ATTEMPTS = 8;
+
+    constructor() {
+        super();
+        this.on('auth success', () => {
+            this.attempts = 0;
+        });
+    }
+
     // Connects to the websocket instance and sets the token for the initial request.
     connect(url: string): this {
         this.url = url;
+        this.openSocket();
 
+        return this;
+    }
+
+    private openSocket() {
+        if (!this.url) return;
+
+        this.socket?.close();
+        // Reconnecting is handled below with exponential backoff, so sockette itself must not retry.
         this.socket = new Sockette(`${this.url}`, {
             timeout: 1000,
-            maxAttempts: 20,
+            maxAttempts: 0,
             onmessage: (e) => {
                 try {
                     const { event, args } = JSON.parse(e.data);
@@ -34,27 +56,45 @@ export class Websocket extends EventEmitter {
                 this.emit('SOCKET_OPEN');
                 this.authenticate();
             },
-            onreconnect: (evt) => {
-                // We return code 4409 from Wings when a server is suspended. We've
-                // gone ahead and reserved 4400 as well here for future expansion without
-                // having to loop back around.
-                //
-                // If either of those codes is returned go ahead and abort here. Unfortunately
-                // the underlying sockette logic always calls reconnect for any code that isn't
-                // 1000/1001/1003, which is painful but we can just stop the flow here.
-                // @ts-expect-error code is actually present here.
-                if (evt.code === 4409 || evt.code === 4400) {
-                    this.close(1000);
-                } else {
-                    this.emit('SOCKET_RECONNECT');
-                }
-            },
             onclose: () => this.emit('SOCKET_CLOSE'),
             onerror: (error) => this.emit('SOCKET_ERROR', error),
-            onmaximum: () => this.emit('SOCKET_CONNECT_ERROR'),
-        });
+            onmaximum: (evt) => {
+                // We return code 4409 from Wings when a server is suspended. 4400 is reserved alongside it.
+                if (evt?.code === 4409 || evt?.code === 4400) {
+                    this.close(1000);
 
-        return this;
+                    return;
+                }
+                this.scheduleReconnect();
+            },
+        });
+    }
+
+    // 1s, 2s, 4s ... capped at 30s, and given up on after a handful of attempts rather than hammering forever.
+    private scheduleReconnect() {
+        if (!this.url || this.timer) return;
+
+        if (++this.attempts > Websocket.MAX_ATTEMPTS) {
+            this.emit('SOCKET_CONNECT_ERROR');
+
+            return;
+        }
+
+        const delay = Math.min(30000, 1000 * 2 ** (this.attempts - 1));
+        this.emit('SOCKET_RECONNECT_SCHEDULED', { attempt: this.attempts, delay });
+        this.timer = setTimeout(() => {
+            this.timer = null;
+            this.emit('SOCKET_RECONNECT');
+            this.openSocket();
+        }, delay);
+    }
+
+    // Starts over immediately, for example from a "Retry" button.
+    retryNow() {
+        if (this.timer) clearTimeout(this.timer);
+        this.timer = null;
+        this.attempts = 0;
+        this.openSocket();
     }
 
     // Sets the authentication token to use when sending commands back and forth
@@ -76,6 +116,8 @@ export class Websocket extends EventEmitter {
     }
 
     close(code?: number, reason?: string) {
+        if (this.timer) clearTimeout(this.timer);
+        this.timer = null;
         this.url = null;
         this.token = '';
         this.socket?.close(code, reason);

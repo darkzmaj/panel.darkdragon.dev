@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Actions, useStoreActions } from 'easy-peasy';
+import { ApplicationStore } from '@/state';
 import { Websocket } from '@/plugins/Websocket';
 import { ServerContext } from '@/state/server';
 import getWebsocketToken from '@/api/server/getWebsocketToken';
-import ContentContainer from '@/components/elements/ContentContainer';
-import { CSSTransition } from 'react-transition-group';
 import Spinner from '@/components/elements/Spinner';
 import tw from 'twin.macro';
 
@@ -12,6 +12,9 @@ const reconnectErrors = ['jwt: exp claim is invalid', 'jwt: created too far in p
 export default () => {
     let updatingToken = false;
     const [error, setError] = useState<'connecting' | string>('');
+    const [retry, setRetry] = useState(0);
+    const wasDown = useRef(false);
+    const toast = useStoreActions((actions: Actions<ApplicationStore>) => actions.toasts.push);
     const { connected, instance } = ServerContext.useStoreState((state) => state.socket);
     const uuid = ServerContext.useStoreState((state) => state.server.data?.uuid);
     const setServerStatus = ServerContext.useStoreActions((actions) => actions.status.setServerStatus);
@@ -35,10 +38,14 @@ export default () => {
         socket.on('auth success', () => setConnectionState(true));
         socket.on('SOCKET_CLOSE', () => setConnectionState(false));
         socket.on('SOCKET_CONNECT_ERROR', () => {
-            setError('Failed to connect to websocket instance after multiple attempts: try refreshing the page.');
+            setError('Could not reach the server after several attempts.');
+        });
+        socket.on('SOCKET_RECONNECT_SCHEDULED', ({ attempt }: { attempt: number }) => {
+            setRetry(attempt);
+            setError('connecting');
+            setConnectionState(false);
         });
         socket.on('SOCKET_ERROR', () => {
-            setError('connecting');
             setConnectionState(false);
         });
         socket.on('status', (status) => setServerStatus(status));
@@ -88,8 +95,17 @@ export default () => {
     };
 
     useEffect(() => {
-        connected && setError('');
+        if (connected) {
+            setError('');
+            setRetry(0);
+            if (wasDown.current) toast({ type: 'success', message: 'Connection restored.' });
+            wasDown.current = false;
+        }
     }, [connected]);
+
+    useEffect(() => {
+        if (error) wasDown.current = true;
+    }, [error]);
 
     useEffect(() => {
         return () => {
@@ -107,22 +123,32 @@ export default () => {
         connect(uuid);
     }, [uuid]);
 
-    return error ? (
-        <CSSTransition timeout={150} in appear classNames={'fade'}>
-            <div css={tw`bg-red-500 py-2`}>
-                <ContentContainer css={tw`flex items-center justify-center`}>
-                    {error === 'connecting' ? (
-                        <>
-                            <Spinner size={'small'} />
-                            <p css={tw`ml-2 text-sm text-red-100`}>
-                                We&apos;re having some trouble connecting to your server, please wait...
-                            </p>
-                        </>
-                    ) : (
-                        <p css={tw`ml-2 text-sm text-white`}>{error}</p>
+    if (!error) return null;
+
+    // A compact notice pinned to the corner, so a lost connection never pushes the page content around.
+    return (
+        <div
+            role={'status'}
+            aria-live={'polite'}
+            css={tw`fixed bottom-4 left-4 z-40 max-w-sm flex items-center rounded shadow-lg px-4 py-2 text-sm bg-neutral-800 border border-red-500 text-neutral-100`}
+        >
+            {error === 'connecting' ? (
+                <>
+                    <Spinner size={'small'} />
+                    <span css={tw`ml-2`}>
+                        Disconnected from server. Reconnecting{retry ? ` (attempt ${retry})` : ''}&hellip;
+                    </span>
+                </>
+            ) : (
+                <>
+                    <span css={tw`flex-1`}>{error}</span>
+                    {instance && (
+                        <button type={'button'} css={tw`ml-3 underline`} onClick={() => instance.retryNow()}>
+                            Retry
+                        </button>
                     )}
-                </ContentContainer>
-            </div>
-        </CSSTransition>
-    ) : null;
+                </>
+            )}
+        </div>
+    );
 };

@@ -13,6 +13,9 @@ module.exports = {
     moduleNameMapper: {
         '\\.(jpe?g|png|gif|svg)$': '<rootDir>/resources/scripts/__mocks__/file.ts',
         '\\.(s?css|less)$': 'identity-obj-proxy',
+        // jsdom resolves these to their browser ESM builds, which Jest cannot load; use the CommonJS builds.
+        '^yaml$': '<rootDir>/node_modules/yaml/dist/index.js',
+        '^smol-toml$': '<rootDir>/node_modules/smol-toml/dist/index.cjs',
         ...pathsToModuleNameMapper(compilerOptions.paths, {
             prefix: '<rootDir>/',
         }),

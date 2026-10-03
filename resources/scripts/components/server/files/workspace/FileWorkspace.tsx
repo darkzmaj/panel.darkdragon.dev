@@ -1,10 +1,13 @@
-import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, lazy, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import tw from 'twin.macro';
 import axios from 'axios';
 import { basename, dirname, join } from 'pathe';
 import { useHistory, useLocation, useParams } from 'react-router';
+import { Actions, useStoreActions } from 'easy-peasy';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
+    faBars,
+    faEllipsisH,
     faFileMedical,
     faFolderPlus,
     faPencilAlt,
@@ -13,6 +16,7 @@ import {
     faTrashAlt,
     faUpload,
 } from '@fortawesome/free-solid-svg-icons';
+import { ApplicationStore } from '@/state';
 import { ServerContext } from '@/state/server';
 import { usePermissions } from '@/plugins/usePermissions';
 import { encodePathSegments, hashToPath } from '@/helpers';
@@ -25,14 +29,19 @@ import renameFiles from '@/api/server/files/renameFiles';
 import deleteFiles from '@/api/server/files/deleteFiles';
 import getFileUploadUrl from '@/api/server/files/getFileUploadUrl';
 import getFileDownloadUrl from '@/api/server/files/getFileDownloadUrl';
-import PageContentBlock from '@/components/elements/PageContentBlock';
 import Spinner from '@/components/elements/Spinner';
 import Modal from '@/components/elements/Modal';
 import Input from '@/components/elements/Input';
+import Popover from '@/components/elements/Popover';
 import { Button } from '@/components/elements/button/index';
-import Tooltip from '@/components/elements/tooltip/Tooltip';
 import FileTree, { Selection } from '@/components/server/files/workspace/FileTree';
 import { languageForFile, LANGUAGE_LABELS, MAX_BYTES, WARN_BYTES } from '@/components/server/files/workspace/languages';
+import {
+    blockingErrors,
+    describeBlocking,
+    Diagnostic,
+    validateContent,
+} from '@/components/server/files/workspace/validation';
 import type { EditorHandle } from '@/components/server/files/workspace/MonacoEditor';
 
 // Monaco is large, so it is only fetched when the workspace is actually opened.
@@ -48,7 +57,7 @@ interface Tab {
     language: string;
     status: Status;
     size: number;
-    // The file's modified time when it was opened or last saved; used to notice changes made by others.
+    // The file's modified time when it was opened or last saved; used to notice changes made by someone else.
     mtime: number;
     content: string;
     revision: number;
@@ -57,9 +66,58 @@ interface Tab {
 }
 
 type Prompt = { kind: 'file' | 'folder' | 'rename'; directory: string; initial: string } | null;
-type Conflict = { path: string } | null;
+type Conflict = {
+    path: string;
+    remoteMtime?: number;
+    remoteSize?: number;
+    compare: boolean;
+    arming: boolean;
+    confirmed: boolean;
+} | null;
 
-const MIN_HEIGHT = 480;
+const WIDTH_KEY = 'gobia:explorer-width';
+const MIN_SIDEBAR = 180;
+const MAX_SIDEBAR = 480;
+const MOBILE = 768;
+
+// Height of the workspace: whatever is left of the viewport below its own top edge, so it adapts to the header,
+// server navigation and any banner above it instead of relying on a fixed offset.
+const useRemainingHeight = (ref: React.RefObject<HTMLElement>) => {
+    const [height, setHeight] = useState(560);
+
+    useLayoutEffect(() => {
+        const measure = () => {
+            const top = ref.current?.getBoundingClientRect().top ?? 0;
+            const viewport = window.visualViewport?.height ?? window.innerHeight;
+            setHeight(Math.max(360, Math.floor(viewport - Math.max(0, top) - 12)));
+        };
+        measure();
+        window.addEventListener('resize', measure);
+        const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
+        observer?.observe(document.body);
+
+        return () => {
+            window.removeEventListener('resize', measure);
+            observer?.disconnect();
+        };
+    }, []);
+
+    return height;
+};
+
+const useIsMobile = () => {
+    const [mobile, setMobile] = useState(window.innerWidth < MOBILE);
+    useEffect(() => {
+        const onResize = () => setMobile(window.innerWidth < MOBILE);
+        window.addEventListener('resize', onResize);
+
+        return () => window.removeEventListener('resize', onResize);
+    }, []);
+
+    return mobile;
+};
+
+const iconButton = tw`px-2 py-1 text-sm text-neutral-300 hover:text-neutral-50 disabled:opacity-30 focus:outline-none focus:text-cyan-400`;
 
 export default () => {
     const { action } = useParams<{ action: 'new' | 'edit' }>();
@@ -68,37 +126,77 @@ export default () => {
     const id = ServerContext.useStoreState((state) => state.server.data!.id);
     const uuid = ServerContext.useStoreState((state) => state.server.data!.uuid);
     const [canCreate, canUpdate, canDelete] = usePermissions(['file.create', 'file.update', 'file.delete']);
+    const toast = useStoreActions((actions: Actions<ApplicationStore>) => actions.toasts.push);
+    const mobile = useIsMobile();
 
     const [tabs, setTabs] = useState<Tab[]>([]);
     const [activePath, setActivePath] = useState<string | null>(null);
+    const [diagnostics, setDiagnostics] = useState<Record<string, Diagnostic[]>>({});
     const [selection, setSelection] = useState<Selection | null>(null);
     const [refreshToken, setRefreshToken] = useState({ directory: '/', n: 0 });
-    const [notice, setNotice] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
     const [prompt, setPrompt] = useState<Prompt>(null);
     const [promptValue, setPromptValue] = useState('');
     const [closing, setClosing] = useState<string | null>(null);
     const [deleting, setDeleting] = useState<Selection | null>(null);
     const [conflict, setConflict] = useState<Conflict>(null);
     const [busy, setBusy] = useState(false);
-    const [treeOpen, setTreeOpen] = useState(true);
+    const [treeOpen, setTreeOpen] = useState(() => window.innerWidth >= MOBILE);
+    const [sidebarWidth, setSidebarWidth] = useState(() => {
+        try {
+            return Math.min(MAX_SIDEBAR, Math.max(MIN_SIDEBAR, Number(localStorage.getItem(WIDTH_KEY)) || 256));
+        } catch {
+            return 256;
+        }
+    });
     const [wordWrap, setWordWrap] = useState(false);
-    const [minimap, setMinimap] = useState(true);
+    const [minimap, setMinimap] = useState(() => window.innerWidth >= 1100);
+    const [problemsOpen, setProblemsOpen] = useState(false);
+    const [moreOpen, setMoreOpen] = useState(false);
+
+    const root = useRef<HTMLDivElement>(null);
     const editor = useRef<EditorHandle>(null);
     const upload = useRef<HTMLInputElement>(null);
+    const problemsButton = useRef<HTMLButtonElement>(null);
+    const moreButton = useRef<HTMLButtonElement>(null);
+    const validationTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
     const tabsRef = useRef(tabs);
     tabsRef.current = tabs;
+    const height = useRemainingHeight(root);
 
     const fail = (error: unknown) =>
-        setNotice({ type: 'error', message: typeof error === 'string' ? error : httpErrorToHuman(error) });
+        toast({ type: 'error', message: typeof error === 'string' ? error : httpErrorToHuman(error) });
     const patch = useCallback(
         (path: string, changes: Partial<Tab>) =>
             setTabs((all) => all.map((t) => (t.path === path ? { ...t, ...changes } : t))),
         []
     );
     const refresh = (directory: string) => setRefreshToken((t) => ({ directory, n: t.n + 1 }));
-
     const stat = async (path: string) =>
         (await loadDirectory(uuid, dirname(path))).find((f) => f.name === basename(path));
+
+    // --- validation -------------------------------------------------------------------------------------------
+
+    const runValidation = useCallback(async (path: string) => {
+        const tab = tabsRef.current.find((t) => t.path === path);
+        const content = editor.current?.getContent(path);
+        if (!tab || content === undefined) return [] as Diagnostic[];
+
+        const result = await validateContent(tab.language, content, path);
+        setDiagnostics((d) => ({ ...d, [path]: result.diagnostics }));
+        editor.current?.setMarkers(path, result.diagnostics);
+
+        return result;
+    }, []);
+
+    const onContentChange = useCallback(
+        (path: string) => {
+            clearTimeout(validationTimers.current[path]);
+            validationTimers.current[path] = setTimeout(() => runValidation(path), 350);
+        },
+        [runValidation]
+    );
+
+    // --- opening files ----------------------------------------------------------------------------------------
 
     const readContents = async (path: string) => {
         patch(path, { status: 'loading' });
@@ -125,7 +223,7 @@ export default () => {
 
     const open = useCallback(
         async (path: string) => {
-            setNotice(null);
+            if (mobile) setTreeOpen(false);
             if (tabsRef.current.some((t) => t.path === path)) {
                 setActivePath(path);
 
@@ -133,18 +231,20 @@ export default () => {
             }
 
             const name = basename(path);
-            const base: Tab = {
-                path,
-                name,
-                language: languageForFile(name),
-                status: 'loading',
-                size: 0,
-                mtime: 0,
-                content: '',
-                revision: 0,
-                dirty: false,
-            };
-            setTabs((all) => [...all, base]);
+            setTabs((all) => [
+                ...all,
+                {
+                    path,
+                    name,
+                    language: languageForFile(name),
+                    status: 'loading',
+                    size: 0,
+                    mtime: 0,
+                    content: '',
+                    revision: 0,
+                    dirty: false,
+                },
+            ]);
             setActivePath(path);
 
             try {
@@ -162,25 +262,28 @@ export default () => {
                 patch(path, { status: 'error', error: httpErrorToHuman(e) });
             }
         },
-        [uuid]
+        [uuid, mobile]
     );
 
-    // Opening the page for a file (from the file list) or for a new file in a directory.
     useEffect(() => {
         const path = hashToPath(hash);
         if (action === 'new') {
             setSelection({ path, isDirectory: true });
             setPrompt({ kind: 'file', directory: path, initial: '' });
             setPromptValue('');
-        } else if (path !== '/' && path !== activePath) {
+        } else if (path !== '/') {
             open(path);
         }
     }, []);
 
-    // Keep the address bar pointing at the file being edited so a reload reopens it.
     useEffect(() => {
+        document.title = activePath ? `${basename(activePath)} - File editor` : 'File editor';
         if (activePath && action !== 'new')
             history.replace(`/server/${id}/files/edit#${encodePathSegments(activePath)}`);
+        // Keep the active tab visible in the scrolling tab strip.
+        root.current
+            ?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')
+            ?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
     }, [activePath]);
 
     useEffect(() => {
@@ -192,17 +295,39 @@ export default () => {
         };
         window.addEventListener('beforeunload', warn);
 
-        return () => window.removeEventListener('beforeunload', warn);
+        return () => {
+            window.removeEventListener('beforeunload', warn);
+            Object.values(validationTimers.current).forEach(clearTimeout);
+        };
     }, []);
+
+    // Validate a file as soon as it is loaded, and again after a reload from the server.
+    useEffect(() => {
+        const active = tabs.find((t) => t.path === activePath);
+        if (active?.status !== 'ready') return undefined;
+
+        const t = setTimeout(() => runValidation(active.path), 150);
+
+        return () => clearTimeout(t);
+    }, [activePath, tabs.map((t) => `${t.path}:${t.status}:${t.revision}`).join('|')]);
 
     const dirtyPaths = useMemo(() => tabs.filter((t) => t.dirty).map((t) => t.path), [tabs]);
     const active = tabs.find((t) => t.path === activePath) || null;
+    const problems = (activePath && diagnostics[activePath]) || [];
+    const errorCount = problems.filter((p) => p.severity === 'error').length;
+
+    // --- closing / saving -------------------------------------------------------------------------------------
 
     const closeNow = (path: string) => {
         setTabs((all) => {
             const index = all.findIndex((t) => t.path === path);
             const rest = all.filter((t) => t.path !== path);
             if (activePath === path) setActivePath(rest[Math.min(index, rest.length - 1)]?.path || null);
+
+            return rest;
+        });
+        setDiagnostics((d) => {
+            const { [path]: _removed, ...rest } = d;
 
             return rest;
         });
@@ -216,13 +341,35 @@ export default () => {
             const tab = tabsRef.current.find((t) => t.path === path);
             if (!tab || tab.status !== 'ready' || !canUpdate || !editor.current) return;
 
-            setNotice(null);
             setBusy(true);
             try {
-                // Refuse to silently overwrite something that changed on the server after it was opened.
+                // Syntax errors in structured config files always stop the save; source code is never checked.
+                const result = await validateContent(
+                    tab.language,
+                    editor.current.getContent(tab.path) ?? tab.content,
+                    tab.path
+                );
+                setDiagnostics((d) => ({ ...d, [tab.path]: result.diagnostics }));
+                editor.current.setMarkers(tab.path, result.diagnostics);
+                const blocking = blockingErrors(result.diagnostics);
+                if (blocking.length) {
+                    toast({ type: 'error', message: describeBlocking(tab.name, result) });
+                    if (tab.path === activePath) editor.current.reveal(tab.path, blocking[0].line, blocking[0].column);
+
+                    return;
+                }
+
+                // Refuse to silently replace something that changed on the server after it was opened.
                 const current = await stat(tab.path);
                 if (!overwrite && current && current.modifiedAt.getTime() !== tab.mtime) {
-                    setConflict({ path: tab.path });
+                    setConflict({
+                        path: tab.path,
+                        remoteMtime: current.modifiedAt.getTime(),
+                        remoteSize: current.size,
+                        compare: false,
+                        arming: false,
+                        confirmed: false,
+                    });
 
                     return;
                 }
@@ -231,9 +378,9 @@ export default () => {
                 editor.current.markSaved(tab.path);
                 const after = await stat(tab.path);
                 patch(tab.path, { mtime: after?.modifiedAt.getTime() ?? Date.now(), dirty: false });
-                setNotice({ type: 'success', message: `Saved ${tab.name}.` });
+                toast({ type: 'success', message: `Saved ${tab.name}` });
             } catch (e) {
-                fail(e);
+                toast({ type: 'error', message: `Save failed: ${httpErrorToHuman(e)}` });
             } finally {
                 setBusy(false);
             }
@@ -241,7 +388,6 @@ export default () => {
         [activePath, canUpdate, uuid]
     );
 
-    // Ctrl/Cmd+S while focus is outside the editor (for example in the file tree).
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
             if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
@@ -254,8 +400,9 @@ export default () => {
         return () => window.removeEventListener('keydown', onKey);
     }, [save]);
 
-    const targetDirectory = selection ? (selection.isDirectory ? selection.path : dirname(selection.path)) : '/';
+    // --- explorer actions -------------------------------------------------------------------------------------
 
+    const targetDirectory = selection ? (selection.isDirectory ? selection.path : dirname(selection.path)) : '/';
     const blockedByUnsaved = (path: string) =>
         tabs.find((t) => t.dirty && (t.path === path || t.path.startsWith(path + '/')));
 
@@ -274,8 +421,6 @@ export default () => {
                 await saveFileContents(uuid, join(prompt.directory, name), '');
                 refresh(prompt.directory);
                 setPrompt(null);
-                if (action === 'new')
-                    history.replace(`/server/${id}/files/edit#${encodePathSegments(join(prompt.directory, name))}`);
                 await open(join(prompt.directory, name));
             } else if (prompt.kind === 'folder') {
                 await createDirectory(uuid, prompt.directory, name);
@@ -309,6 +454,7 @@ export default () => {
                 .forEach((t) => closeNow(t.path));
             setSelection(null);
             refresh(dirname(target.path));
+            toast({ type: 'success', message: `Deleted ${basename(target.path)}` });
         } catch (e) {
             fail(e);
         } finally {
@@ -346,7 +492,7 @@ export default () => {
                 })
             );
             refresh(targetDirectory);
-            setNotice({ type: 'success', message: `Uploaded ${files.length} file${files.length === 1 ? '' : 's'}.` });
+            toast({ type: 'success', message: `Uploaded ${files.length} file${files.length === 1 ? '' : 's'}` });
         } catch (e) {
             fail(e);
         } finally {
@@ -363,24 +509,32 @@ export default () => {
         }
     };
 
-    const reloadFromServer = async (path: string) => {
-        setConflict(null);
-        await readContents(path);
+    // --- sidebar resizing -------------------------------------------------------------------------------------
+
+    const startResize = (e: React.PointerEvent) => {
+        e.preventDefault();
+        const startX = e.clientX;
+        const startWidth = sidebarWidth;
+        const move = (ev: PointerEvent) =>
+            setSidebarWidth(Math.min(MAX_SIDEBAR, Math.max(MIN_SIDEBAR, startWidth + ev.clientX - startX)));
+        const up = () => {
+            window.removeEventListener('pointermove', move);
+            window.removeEventListener('pointerup', up);
+            setSidebarWidth((w) => {
+                try {
+                    localStorage.setItem(WIDTH_KEY, String(w));
+                } catch {
+                    // The width simply isn't remembered.
+                }
+
+                return w;
+            });
+        };
+        window.addEventListener('pointermove', move);
+        window.addEventListener('pointerup', up);
     };
 
-    const toolbarButton = (label: string, icon: any, onClick: () => void, disabled = false) => (
-        <Tooltip placement={'bottom'} content={label}>
-            <button
-                type={'button'}
-                aria-label={label}
-                disabled={disabled || busy}
-                onClick={onClick}
-                css={tw`px-2 py-1 text-sm text-neutral-300 hover:text-neutral-50 disabled:opacity-30 focus:outline-none focus:text-cyan-400`}
-            >
-                <FontAwesomeIcon icon={icon} fixedWidth />
-            </button>
-        </Tooltip>
-    );
+    // --- render -----------------------------------------------------------------------------------------------
 
     const editorFiles = useMemo(
         () =>
@@ -390,187 +544,316 @@ export default () => {
         [tabs.map((t) => `${t.path}:${t.status}:${t.revision}`).join('|')]
     );
 
+    const explorerButtons = (
+        <div css={tw`flex items-center px-1 border-b border-neutral-700 flex-none`}>
+            {[
+                [
+                    'New file',
+                    faFileMedical,
+                    () => {
+                        setPrompt({ kind: 'file', directory: targetDirectory, initial: '' });
+                        setPromptValue('');
+                    },
+                    !canCreate,
+                ],
+                [
+                    'New folder',
+                    faFolderPlus,
+                    () => {
+                        setPrompt({ kind: 'folder', directory: targetDirectory, initial: '' });
+                        setPromptValue('');
+                    },
+                    !canCreate,
+                ],
+                ['Upload files', faUpload, () => upload.current?.click(), !canCreate],
+                ['Rename', faPencilAlt, startRename, !selection || selection.path === '/' || !canUpdate],
+                ['Delete', faTrashAlt, startDelete, !selection || selection.path === '/' || !canDelete],
+            ].map(([label, icon, onClick, disabled]) => (
+                <button
+                    key={label as string}
+                    type={'button'}
+                    title={label as string}
+                    aria-label={label as string}
+                    disabled={(disabled as boolean) || busy}
+                    onClick={onClick as () => void}
+                    css={iconButton}
+                >
+                    <FontAwesomeIcon icon={icon as any} fixedWidth />
+                </button>
+            ))}
+            <div css={tw`flex-1`} />
+            <button
+                type={'button'}
+                title={'Refresh'}
+                aria-label={'Refresh'}
+                disabled={busy}
+                onClick={() => refresh(targetDirectory)}
+                css={iconButton}
+            >
+                <FontAwesomeIcon icon={faSyncAlt} fixedWidth />
+            </button>
+            <input
+                ref={upload}
+                type={'file'}
+                multiple
+                css={tw`hidden`}
+                onChange={(e) => uploadFiles(e.currentTarget.files)}
+            />
+        </div>
+    );
+
+    const explorer = (
+        <>
+            {explorerButtons}
+            <div css={tw`flex-1 overflow-auto py-1 min-h-0`}>
+                <FileTree
+                    uuid={uuid}
+                    selection={selection}
+                    activePath={activePath}
+                    openPaths={tabs.map((t) => t.path)}
+                    dirtyPaths={dirtyPaths}
+                    refreshToken={refreshToken}
+                    onSelect={setSelection}
+                    onOpen={open}
+                />
+            </div>
+        </>
+    );
+
+    const toggles = (
+        <>
+            <label css={tw`flex items-center cursor-pointer text-xs text-neutral-300 px-2 py-1`}>
+                <input
+                    type={'checkbox'}
+                    checked={wordWrap}
+                    onChange={(e) => setWordWrap(e.currentTarget.checked)}
+                    css={tw`mr-2`}
+                />
+                Word wrap
+            </label>
+            <label css={tw`flex items-center cursor-pointer text-xs text-neutral-300 px-2 py-1`}>
+                <input
+                    type={'checkbox'}
+                    checked={minimap}
+                    onChange={(e) => setMinimap(e.currentTarget.checked)}
+                    css={tw`mr-2`}
+                />
+                Minimap
+            </label>
+        </>
+    );
+
     return (
-        <PageContentBlock title={active ? active.name : 'File editor'}>
-            <div css={tw`flex items-center mb-2`}>
-                <h2 css={tw`text-xl text-neutral-300 flex-1`}>File editor</h2>
-                <Button.Text type={'button'} onClick={() => history.push(`/server/${id}/files`)}>
-                    Back to file list
+        <div ref={root} css={tw`px-2 sm:px-4 pt-2`}>
+            <div css={tw`flex items-center mb-2 min-w-0`}>
+                <button
+                    type={'button'}
+                    aria-label={treeOpen ? 'Hide file explorer' : 'Show file explorer'}
+                    aria-expanded={treeOpen}
+                    onClick={() => setTreeOpen((v) => !v)}
+                    css={[iconButton, tw`mr-1`]}
+                >
+                    <FontAwesomeIcon icon={faBars} />
+                </button>
+                <p css={tw`flex-1 min-w-0 truncate text-sm text-neutral-300`} title={activePath || ''}>
+                    {activePath || 'File editor'}
+                </p>
+                <Button.Text type={'button'} onClick={() => history.push(`/server/${id}/files`)} css={tw`flex-none`}>
+                    {mobile ? 'Files' : 'Back to file list'}
                 </Button.Text>
             </div>
-            {notice && (
-                <div
-                    role={'status'}
-                    css={[
-                        tw`mb-2 px-3 py-2 text-sm rounded flex items-center`,
-                        notice.type === 'error' ? tw`bg-red-900 text-red-100` : tw`bg-green-900 text-green-100`,
-                    ]}
-                >
-                    <span css={tw`flex-1`}>{notice.message}</span>
-                    <button type={'button'} aria-label={'Dismiss'} onClick={() => setNotice(null)}>
-                        <FontAwesomeIcon icon={faTimes} />
-                    </button>
-                </div>
-            )}
-            <div
-                css={tw`flex bg-neutral-900 rounded overflow-hidden shadow-lg`}
-                style={{ height: `max(${MIN_HEIGHT}px, calc(100vh - 17rem))` }}
-            >
-                {treeOpen && (
-                    <aside css={tw`w-56 sm:w-64 flex-none flex flex-col border-r border-neutral-700 bg-neutral-800`}>
-                        <div css={tw`flex items-center px-1 border-b border-neutral-700`}>
-                            {toolbarButton(
-                                'New file',
-                                faFileMedical,
-                                () => {
-                                    setPrompt({ kind: 'file', directory: targetDirectory, initial: '' });
-                                    setPromptValue('');
-                                },
-                                !canCreate
-                            )}
-                            {toolbarButton(
-                                'New folder',
-                                faFolderPlus,
-                                () => {
-                                    setPrompt({ kind: 'folder', directory: targetDirectory, initial: '' });
-                                    setPromptValue('');
-                                },
-                                !canCreate
-                            )}
-                            {toolbarButton('Upload files', faUpload, () => upload.current?.click(), !canCreate)}
-                            {toolbarButton(
-                                'Rename',
-                                faPencilAlt,
-                                startRename,
-                                !selection || selection.path === '/' || !canUpdate
-                            )}
-                            {toolbarButton(
-                                'Delete',
-                                faTrashAlt,
-                                startDelete,
-                                !selection || selection.path === '/' || !canDelete
-                            )}
-                            <div css={tw`flex-1`} />
-                            {toolbarButton('Refresh', faSyncAlt, () => refresh(targetDirectory))}
-                            <input
-                                ref={upload}
-                                type={'file'}
-                                multiple
-                                css={tw`hidden`}
-                                onChange={(e) => uploadFiles(e.currentTarget.files)}
-                            />
-                        </div>
-                        <div css={tw`flex-1 overflow-auto py-1`}>
-                            <FileTree
-                                uuid={uuid}
-                                selection={selection}
-                                activePath={activePath}
-                                openPaths={tabs.map((t) => t.path)}
-                                dirtyPaths={dirtyPaths}
-                                refreshToken={refreshToken}
-                                onSelect={setSelection}
-                                onOpen={open}
-                            />
-                        </div>
-                    </aside>
+
+            <div css={tw`relative flex bg-neutral-900 rounded overflow-hidden shadow-lg`} style={{ height }}>
+                {treeOpen && !mobile && (
+                    <>
+                        <aside css={tw`flex-none flex flex-col bg-neutral-800`} style={{ width: sidebarWidth }}>
+                            {explorer}
+                        </aside>
+                        <div
+                            role={'separator'}
+                            aria-orientation={'vertical'}
+                            aria-label={'Resize file explorer'}
+                            tabIndex={0}
+                            onPointerDown={startResize}
+                            onKeyDown={(e) => {
+                                if (e.key === 'ArrowLeft') setSidebarWidth((w) => Math.max(MIN_SIDEBAR, w - 16));
+                                if (e.key === 'ArrowRight') setSidebarWidth((w) => Math.min(MAX_SIDEBAR, w + 16));
+                            }}
+                            style={{ cursor: 'col-resize' }}
+                            css={tw`flex-none w-1 bg-neutral-700 hover:bg-cyan-600 focus:bg-cyan-600 focus:outline-none`}
+                        />
+                    </>
                 )}
+
                 <section css={tw`flex-1 min-w-0 flex flex-col`}>
-                    <div css={tw`flex items-stretch bg-neutral-800 border-b border-neutral-700`}>
-                        <button
-                            type={'button'}
-                            aria-label={treeOpen ? 'Hide file explorer' : 'Show file explorer'}
-                            aria-expanded={treeOpen}
-                            onClick={() => setTreeOpen((v) => !v)}
-                            css={tw`px-3 text-neutral-400 hover:text-neutral-100 border-r border-neutral-700 focus:outline-none focus:text-cyan-400`}
-                        >
-                            &#9776;
-                        </button>
-                        <div role={'tablist'} aria-label={'Open files'} css={tw`flex flex-1 overflow-x-auto`}>
-                            {tabs.map((tab) => (
-                                <div
-                                    key={tab.path}
-                                    role={'tab'}
-                                    aria-selected={tab.path === activePath}
-                                    css={[
-                                        tw`flex items-center flex-none pl-3 pr-1 text-sm border-r border-neutral-700 cursor-pointer`,
-                                        tab.path === activePath
-                                            ? tw`bg-neutral-900 text-neutral-50`
-                                            : tw`text-neutral-400 hover:text-neutral-200`,
-                                    ]}
-                                    title={tab.path}
-                                    onClick={() => setActivePath(tab.path)}
-                                    onAuxClick={(e) => e.button === 1 && requestClose(tab.path)}
-                                >
-                                    <button
-                                        type={'button'}
-                                        onClick={() => setActivePath(tab.path)}
-                                        css={tw`py-2 focus:outline-none focus:underline`}
-                                    >
-                                        {tab.name}
-                                        {tab.dirty && (
-                                            <span aria-label={'unsaved changes'} css={tw`ml-1 text-cyan-400`}>
-                                                &bull;
-                                            </span>
-                                        )}
-                                    </button>
-                                    <button
-                                        type={'button'}
-                                        aria-label={`Close ${tab.name}`}
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            requestClose(tab.path);
-                                        }}
-                                        css={tw`ml-2 px-2 py-1 rounded text-neutral-500 hover:text-neutral-100 hover:bg-neutral-700 focus:outline-none focus:text-cyan-400`}
-                                    >
-                                        <FontAwesomeIcon icon={faTimes} />
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-                        {active?.status === 'ready' && (
-                            <div css={tw`flex items-center px-2 text-xs text-neutral-400 flex-none`}>
-                                <label css={tw`mr-3 cursor-pointer hidden sm:block`}>
-                                    <input
-                                        type={'checkbox'}
-                                        checked={wordWrap}
-                                        onChange={(e) => setWordWrap(e.currentTarget.checked)}
-                                        css={tw`mr-1`}
-                                    />
-                                    Wrap
-                                </label>
-                                <label css={tw`mr-3 cursor-pointer hidden sm:block`}>
-                                    <input
-                                        type={'checkbox'}
-                                        checked={minimap}
-                                        onChange={(e) => setMinimap(e.currentTarget.checked)}
-                                        css={tw`mr-1`}
-                                    />
-                                    Minimap
-                                </label>
-                                <span css={tw`mr-3 hidden md:block`}>
-                                    {LANGUAGE_LABELS[active.language] || active.language}
-                                </span>
-                                <Button
+                    <div
+                        role={'tablist'}
+                        aria-label={'Open files'}
+                        css={tw`flex-none flex overflow-x-auto bg-neutral-800 border-b border-neutral-700`}
+                        style={{ scrollbarWidth: 'thin' }}
+                    >
+                        {tabs.map((tab) => (
+                            <div
+                                key={tab.path}
+                                role={'tab'}
+                                aria-selected={tab.path === activePath}
+                                title={tab.path}
+                                onClick={() => setActivePath(tab.path)}
+                                onAuxClick={(e) => e.button === 1 && requestClose(tab.path)}
+                                css={[
+                                    tw`flex items-center flex-none max-w-[14rem] pl-3 pr-1 text-sm border-r border-neutral-700 cursor-pointer border-t-2`,
+                                    tab.path === activePath
+                                        ? tw`bg-neutral-900 text-neutral-50 border-t-cyan-500`
+                                        : tw`text-neutral-400 hover:text-neutral-200 border-t-transparent`,
+                                ]}
+                            >
+                                <button
                                     type={'button'}
-                                    size={'small' as any}
-                                    disabled={!canUpdate || busy || !active.dirty}
-                                    onClick={() => save()}
+                                    onClick={() => setActivePath(tab.path)}
+                                    css={tw`py-2 truncate focus:outline-none focus:underline`}
                                 >
-                                    Save
-                                </Button>
+                                    {tab.name}
+                                </button>
+                                {tab.dirty && (
+                                    <span aria-label={'unsaved changes'} css={tw`ml-1 text-cyan-400`}>
+                                        &bull;
+                                    </span>
+                                )}
+                                <button
+                                    type={'button'}
+                                    aria-label={`Close ${tab.name}`}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        requestClose(tab.path);
+                                    }}
+                                    css={tw`ml-1 px-2 py-1 rounded text-neutral-500 hover:text-neutral-100 hover:bg-neutral-700 focus:outline-none focus:text-cyan-400`}
+                                >
+                                    <FontAwesomeIcon icon={faTimes} />
+                                </button>
                             </div>
-                        )}
+                        ))}
+                        {tabs.length === 0 && <span css={tw`px-3 py-2 text-sm text-neutral-500`}>No files open</span>}
                     </div>
+
+                    {active?.status === 'ready' && (
+                        <div
+                            css={tw`flex-none flex items-center h-9 px-2 border-b border-neutral-800 bg-neutral-900 text-xs text-neutral-400`}
+                        >
+                            <span css={tw`flex-1 min-w-0 truncate`}>
+                                {LANGUAGE_LABELS[active.language] || active.language}
+                            </span>
+                            <button
+                                ref={problemsButton}
+                                type={'button'}
+                                onClick={() => setProblemsOpen((v) => !v)}
+                                aria-haspopup={'listbox'}
+                                aria-expanded={problemsOpen}
+                                disabled={problems.length === 0}
+                                css={[
+                                    tw`mr-2 px-2 py-1 rounded focus:outline-none focus:ring-2 focus:ring-cyan-600`,
+                                    errorCount
+                                        ? tw`text-red-300`
+                                        : problems.length
+                                        ? tw`text-yellow-300`
+                                        : tw`text-neutral-500`,
+                                ]}
+                            >
+                                {problems.length === 0
+                                    ? 'No problems'
+                                    : `${
+                                          errorCount
+                                              ? `${errorCount} error${errorCount === 1 ? '' : 's'}`
+                                              : `${problems.length} warning${problems.length === 1 ? '' : 's'}`
+                                      }`}
+                            </button>
+                            <Popover
+                                anchor={problemsButton.current}
+                                open={problemsOpen}
+                                onClose={() => setProblemsOpen(false)}
+                                align={'end'}
+                                role={'listbox'}
+                                label={'Problems'}
+                                className={
+                                    'w-96 max-w-[90vw] py-1 rounded bg-neutral-800 border border-neutral-700 shadow-lg'
+                                }
+                            >
+                                {problems.map((p, i) => (
+                                    <button
+                                        key={i}
+                                        type={'button'}
+                                        role={'option'}
+                                        aria-selected={false}
+                                        onClick={() => {
+                                            setProblemsOpen(false);
+                                            editor.current?.reveal(active.path, p.line, p.column);
+                                        }}
+                                        className={
+                                            'block w-full text-left px-3 py-2 text-xs text-neutral-200 hover:bg-neutral-700 focus:bg-neutral-700 focus:outline-none'
+                                        }
+                                    >
+                                        <span className={p.severity === 'error' ? 'text-red-300' : 'text-yellow-300'}>
+                                            {p.severity === 'error' ? 'Error' : 'Warning'}
+                                        </span>
+                                        {' · '}line {p.line}, column {p.column}
+                                        <span className={'block text-neutral-400'}>{p.message}</span>
+                                    </button>
+                                ))}
+                            </Popover>
+                            {!mobile && <div css={tw`flex items-center`}>{toggles}</div>}
+                            {mobile && (
+                                <>
+                                    <button
+                                        ref={moreButton}
+                                        type={'button'}
+                                        aria-label={'Editor options'}
+                                        aria-haspopup={'menu'}
+                                        aria-expanded={moreOpen}
+                                        onClick={() => setMoreOpen((v) => !v)}
+                                        css={[iconButton, tw`mr-1`]}
+                                    >
+                                        <FontAwesomeIcon icon={faEllipsisH} />
+                                    </button>
+                                    <Popover
+                                        anchor={moreButton.current}
+                                        open={moreOpen}
+                                        onClose={() => setMoreOpen(false)}
+                                        align={'end'}
+                                        label={'Editor options'}
+                                        className={'py-1 rounded bg-neutral-800 border border-neutral-700 shadow-lg'}
+                                    >
+                                        {toggles}
+                                    </Popover>
+                                </>
+                            )}
+                            <Button
+                                type={'button'}
+                                disabled={!canUpdate || busy || !active.dirty}
+                                onClick={() => save()}
+                                css={tw`!py-1 !px-3 !text-xs ml-1`}
+                            >
+                                Save
+                            </Button>
+                        </div>
+                    )}
+
                     <div css={tw`flex-1 min-h-0 relative`}>
                         {tabs.length === 0 && (
                             <p
                                 css={tw`absolute inset-0 flex items-center justify-center text-sm text-neutral-500 text-center px-6`}
                             >
-                                Select a file in the explorer to open it. Files stay open in tabs while you browse.
+                                {mobile
+                                    ? 'Open the explorer to choose a file.'
+                                    : 'Select a file in the explorer to open it. Files stay open in tabs while you browse.'}
                             </p>
                         )}
                         {tabs.length > 0 && (
-                            <Suspense fallback={<Spinner centered size={'large'} />}>
+                            <Suspense
+                                fallback={
+                                    <div css={tw`absolute inset-0 flex items-center justify-center`}>
+                                        <Spinner size={'large'} />
+                                    </div>
+                                }
+                            >
                                 <div
                                     style={{
                                         position: 'absolute',
@@ -583,9 +866,10 @@ export default () => {
                                         files={editorFiles}
                                         activePath={active?.status === 'ready' ? activePath : null}
                                         wordWrap={wordWrap}
-                                        minimap={minimap}
+                                        minimap={minimap && !mobile}
                                         readOnly={!canUpdate}
                                         onDirtyChange={(path, dirty) => patch(path, { dirty })}
+                                        onContentChange={onContentChange}
                                         onSave={() => save()}
                                     />
                                 </div>
@@ -642,6 +926,22 @@ export default () => {
                         )}
                     </div>
                 </section>
+
+                {mobile && treeOpen && (
+                    <>
+                        <div
+                            css={tw`absolute inset-0 z-10 bg-black opacity-60`}
+                            onClick={() => setTreeOpen(false)}
+                            aria-hidden
+                        />
+                        <aside
+                            css={tw`absolute inset-y-0 left-0 z-20 w-72 max-w-[85%] flex flex-col bg-neutral-800 shadow-xl`}
+                            aria-label={'File explorer'}
+                        >
+                            {explorer}
+                        </aside>
+                    </>
+                )}
             </div>
 
             <Modal
@@ -718,35 +1018,101 @@ export default () => {
             </Modal>
 
             <Modal visible={!!conflict} onDismissed={() => setConflict(null)} dismissable closeOnEscape>
-                <h2 css={tw`text-xl mb-3 text-neutral-100`}>This file changed on the server</h2>
+                <h2 css={tw`text-xl mb-3 text-neutral-100`}>File changed on server</h2>
                 <p css={tw`text-sm text-neutral-300`}>
-                    {conflict && basename(conflict.path)} was modified after you opened it, possibly by another person,
-                    a plugin or the game server itself. Saving now would overwrite those changes.
+                    The remote version of {conflict && basename(conflict.path)} changed since this tab was opened. It
+                    may have been edited by another person, a plugin or the server itself.
                 </p>
+                {conflict?.compare && (
+                    <dl
+                        css={tw`mt-4 text-xs text-neutral-300 bg-neutral-800 rounded p-3 grid grid-cols-2 gap-x-4 gap-y-1`}
+                    >
+                        <dt css={tw`text-neutral-500`}>Opened version</dt>
+                        <dd>{new Date(tabs.find((t) => t.path === conflict.path)?.mtime || 0).toLocaleString()}</dd>
+                        <dt css={tw`text-neutral-500`}>Server version</dt>
+                        <dd>{conflict.remoteMtime ? new Date(conflict.remoteMtime).toLocaleString() : 'unknown'}</dd>
+                        <dt css={tw`text-neutral-500`}>Server size</dt>
+                        <dd>
+                            {conflict.remoteSize !== undefined
+                                ? `${conflict.remoteSize.toLocaleString()} bytes`
+                                : 'unknown'}
+                        </dd>
+                        <dt css={tw`text-neutral-500`}>Your version</dt>
+                        <dd>{(editor.current?.getContent(conflict.path) ?? '').length.toLocaleString()} characters</dd>
+                    </dl>
+                )}
+                {conflict?.arming && (
+                    <label css={tw`flex items-start mt-4 text-sm text-red-200 cursor-pointer`}>
+                        <input
+                            type={'checkbox'}
+                            checked={conflict.confirmed}
+                            css={tw`mt-1 mr-2`}
+                            onChange={(e) => {
+                                const checked = e.currentTarget.checked;
+                                setConflict((c) => (c ? { ...c, confirmed: checked } : c));
+                            }}
+                        />
+                        I understand this permanently replaces the newer version on the server.
+                    </label>
+                )}
                 <div css={tw`flex flex-wrap justify-end mt-6`}>
-                    <Button.Text type={'button'} onClick={() => setConflict(null)}>
-                        Cancel
-                    </Button.Text>
-                    <Button.Text
-                        type={'button'}
-                        css={tw`ml-2`}
-                        onClick={() => conflict && reloadFromServer(conflict.path)}
-                    >
-                        Discard mine and reload
-                    </Button.Text>
-                    <Button.Danger
-                        type={'button'}
-                        css={tw`ml-2`}
-                        onClick={() => {
-                            const path = conflict!.path;
-                            setConflict(null);
-                            save(path, true);
-                        }}
-                    >
-                        Overwrite
-                    </Button.Danger>
+                    {conflict?.arming ? (
+                        <>
+                            <Button.Text
+                                type={'button'}
+                                onClick={() => setConflict((c) => (c ? { ...c, arming: false, confirmed: false } : c))}
+                            >
+                                Back
+                            </Button.Text>
+                            <Button.Danger
+                                type={'button'}
+                                css={tw`ml-2`}
+                                disabled={!conflict.confirmed}
+                                onClick={() => {
+                                    const path = conflict.path;
+                                    setConflict(null);
+                                    save(path, true);
+                                }}
+                            >
+                                Overwrite remote file
+                            </Button.Danger>
+                        </>
+                    ) : (
+                        <>
+                            <Button.Text type={'button'} onClick={() => setConflict(null)}>
+                                Cancel
+                            </Button.Text>
+                            {!conflict?.compare && (
+                                <Button.Text
+                                    type={'button'}
+                                    css={tw`ml-2`}
+                                    onClick={() => setConflict((c) => (c ? { ...c, compare: true } : c))}
+                                >
+                                    Compare metadata
+                                </Button.Text>
+                            )}
+                            <Button.Text
+                                type={'button'}
+                                css={tw`ml-2`}
+                                onClick={() => {
+                                    const path = conflict!.path;
+                                    setConflict(null);
+                                    readContents(path);
+                                }}
+                            >
+                                Reload remote
+                            </Button.Text>
+                            <Button.Danger
+                                type={'button'}
+                                css={tw`ml-2`}
+                                onClick={() => setConflict((c) => (c ? { ...c, arming: true } : c))}
+                            >
+                                Overwrite&hellip;
+                            </Button.Danger>
+                        </>
+                    )}
                 </div>
             </Modal>
-        </PageContentBlock>
+        </div>
     );
 };

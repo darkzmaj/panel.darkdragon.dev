@@ -11,8 +11,21 @@ export interface EditorFile {
     revision: number;
 }
 
+export interface MarkerInput {
+    message: string;
+    line: number;
+    column: number;
+    endLine?: number;
+    endColumn?: number;
+    severity: 'error' | 'warning';
+}
+
 export interface EditorHandle {
     getContent: (path: string) => string | undefined;
+    // Shows problems as red/yellow underlines. Passing an empty list clears them.
+    setMarkers: (path: string, markers: MarkerInput[]) => void;
+    // Moves the cursor to a position in the given file's model (which must be the active one) and focuses it.
+    reveal: (path: string, line: number, column: number) => void;
     markSaved: (path: string) => void;
     focus: () => void;
     runAction: (id: string) => void;
@@ -25,6 +38,7 @@ interface Props {
     minimap: boolean;
     readOnly: boolean;
     onDirtyChange: (path: string, dirty: boolean) => void;
+    onContentChange: (path: string) => void;
     onSave: () => void;
 }
 
@@ -79,13 +93,13 @@ const configure = () => {
 };
 
 export default forwardRef<EditorHandle, Props>(
-    ({ files, activePath, wordWrap, minimap, readOnly, onDirtyChange, onSave }, ref) => {
+    ({ files, activePath, wordWrap, minimap, readOnly, onDirtyChange, onContentChange, onSave }, ref) => {
         const container = useRef<HTMLDivElement>(null);
         const editor = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
         const entries = useRef(new Map<string, Entry>());
         const active = useRef<string | null>(null);
-        const callbacks = useRef({ onDirtyChange, onSave });
-        callbacks.current = { onDirtyChange, onSave };
+        const callbacks = useRef({ onDirtyChange, onContentChange, onSave });
+        callbacks.current = { onDirtyChange, onContentChange, onSave };
 
         useImperativeHandle(ref, () => ({
             getContent: (path) => entries.current.get(path)?.model.getValue(),
@@ -95,6 +109,31 @@ export default forwardRef<EditorHandle, Props>(
                     entry.savedVersion = entry.model.getAlternativeVersionId();
                     callbacks.current.onDirtyChange(path, false);
                 }
+            },
+            setMarkers: (path, markers) => {
+                const model = entries.current.get(path)?.model;
+                if (!model) return;
+
+                monaco.editor.setModelMarkers(
+                    model,
+                    'gobia',
+                    markers.map((m) => ({
+                        severity: m.severity === 'error' ? monaco.MarkerSeverity.Error : monaco.MarkerSeverity.Warning,
+                        message: m.message,
+                        startLineNumber: m.line,
+                        startColumn: m.column,
+                        endLineNumber: m.endLine ?? m.line,
+                        endColumn:
+                            m.endColumn ??
+                            Math.max(m.column + 1, model.getLineMaxColumn(Math.min(m.line, model.getLineCount()))),
+                    }))
+                );
+            },
+            reveal: (path, line, column) => {
+                if (active.current !== path || !editor.current) return;
+                editor.current.setPosition({ lineNumber: line, column });
+                editor.current.revealLineInCenter(line);
+                editor.current.focus();
             },
             focus: () => editor.current?.focus(),
             runAction: (id) => editor.current?.getAction(id)?.run(),
@@ -162,6 +201,7 @@ export default forwardRef<EditorHandle, Props>(
                 };
                 model.onDidChangeContent(() => {
                     callbacks.current.onDirtyChange(file.path, model.getAlternativeVersionId() !== entry.savedVersion);
+                    callbacks.current.onContentChange(file.path);
                 });
                 entries.current.set(file.path, entry);
             });
