@@ -216,6 +216,35 @@ Route::group(['prefix' => 'mounts'], function () {
 
 /*
 |--------------------------------------------------------------------------
+| Server Template Controller Routes
+|--------------------------------------------------------------------------
+|
+| Endpoint: /admin/templates
+|
+*/
+Route::group(['prefix' => 'templates'], function () {
+    Route::get('/', [Admin\TemplateController::class, 'index'])->name('admin.templates');
+    Route::get('/new', [Admin\TemplateController::class, 'create'])->name('admin.templates.new');
+    Route::get('/view/{template:id}', [Admin\TemplateController::class, 'view'])->name('admin.templates.view');
+
+    Route::post('/new', [Admin\TemplateController::class, 'store']);
+    Route::patch('/view/{template:id}', [Admin\TemplateController::class, 'update']);
+    Route::post('/view/{template:id}/duplicate', [Admin\TemplateController::class, 'duplicate'])->name('admin.templates.duplicate');
+    Route::post('/view/{template:id}/toggle', [Admin\TemplateController::class, 'toggle'])->name('admin.templates.toggle');
+    Route::delete('/view/{template:id}', [Admin\TemplateController::class, 'delete']);
+
+    Route::get('/view/{template:id}/files', [Admin\TemplateController::class, 'files'])->name('admin.templates.files');
+    Route::get('/view/{template:id}/files/content', [Admin\TemplateController::class, 'readFile'])->name('admin.templates.files.read');
+    Route::put('/view/{template:id}/files', [Admin\TemplateController::class, 'writeFile'])->name('admin.templates.files.write');
+    Route::delete('/view/{template:id}/files', [Admin\TemplateController::class, 'deleteFile'])->name('admin.templates.files.delete');
+
+    Route::post('/view/{template:id}/instances', [Admin\TemplateController::class, 'createInstance'])->name('admin.templates.instances');
+    Route::get('/view/{template:id}/instances/{instance:uuid}', [Admin\TemplateController::class, 'instanceStatus'])->name('admin.templates.instances.status');
+    Route::post('/view/{template:id}/instances/{instance:uuid}/retry', [Admin\TemplateController::class, 'retryInstance'])->name('admin.templates.instances.retry');
+});
+
+/*
+|--------------------------------------------------------------------------
 | Nest Controller Routes
 |--------------------------------------------------------------------------
 |

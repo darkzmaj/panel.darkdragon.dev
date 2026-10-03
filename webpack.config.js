@@ -14,10 +14,18 @@ module.exports = {
     performance: {
         hints: false,
     },
-    entry: isProduction ? ['./resources/scripts/index.tsx'] : ['react-hot-loader/patch', './resources/scripts/index.tsx'],
+    entry: {
+        main: isProduction ? ['./resources/scripts/index.tsx'] : ['react-hot-loader/patch', './resources/scripts/index.tsx'],
+        // Small separate entry for the admin template file editor, loaded only on that page.
+        'template-editor': './resources/scripts/templateEditor.tsx',
+    },
     output: {
         path: path.join(__dirname, '/public/assets'),
-        filename: isProduction ? 'bundle.[chunkhash:8].js' : 'bundle.[fullhash:8].js',
+        filename: (pathData) => {
+            const prefix = pathData.chunk && pathData.chunk.name === 'main' ? 'bundle' : '[name]';
+
+            return isProduction ? prefix + '.[chunkhash:8].js' : prefix + '.[fullhash:8].js';
+        },
         chunkFilename: isProduction ? '[name].[chunkhash:8].js' : '[name].[fullhash:8].js',
         publicPath: process.env.WEBPACK_PUBLIC_PATH || '/assets/',
         crossOriginLoading: 'anonymous',

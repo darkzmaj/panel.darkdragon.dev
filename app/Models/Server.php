@@ -38,6 +38,8 @@ use Pterodactyl\Exceptions\Http\Server\ServerStateConflictException;
  * @property int $allocation_id
  * @property int $nest_id
  * @property int $egg_id
+ * @property int|null $template_id
+ * @property int|null $template_revision
  * @property string $startup
  * @property string $image
  * @property int|null $allocation_limit
@@ -148,7 +150,7 @@ class Server extends Model implements Identifiable
     /**
      * Fields that are not mass assignable.
      */
-    protected $guarded = ['id', self::CREATED_AT, self::UPDATED_AT, 'deleted_at', 'installed_at'];
+    protected $guarded = ['id', self::CREATED_AT, self::UPDATED_AT, 'deleted_at', 'installed_at', 'template_id', 'template_revision'];
 
     public static array $validationRules = [
         'external_id' => 'sometimes|nullable|string|between:1,191|unique:servers',
@@ -238,6 +240,14 @@ class Server extends Model implements Identifiable
      *
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\Pterodactyl\Models\User, $this>
      */
+    /**
+     * The template this server was created from, if any. The revision records which version of it was used.
+     */
+    public function template(): BelongsTo
+    {
+        return $this->belongsTo(ServerTemplate::class, 'template_id');
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'owner_id');

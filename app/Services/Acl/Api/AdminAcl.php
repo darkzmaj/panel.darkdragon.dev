@@ -33,6 +33,10 @@ class AdminAcl
     public const RESOURCE_EGGS = 'eggs';
     public const RESOURCE_DATABASE_HOSTS = 'database_hosts';
     public const RESOURCE_SERVER_DATABASES = 'server_databases';
+    // Server templates: read = template.read, write = template.instance.create / template.instance.delete.
+    public const RESOURCE_TEMPLATES = 'templates';
+    public const RESOURCE_TEMPLATE_INSTANCE_CREATE = 'template_instance_create';
+    public const RESOURCE_TEMPLATE_INSTANCE_DELETE = 'template_instance_delete';
 
     /**
      * Determine if an API key has permission to perform a specific read/write operation.

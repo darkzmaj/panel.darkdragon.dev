@@ -95,6 +95,9 @@
                         <li class="{{ ! $in('admin.mounts', 'admin.nests', 'admin.databases') ?: 'active' }}">
                             <a href="{{ route('admin.mounts') }}"><i class="fa fa-cubes"></i> <span>Services</span></a>
                         </li>
+                        <li class="{{ ! $in('admin.templates') ?: 'active' }}">
+                            <a href="{{ route('admin.templates') }}"><i class="fa fa-clone"></i> <span>Templates</span></a>
+                        </li>
                     </ul>
                 </section>
             </aside>

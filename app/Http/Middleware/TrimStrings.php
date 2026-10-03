@@ -12,5 +12,7 @@ class TrimStrings extends BaseTrimmer
     protected $except = [
         'password',
         'password_confirmation',
+        // File contents (template files) must be stored byte for byte, including leading and trailing whitespace.
+        'content',
     ];
 }
