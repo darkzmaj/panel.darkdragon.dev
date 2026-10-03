@@ -7,13 +7,14 @@
 @section('content-header')
     <h1>Panel Updates<small>Install published releases of this Panel.</small></h1>
     <ol class="breadcrumb">
-        <li><a href="{{ route('admin.index') }}">Admin</a></li>
+        <li><a href="{{ route('admin.index') }}">Dashboard</a></li>
         <li>System</li>
         <li class="active">Updates</li>
     </ol>
 @endsection
 
 @section('content')
+    @include('partials.admin.section-tabs', ['section' => 'settings', 'active' => 'updates'])
     <div class="row">
         <div class="col-md-6">
             <div class="box" id="update-box">

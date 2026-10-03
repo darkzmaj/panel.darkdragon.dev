@@ -1,0 +1,61 @@
+/* Gobia Cloud admin components: stat cards, section tabs, resource gauges, node rows. */
+
+.gb-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-bottom: 15px; }
+.gb-stat { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: #3f4d5a; border-top: 3px solid #1f2933; border-radius: 3px; color: #cad1d8; text-decoration: none !important; box-shadow: 0 2px 4px rgba(0,0,0,.12); transition: background-color .15s; }
+.gb-stat:hover { background: #46555f; color: #fff; }
+.gb-stat > i { font-size: 20px; width: 24px; text-align: center; color: #7b8794; }
+.gb-stat .gb-num { display: block; font-size: 22px; line-height: 1.1; font-weight: 600; color: #f5f7fa; }
+.gb-stat .gb-label { display: block; font-size: 12px; color: #9aa5b1; }
+
+.gb-section-title { margin: 20px 0 10px; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: #9aa5b1; }
+
+.gb-gauges { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; }
+.gb-gauge { padding: 14px; background: #3f4d5a; border-top: 3px solid #1f2933; border-radius: 3px; display: flex; gap: 14px; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,.12); }
+.gb-gauge svg { flex: none; width: 76px; height: 76px; }
+.gb-gauge .gb-ring-bg { stroke: #2a3541; }
+.gb-gauge .gb-ring-fg { stroke: #3c8dbc; transition: stroke-dasharray .4s; }
+.gb-gauge .gb-ring-fg.warn { stroke: #c87f0a; }
+.gb-gauge .gb-ring-fg.crit { stroke: #c23321; }
+.gb-gauge .gb-ring-text { fill: #f5f7fa; font-size: 17px; font-weight: 600; text-anchor: middle; dominant-baseline: central; }
+.gb-gauge h4 { margin: 0 0 4px; font-size: 13px; color: #f5f7fa; text-transform: uppercase; letter-spacing: .04em; }
+.gb-gauge dl { margin: 0; font-size: 12px; color: #9aa5b1; }
+.gb-gauge dl div { display: flex; justify-content: space-between; gap: 10px; }
+.gb-gauge dd { margin: 0; color: #cad1d8; text-align: right; }
+
+.gb-nodes { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 10px; }
+.gb-node { background: #3f4d5a; border-top: 3px solid #1f2933; border-radius: 3px; padding: 12px 14px; box-shadow: 0 2px 4px rgba(0,0,0,.12); }
+.gb-node.is-offline { border-top-color: #c23321; }
+.gb-node.is-online { border-top-color: #00733e; }
+.gb-node.is-maintenance { border-top-color: #c87f0a; }
+.gb-node header { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+.gb-node header a { font-weight: 600; font-size: 14px; color: #f5f7fa; }
+.gb-node .gb-sub { font-size: 12px; color: #9aa5b1; word-break: break-all; }
+.gb-badge { font-size: 11px; padding: 1px 7px; border-radius: 9px; background: #2a3541; color: #cad1d8; white-space: nowrap; }
+.gb-badge.online { background: #00733e; color: #fff; }
+.gb-badge.offline { background: #c23321; color: #fff; }
+.gb-badge.maintenance { background: #c87f0a; color: #fff; }
+.gb-meter { margin-top: 8px; font-size: 12px; color: #9aa5b1; }
+.gb-meter .gb-meter-head { display: flex; justify-content: space-between; }
+.gb-meter .gb-bar { height: 5px; background: #2a3541; border-radius: 3px; overflow: hidden; margin-top: 3px; }
+.gb-meter .gb-bar > span { display: block; height: 100%; background: #3c8dbc; }
+.gb-meter .gb-bar > span.warn { background: #c87f0a; }
+.gb-meter .gb-bar > span.crit { background: #c23321; }
+.gb-muted { color: #7b8794; }
+
+/* Section tabs shared by Settings, Network and Services pages. */
+.gb-tabs { display: flex; flex-wrap: wrap; gap: 2px; margin: 0 0 15px; padding: 0; list-style: none; border-bottom: 1px solid #1f2933; }
+.gb-tabs a { display: block; padding: 9px 16px; color: #9aa5b1; border-bottom: 2px solid transparent; margin-bottom: -1px; text-decoration: none; }
+.gb-tabs a:hover { color: #f5f7fa; }
+.gb-tabs a.active { color: #f5f7fa; border-bottom-color: #3c8dbc; }
+
+/* Avatars are always circles. */
+.user-menu .user-image, .gb-avatar { border-radius: 50% !important; object-fit: cover; }
+.gb-avatar { width: 28px; height: 28px; vertical-align: middle; }
+
+.gb-user-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.gb-user-filters .form-control { width: auto; min-width: 140px; }
+
+@media (max-width: 767px) {
+    .gb-nodes { grid-template-columns: 1fr; }
+    .gb-gauge { flex-direction: row; }
+}

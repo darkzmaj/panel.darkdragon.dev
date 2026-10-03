@@ -20,6 +20,7 @@
             {!! Theme::css('vendor/sweetalert/sweetalert.min.css?t={cache-version}') !!}
             {!! Theme::css('vendor/animate/animate.min.css?t={cache-version}') !!}
             {!! Theme::css('css/pterodactyl.css?t={cache-version}') !!}
+            {!! Theme::css('css/gobia-admin.css?t={cache-version}') !!}
             {!! Theme::css('vendor/font-awesome/css/font-awesome.min.css?t={cache-version}') !!}
 
             <!--[if lt IE 9]>
@@ -67,66 +68,32 @@
             <aside class="main-sidebar">
                 <section class="sidebar">
                     <ul class="sidebar-menu">
-                        <li class="header">BASIC ADMINISTRATION</li>
-                        <li class="{{ Route::currentRouteName() !== 'admin.index' ?: 'active' }}">
-                            <a href="{{ route('admin.index') }}">
-                                <i class="fa fa-home"></i> <span>Overview</span>
-                            </a>
+                        @php
+                            $route = Route::currentRouteName() ?? '';
+                            $in = fn (string ...$prefixes) => collect($prefixes)->contains(fn ($p) => \Illuminate\Support\Str::startsWith($route, $p));
+                            $updateAvailable = data_get(app(\Pterodactyl\Services\Updater\UpdateService::class)->cached(), 'available');
+                        @endphp
+                        <li class="header">Dashboard</li>
+                        <li class="{{ $route !== 'admin.index' ?: 'active' }}">
+                            <a href="{{ route('admin.index') }}"><i class="fa fa-home"></i> <span>Overview</span></a>
                         </li>
-                        <li class="{{ ! starts_with(Route::currentRouteName(), 'admin.settings') ?: 'active' }}">
-                            <a href="{{ route('admin.settings')}}">
+                        <li class="{{ ! $in('admin.settings', 'admin.api', 'admin.system') ?: 'active' }}">
+                            <a href="{{ route('admin.settings') }}">
                                 <i class="fa fa-wrench"></i> <span>Settings</span>
-                            </a>
-                        </li>
-                        <li class="{{ ! starts_with(Route::currentRouteName(), 'admin.system') ?: 'active' }}">
-                            <a href="{{ route('admin.system.updates') }}">
-                                <i class="fa fa-cloud-download"></i> <span>Updates</span>
-                                @if(data_get(app(\Pterodactyl\Services\Updater\UpdateService::class)->cached(), 'available'))
-                                    <span class="pull-right-container"><small class="label pull-right bg-green">new</small></span>
+                                @if($updateAvailable)
+                                    <span class="pull-right-container"><small class="label pull-right bg-green">update</small></span>
                                 @endif
                             </a>
                         </li>
-                        <li class="{{ ! starts_with(Route::currentRouteName(), 'admin.api') ?: 'active' }}">
-                            <a href="{{ route('admin.api.index')}}">
-                                <i class="fa fa-gamepad"></i> <span>Application API</span>
-                            </a>
+                        <li class="{{ ! $in('admin.users') ?: 'active' }}">
+                            <a href="{{ route('admin.users') }}"><i class="fa fa-users"></i> <span>Users</span></a>
                         </li>
-                        <li class="header">MANAGEMENT</li>
-                        <li class="{{ ! starts_with(Route::currentRouteName(), 'admin.databases') ?: 'active' }}">
-                            <a href="{{ route('admin.databases') }}">
-                                <i class="fa fa-database"></i> <span>Databases</span>
-                            </a>
+                        <li class="header">Network</li>
+                        <li class="{{ ! $in('admin.nodes', 'admin.servers', 'admin.locations') ?: 'active' }}">
+                            <a href="{{ route('admin.nodes') }}"><i class="fa fa-sitemap"></i> <span>Nodes</span></a>
                         </li>
-                        <li class="{{ ! starts_with(Route::currentRouteName(), 'admin.locations') ?: 'active' }}">
-                            <a href="{{ route('admin.locations') }}">
-                                <i class="fa fa-globe"></i> <span>Locations</span>
-                            </a>
-                        </li>
-                        <li class="{{ ! starts_with(Route::currentRouteName(), 'admin.nodes') ?: 'active' }}">
-                            <a href="{{ route('admin.nodes') }}">
-                                <i class="fa fa-sitemap"></i> <span>Nodes</span>
-                            </a>
-                        </li>
-                        <li class="{{ ! starts_with(Route::currentRouteName(), 'admin.servers') ?: 'active' }}">
-                            <a href="{{ route('admin.servers') }}">
-                                <i class="fa fa-server"></i> <span>Servers</span>
-                            </a>
-                        </li>
-                        <li class="{{ ! starts_with(Route::currentRouteName(), 'admin.users') ?: 'active' }}">
-                            <a href="{{ route('admin.users') }}">
-                                <i class="fa fa-users"></i> <span>Users</span>
-                            </a>
-                        </li>
-                        <li class="header">SERVICE MANAGEMENT</li>
-                        <li class="{{ ! starts_with(Route::currentRouteName(), 'admin.mounts') ?: 'active' }}">
-                            <a href="{{ route('admin.mounts') }}">
-                                <i class="fa fa-magic"></i> <span>Mounts</span>
-                            </a>
-                        </li>
-                        <li class="{{ ! starts_with(Route::currentRouteName(), 'admin.nests') ?: 'active' }}">
-                            <a href="{{ route('admin.nests') }}">
-                                <i class="fa fa-th-large"></i> <span>Nests</span>
-                            </a>
+                        <li class="{{ ! $in('admin.mounts', 'admin.nests', 'admin.databases') ?: 'active' }}">
+                            <a href="{{ route('admin.mounts') }}"><i class="fa fa-cubes"></i> <span>Services</span></a>
                         </li>
                     </ul>
                 </section>
@@ -165,7 +132,7 @@
                     <strong><i class="fa fa-fw {{ $appIsGit ? 'fa-git-square' : 'fa-code-fork' }}"></i></strong> {{ $appVersion }}<br />
                     <strong><i class="fa fa-fw fa-clock-o"></i></strong> {{ round(microtime(true) - LARAVEL_START, 3) }}s
                 </div>
-                Copyright &copy; 2015 - {{ date('Y') }} <a href="https://pterodactyl.io/">Pterodactyl Software</a>.
+                &copy; {{ date('Y') }} <strong>Gobia Cloud</strong>. All Rights Reserved.
             </footer>
         </div>
         @section('footer-scripts')

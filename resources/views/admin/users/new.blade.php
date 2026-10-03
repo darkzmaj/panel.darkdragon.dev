@@ -7,7 +7,7 @@
 @section('content-header')
     <h1>Create User<small>Add a new user to the system.</small></h1>
     <ol class="breadcrumb">
-        <li><a href="{{ route('admin.index') }}">Admin</a></li>
+        <li><a href="{{ route('admin.index') }}">Dashboard</a></li>
         <li><a href="{{ route('admin.users') }}">Users</a></li>
         <li class="active">Create</li>
     </ol>

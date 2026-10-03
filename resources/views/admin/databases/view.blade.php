@@ -7,7 +7,7 @@
 @section('content-header')
     <h1>{{ $host->name }}<small>Viewing associated databases and details for this database host.</small></h1>
     <ol class="breadcrumb">
-        <li><a href="{{ route('admin.index') }}">Admin</a></li>
+        <li><a href="{{ route('admin.index') }}">Dashboard</a></li>
         <li><a href="{{ route('admin.databases') }}">Database Hosts</a></li>
         <li class="active">{{ $host->name }}</li>
     </ol>

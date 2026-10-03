@@ -7,12 +7,13 @@
 @section('content-header')
     <h1>Application API<small>Control access credentials for managing this Panel via the API.</small></h1>
     <ol class="breadcrumb">
-        <li><a href="{{ route('admin.index') }}">Admin</a></li>
+        <li><a href="{{ route('admin.index') }}">Dashboard</a></li>
         <li class="active">Application API</li>
     </ol>
 @endsection
 
 @section('content')
+    @include('partials.admin.section-tabs', ['section' => 'settings', 'active' => 'api'])
     <div class="row">
         <div class="col-xs-12">
             <div class="box box-primary">

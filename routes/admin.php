@@ -5,6 +5,7 @@ use Pterodactyl\Http\Controllers\Admin;
 use Pterodactyl\Http\Middleware\Admin\Servers\ServerInstalled;
 
 Route::get('/', [Admin\BaseController::class, 'index'])->name('admin.index');
+Route::get('/stats/nodes', [Admin\StatsController::class, 'nodes'])->name('admin.stats.nodes');
 
 /*
 |--------------------------------------------------------------------------
@@ -68,8 +69,6 @@ Route::group(['prefix' => 'settings'], function () {
     Route::get('/', [Admin\Settings\IndexController::class, 'index'])->name('admin.settings');
     Route::get('/mail', [Admin\Settings\MailController::class, 'index'])->name('admin.settings.mail');
     Route::get('/advanced', [Admin\Settings\AdvancedController::class, 'index'])->name('admin.settings.advanced');
-    Route::get('/branding', [Admin\Settings\BrandingController::class, 'index'])->name('admin.settings.branding');
-
     Route::post('/branding/{asset}', [Admin\Settings\BrandingController::class, 'update'])
         ->whereIn('asset', ['logo', 'favicon']);
     Route::delete('/branding/{asset}', [Admin\Settings\BrandingController::class, 'delete'])

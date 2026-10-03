@@ -7,12 +7,13 @@
 @section('content-header')
     <h1>Nests<small>All nests currently available on this system.</small></h1>
     <ol class="breadcrumb">
-        <li><a href="{{ route('admin.index') }}">Admin</a></li>
+        <li><a href="{{ route('admin.index') }}">Dashboard</a></li>
         <li class="active">Nests</li>
     </ol>
 @endsection
 
 @section('content')
+    @include('partials.admin.section-tabs', ['section' => 'services', 'active' => 'nests'])
 <div class="row">
     <div class="col-xs-12">
         <div class="alert alert-danger">

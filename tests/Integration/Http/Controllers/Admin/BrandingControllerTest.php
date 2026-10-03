@@ -26,7 +26,7 @@ class BrandingControllerTest extends HttpTestCase
         foreach (['logo' => [512, 256], 'favicon' => [256, 256]] as $asset => [$maxWidth, $maxHeight]) {
             $this->actingAs($admin)
                 ->post('/admin/settings/branding/' . $asset, [$asset => UploadedFile::fake()->createWithContent($asset . '.png', AccountProfileTest::pngBytes(1000, 1000))])
-                ->assertRedirect(route('admin.settings.branding'));
+                ->assertRedirect(route('admin.settings') . '#branding');
 
             $stored = Storage::disk('local')->get('branding/' . $asset . '.png');
             [$width, $height] = getimagesizefromstring($stored);
@@ -38,7 +38,7 @@ class BrandingControllerTest extends HttpTestCase
             $version = substr(sha1($stored), 0, 16);
             config(['pterodactyl.branding.' . $asset => $version]);
             $url = route('branding.' . $asset, ['v' => $version], false);
-            $this->actingAs($admin)->get(route('admin.settings.branding'))->assertOk()->assertSee($url, false);
+            $this->actingAs($admin)->get(route('admin.settings'))->assertOk()->assertSee($url, false);
 
             // Branding assets are public so that they can be shown on the login page.
             $this->app['auth']->forgetGuards();
@@ -47,7 +47,7 @@ class BrandingControllerTest extends HttpTestCase
                 ->assertHeader('Content-Type', 'image/png')
                 ->assertHeader('Cache-Control', 'immutable, max-age=31536000, public');
 
-            $this->actingAs($admin)->delete('/admin/settings/branding/' . $asset)->assertRedirect(route('admin.settings.branding'));
+            $this->actingAs($admin)->delete('/admin/settings/branding/' . $asset)->assertRedirect(route('admin.settings') . '#branding');
             config(['pterodactyl.branding.' . $asset => null]);
             Storage::disk('local')->assertMissing('branding/' . $asset . '.png');
             $this->app['auth']->forgetGuards();
@@ -82,7 +82,7 @@ class BrandingControllerTest extends HttpTestCase
 
         foreach ($invalid as [$name, $contents]) {
             $this->actingAs($admin)
-                ->from(route('admin.settings.branding'))
+                ->from(route('admin.settings'))
                 ->withHeaders(['Accept' => 'text/html'])
                 ->post('/admin/settings/branding/logo', ['logo' => UploadedFile::fake()->createWithContent($name, $contents)])
                 ->assertSessionHasErrors('logo');
@@ -107,7 +107,7 @@ class BrandingControllerTest extends HttpTestCase
     {
         $user = User::factory()->create();
 
-        $this->actingAs($user)->get(route('admin.settings.branding'))->assertForbidden();
+        $this->actingAs($user)->get(route('admin.settings'))->assertForbidden();
         $this->actingAs($user)
             ->post('/admin/settings/branding/logo', ['logo' => UploadedFile::fake()->createWithContent('logo.png', AccountProfileTest::pngBytes())])
             ->assertForbidden();

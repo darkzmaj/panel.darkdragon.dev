@@ -8,7 +8,7 @@
 @section('content-header')
     <h1>Advanced Settings<small>Configure advanced settings for Pterodactyl.</small></h1>
     <ol class="breadcrumb">
-        <li><a href="{{ route('admin.index') }}">Admin</a></li>
+        <li><a href="{{ route('admin.index') }}">Dashboard</a></li>
         <li class="active">Settings</li>
     </ol>
 @endsection

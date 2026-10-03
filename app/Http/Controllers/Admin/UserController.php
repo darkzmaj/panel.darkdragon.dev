@@ -7,9 +7,11 @@ use Illuminate\Http\Request;
 use Pterodactyl\Models\User;
 use Pterodactyl\Models\Model;
 use Illuminate\Support\Collection;
+use Pterodactyl\Models\ActivityLog;
 use Illuminate\Http\RedirectResponse;
 use Prologue\Alerts\AlertsMessageBag;
 use Spatie\QueryBuilder\QueryBuilder;
+use Spatie\QueryBuilder\AllowedFilter;
 use Illuminate\View\Factory as ViewFactory;
 use Pterodactyl\Exceptions\DisplayException;
 use Pterodactyl\Http\Controllers\Controller;
@@ -49,13 +51,43 @@ class UserController extends Controller
             User::query()->select('users.*')
                 ->selectRaw('COUNT(DISTINCT(subusers.id)) as subuser_of_count')
                 ->selectRaw('COUNT(DISTINCT(servers.id)) as servers_count')
+                ->selectSub(
+                    ActivityLog::query()
+                        ->selectRaw('MAX(timestamp)')
+                        ->where('actor_type', 'user')
+                        ->whereColumn('actor_id', 'users.id'),
+                    'last_activity_at'
+                )
                 ->leftJoin('subusers', 'subusers.user_id', '=', 'users.id')
                 ->leftJoin('servers', 'servers.owner_id', '=', 'users.id')
                 ->groupBy('users.id')
         )
-            ->allowedFilters(['username', 'email', 'uuid'])
+            ->allowedFilters([
+                'username',
+                'email',
+                'uuid',
+                AllowedFilter::callback('*', function ($query, $value) {
+                    $term = '%' . addcslashes((string) $value, '%_\\') . '%';
+                    $query->where(function ($query) use ($term) {
+                        $query->where('users.username', 'like', $term)
+                            ->orWhere('users.email', 'like', $term)
+                            ->orWhere('users.name_first', 'like', $term)
+                            ->orWhere('users.name_last', 'like', $term);
+                    });
+                }),
+                AllowedFilter::callback('role', function ($query, $value) {
+                    if ($value === 'admin') {
+                        $query->where('users.root_admin', true);
+                    } elseif ($value === 'user') {
+                        $query->where('users.root_admin', false);
+                    }
+                }),
+                AllowedFilter::callback('2fa', function ($query, $value) {
+                    $query->where('users.use_totp', $value === 'on');
+                }),
+            ])
             ->defaultSort('-root_admin')
-            ->allowedSorts(['id', 'uuid'])
+            ->allowedSorts(['id', 'uuid', 'username', 'email', 'created_at'])
             ->paginate(50);
 
         return view('admin.users.index', ['users' => $users]);

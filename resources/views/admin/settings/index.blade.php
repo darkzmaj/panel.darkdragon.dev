@@ -8,7 +8,7 @@
 @section('content-header')
     <h1>Panel Settings<small>Configure Pterodactyl to your liking.</small></h1>
     <ol class="breadcrumb">
-        <li><a href="{{ route('admin.index') }}">Admin</a></li>
+        <li><a href="{{ route('admin.index') }}">Dashboard</a></li>
         <li class="active">Settings</li>
     </ol>
 @endsection
@@ -72,4 +72,5 @@
             </div>
         </div>
     </div>
+    @include('partials.admin.settings.branding')
 @endsection
