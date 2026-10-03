@@ -122,3 +122,23 @@ Route::group(['prefix' => '/nests'], function () {
         Route::get('/{egg:id}', [Application\Nests\EggController::class, 'view'])->name('api.application.nests.eggs.view');
     });
 });
+
+/*
+|--------------------------------------------------------------------------
+| Server Template Controller Routes
+|--------------------------------------------------------------------------
+|
+| Endpoint: /api/application/templates
+|
+| These require an Application API key that was explicitly granted the template permissions.
+|
+*/
+Route::group(['prefix' => '/templates'], function () {
+    Route::get('/', [Application\Templates\TemplateController::class, 'index'])->name('api.application.templates');
+    Route::get('/{template:id}', [Application\Templates\TemplateController::class, 'view'])->name('api.application.templates.view');
+
+    Route::post('/{template:id}/instances', [Application\Templates\TemplateInstanceController::class, 'store'])->name('api.application.templates.instances');
+    Route::get('/{template:id}/instances/{instance:uuid}', [Application\Templates\TemplateInstanceController::class, 'view'])->name('api.application.templates.instances.view');
+    Route::post('/{template:id}/instances/{instance:uuid}/retry', [Application\Templates\TemplateInstanceController::class, 'retry'])->name('api.application.templates.instances.retry');
+    Route::delete('/{template:id}/instances/{instance:uuid}', [Application\Templates\TemplateInstanceController::class, 'delete'])->name('api.application.templates.instances.delete');
+});

@@ -4,6 +4,10 @@
 //   node scripts/dev/mock-wings.js [port] [dataDir]
 //
 // Never use it outside development: it performs no authentication.
+//
+// To exercise the server provisioning pipeline end to end it also accepts server creation, power and deletion
+// requests. When MOCK_PANEL_URL, MOCK_NODE_TOKEN_ID and MOCK_NODE_TOKEN are set, a created server "finishes installing"
+// two seconds later by calling the Panel's install callback, exactly like a real Wings would.
 const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -11,6 +15,23 @@ const { URL } = require('node:url');
 
 const port = Number(process.argv[2] || 8080);
 const dataDir = path.resolve(process.argv[3] || path.join(__dirname, '../../storage/mock-wings'));
+
+const panelUrl = process.env.MOCK_PANEL_URL;
+const nodeAuth = process.env.MOCK_NODE_TOKEN_ID ? `Bearer ${process.env.MOCK_NODE_TOKEN_ID}.${process.env.MOCK_NODE_TOKEN}` : null;
+const installed = new Set();
+
+const reportInstall = (uuid) => {
+    if (!panelUrl || !nodeAuth) return;
+    setTimeout(() => {
+        fetch(`${panelUrl}/api/remote/servers/${uuid}/install`, {
+            method: 'POST',
+            headers: { Authorization: nodeAuth, 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify({ successful: true, reinstall: false }),
+        })
+            .then((r) => console.log(`install callback for ${uuid}: ${r.status}`))
+            .catch((e) => console.log(`install callback failed: ${e.message}`));
+    }, 2000);
+};
 
 const mime = (name) => {
     const ext = path.extname(name).toLowerCase();
@@ -66,6 +87,16 @@ http.createServer(async (req, res) => {
             return json(res, known.map(usage));
         }
 
+        if (url.pathname === '/api/servers' && req.method === 'POST') {
+            const data = JSON.parse((await body(req)).toString() || '{}');
+            if (!/^[0-9a-f-]{36}$/.test(data.uuid || '')) return json(res, { error: 'invalid uuid' }, 422);
+            fs.mkdirSync(path.join(dataDir, data.uuid), { recursive: true });
+            installed.add(data.uuid);
+            reportInstall(data.uuid);
+
+            return res.writeHead(202).end();
+        }
+
         if (url.pathname === '/upload/file' && req.method === 'POST') {
             const raw = await body(req);
             const boundary = /boundary=(.+)$/.exec(req.headers['content-type'] || '')[1];
@@ -81,7 +112,18 @@ http.createServer(async (req, res) => {
 
         if (parts[0] !== 'api' || parts[1] !== 'servers' || !parts[2]) return json(res, { error: 'not found' }, 404);
         const uuid = parts[2];
+        if (!/^[0-9a-f-]{36}$/.test(uuid)) return json(res, { error: 'invalid uuid' }, 422);
+        if (parts.length === 3 && req.method === 'DELETE') {
+            fs.rmSync(path.join(dataDir, uuid), { recursive: true, force: true });
+
+            return res.writeHead(204).end();
+        }
         if (parts.length === 3) return json(res, usage(uuid));
+        if (parts[3] === 'power' && req.method === 'POST') {
+            console.log(`power ${(JSON.parse((await body(req)).toString() || '{}')).action} -> ${uuid}`);
+
+            return res.writeHead(202).end();
+        }
         if (parts[3] !== 'files') return json(res, { error: 'not found' }, 404);
 
         switch (parts[4]) {
