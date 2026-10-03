@@ -17,7 +17,7 @@ type Props = Readonly<
 const ContentBox = ({
     title,
     description,
-    borderColor,
+    borderColor: _borderColor,
     showFlashes,
     showLoadingOverlay,
     children,

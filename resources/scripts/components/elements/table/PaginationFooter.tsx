@@ -2,7 +2,7 @@ import React from 'react';
 import { PaginationDataSet } from '@/api/http';
 import classNames from 'classnames';
 import { Button } from '@/components/elements/button/index';
-import { ChevronDoubleLeftIcon, ChevronDoubleRightIcon } from '@heroicons/react/solid';
+import { ChevronDoubleLeftIcon, ChevronDoubleRightIcon } from '@/components/elements/icons';
 
 interface Props {
     className?: string;

@@ -2,6 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { Actions, useStoreActions } from 'easy-peasy';
 import tw from 'twin.macro';
 import PageHeader from '@/components/elements/PageHeader';
+import { Plus } from 'lucide-react';
+import { useStoreState } from 'easy-peasy';
+import CreateInstanceModal from '@/components/dashboard/create/CreateInstanceModal';
 import useSWR from 'swr';
 import { useLocation } from 'react-router-dom';
 import { Server } from '@/api/server/getServer';
@@ -29,6 +32,8 @@ export default () => {
     const [page, setPage] = useState(!isNaN(defaultPage) && defaultPage > 0 ? defaultPage : 1);
     const [filter, setFilter] = useState<ServerFilter>({ kind: 'all' });
     const [editing, setEditing] = useState(false);
+    const [creating, setCreating] = useState(false);
+    const rootAdmin = useStoreState((state: ApplicationStore) => state.user.data!.rootAdmin);
     const toast = useStoreActions((actions: Actions<ApplicationStore>) => actions.toasts.push);
 
     // Categories and the servers that can be put in them. Not refetched on focus; changes arrive through mutate().
@@ -88,7 +93,13 @@ export default () => {
 
     return (
         <PageContentBlock title={'Dashboard'}>
-            <PageHeader title={'Instances'} subtitle={'Everything you own or have been given access to.'} />
+            <PageHeader title={'Instances'} subtitle={'Everything you own or have been given access to.'}>
+                {rootAdmin && (
+                    <button type={'button'} className={'gb-btn gb-btn-primary'} onClick={() => setCreating(true)}>
+                        <Plus aria-hidden /> Create Instance
+                    </button>
+                )}
+            </PageHeader>
             <div css={tw`mb-4`}>
                 {layoutError ? (
                     <p css={tw`text-sm text-red-300`}>
@@ -130,6 +141,9 @@ export default () => {
                 </Pagination>
             )}
 
+            {rootAdmin && (
+                <CreateInstanceModal visible={creating} onClose={() => setCreating(false)} onCreated={() => mutate()} />
+            )}
             <CategoryEditorModal
                 visible={editing}
                 layout={layout}

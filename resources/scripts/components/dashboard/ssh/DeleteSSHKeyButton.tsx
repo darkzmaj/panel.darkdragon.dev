@@ -1,6 +1,6 @@
 import tw from 'twin.macro';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTrashAlt } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@/components/elements/icons';
+import { faTrashAlt } from '@/components/elements/icons';
 import React, { useState } from 'react';
 import { useFlashKey } from '@/plugins/useFlash';
 import { deleteSSHKey, useSSHKeys } from '@/api/account/ssh-keys';

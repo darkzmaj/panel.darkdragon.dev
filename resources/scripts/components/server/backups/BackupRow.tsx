@@ -1,6 +1,6 @@
 import React from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArchive, faEllipsisH, faLock } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@/components/elements/icons';
+import { faArchive, faEllipsisH, faLock } from '@/components/elements/icons';
 import { format, formatDistanceToNow } from 'date-fns';
 import Spinner from '@/components/elements/Spinner';
 import { bytesToString } from '@/lib/formatters';

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { faTrashAlt } from '@fortawesome/free-solid-svg-icons';
+import { faTrashAlt } from '@/components/elements/icons';
 import tw from 'twin.macro';
 import Icon from '@/components/elements/Icon';
 import { ServerContext } from '@/state/server';

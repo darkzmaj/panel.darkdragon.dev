@@ -5,7 +5,7 @@ import PageContentBlock from '@/components/elements/PageContentBlock';
 import FlashMessageRender from '@/components/FlashMessageRender';
 import { Link } from 'react-router-dom';
 import PaginationFooter from '@/components/elements/table/PaginationFooter';
-import { DesktopComputerIcon, XCircleIcon } from '@heroicons/react/solid';
+import { DesktopComputerIcon, XCircleIcon } from '@/components/elements/icons';
 import Spinner from '@/components/elements/Spinner';
 import { styles as btnStyles } from '@/components/elements/button/index';
 import classNames from 'classnames';

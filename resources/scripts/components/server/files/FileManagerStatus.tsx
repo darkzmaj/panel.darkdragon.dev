@@ -1,6 +1,6 @@
 import React, { useContext, useEffect } from 'react';
 import { ServerContext } from '@/state/server';
-import { CloudUploadIcon, XIcon } from '@heroicons/react/solid';
+import { CloudUploadIcon, XIcon } from '@/components/elements/icons';
 import asDialog from '@/hoc/asDialog';
 import { Dialog, DialogWrapperContext } from '@/components/elements/dialog';
 import { Button } from '@/components/elements/button/index';

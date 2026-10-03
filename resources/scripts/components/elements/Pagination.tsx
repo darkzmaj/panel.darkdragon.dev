@@ -3,8 +3,8 @@ import { PaginatedResult } from '@/api/http';
 import tw from 'twin.macro';
 import styled from 'styled-components/macro';
 import Button from '@/components/elements/Button';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faAngleDoubleLeft, faAngleDoubleRight } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@/components/elements/icons';
+import { faAngleDoubleLeft, faAngleDoubleRight } from '@/components/elements/icons';
 
 interface RenderFuncProps<T> {
     items: T[];

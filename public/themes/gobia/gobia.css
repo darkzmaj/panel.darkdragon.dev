@@ -721,3 +721,25 @@ textarea.gb-input { height: auto; padding: 10px 12px; min-height: 96px; resize: 
     .gb-cat-list { flex-direction: row; overflow-x: auto; }
     .gb-cat-item { flex: none; }
 }
+
+/* ------------------------------------------------------------------ create instance / template browser */
+
+.gb-template-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; margin-top: 14px; max-height: 52vh; overflow-y: auto; padding: 2px; }
+.gb-template-card { display: flex; flex-direction: column; padding: 16px; background: var(--gb-bg); border: 1px solid var(--gb-border-muted); border-radius: var(--gb-radius-md); }
+.gb-template-card strong { color: var(--gb-text-strong); font-size: 15px; }
+.gb-template-card.disabled { opacity: 0.6; }
+.gb-template-card .gb-btn { margin-top: auto; }
+.gb-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.gb-facts { margin: 0 0 14px; display: grid; gap: 8px; }
+.gb-facts div { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 8px; font-size: 13px; }
+.gb-facts dt { color: var(--gb-text-3); font-weight: 500; }
+.gb-facts dd { margin: 0; color: var(--gb-text); }
+.gb-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.gb-steps li { display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: var(--gb-radius-md); color: var(--gb-text-3); }
+.gb-steps li span { display: inline-flex; width: 26px; height: 26px; align-items: center; justify-content: center; border: 1px solid var(--gb-border-muted); border-radius: 50%; }
+.gb-steps li svg { width: 14px; height: 14px; }
+.gb-steps li.active { color: var(--gb-text-strong); background: var(--gb-primary-soft); }
+.gb-steps li.active span { border-color: var(--gb-primary); color: var(--gb-primary); animation: gb-pulse 1.2s ease-in-out infinite; }
+.gb-steps li.done { color: var(--gb-text); }
+.gb-steps li.done span { background: rgb(var(--gb-success) / 0.16); border-color: transparent; color: rgb(var(--gb-success)); }
+@keyframes gb-pulse { 50% { opacity: 0.45; } }

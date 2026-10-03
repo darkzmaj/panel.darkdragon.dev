@@ -1,6 +1,6 @@
 import React from 'react';
 import Icon from '@/components/elements/Icon';
-import { IconDefinition } from '@fortawesome/free-solid-svg-icons';
+import { IconDefinition } from '@/components/elements/icons';
 import classNames from 'classnames';
 import styles from './style.module.css';
 import useFitText from 'use-fit-text';
@@ -9,7 +9,8 @@ import CopyOnClick from '@/components/elements/CopyOnClick';
 interface StatBlockProps {
     title: string;
     copyOnClick?: string;
-    color?: string | undefined;
+    // 'warn' / 'crit' tint the icon when a value approaches its limit.
+    color?: 'warn' | 'crit' | undefined;
     icon: IconDefinition;
     children: React.ReactNode;
     className?: string;
@@ -20,22 +21,15 @@ export default ({ title, copyOnClick, icon, color, className, children }: StatBl
 
     return (
         <CopyOnClick text={copyOnClick}>
-            <div className={classNames(styles.stat_block, 'bg-gray-600', className)}>
-                <div className={classNames(styles.status_bar, color || 'bg-gray-700')} />
-                <div className={classNames(styles.icon, color || 'bg-gray-700')}>
-                    <Icon
-                        icon={icon}
-                        className={classNames({
-                            'text-gray-100': !color || color === 'bg-gray-700',
-                            'text-gray-50': color && color !== 'bg-gray-700',
-                        })}
-                    />
+            <div className={classNames(styles.stat_block, className)}>
+                <div className={classNames(styles.icon, color && styles[color])}>
+                    <Icon icon={icon} />
                 </div>
                 <div className={'flex flex-col justify-center overflow-hidden w-full'}>
-                    <p className={'font-header font-medium leading-tight text-xs md:text-sm text-gray-200'}>{title}</p>
+                    <p className={'font-medium leading-tight text-xs md:text-sm text-neutral-300'}>{title}</p>
                     <div
                         ref={ref}
-                        className={'h-[1.75rem] w-full font-semibold text-gray-50 truncate'}
+                        className={'h-[1.75rem] w-full font-semibold text-neutral-50 truncate'}
                         style={{ fontSize }}
                     >
                         {children}

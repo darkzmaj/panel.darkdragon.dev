@@ -5,7 +5,7 @@ import Translate from '@/components/elements/Translate';
 import { format, formatDistanceToNowStrict } from 'date-fns';
 import { ActivityLog } from '@definitions/user';
 import ActivityLogMetaButton from '@/components/elements/activity/ActivityLogMetaButton';
-import { FolderOpenIcon, TerminalIcon } from '@heroicons/react/solid';
+import { FolderOpenIcon, TerminalIcon } from '@/components/elements/icons';
 import classNames from 'classnames';
 import style from './style.module.css';
 import Avatar from '@/components/Avatar';

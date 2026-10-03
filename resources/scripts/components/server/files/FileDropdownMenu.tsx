@@ -1,5 +1,5 @@
 import React, { memo, useRef, useState } from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { FontAwesomeIcon } from '@/components/elements/icons';
 import {
     faBoxOpen,
     faCopy,
@@ -11,7 +11,7 @@ import {
     faPencilAlt,
     faTrashAlt,
     IconDefinition,
-} from '@fortawesome/free-solid-svg-icons';
+} from '@/components/elements/icons';
 import RenameFileModal from '@/components/server/files/RenameFileModal';
 import { ServerContext } from '@/state/server';
 import { join } from 'pathe';

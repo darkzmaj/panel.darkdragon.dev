@@ -7,6 +7,20 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const map = {
+    shield: 'shield-check',
+    database: 'database',
+    globe: 'globe',
+    'hdd-o': 'hard-drive',
+    'user-secret': 'user-round-cog',
+    'bar-chart': 'chart-column',
+    'life-ring': 'life-buoy',
+    'puzzle-piece': 'puzzle',
+    'exclamation-circle': 'circle-alert',
+    rocket: 'rocket',
+    terminal: 'terminal',
+    'plus-circle': 'circle-plus',
+    'ban': 'ban',
+    'pause': 'pause',
     bars: 'menu',
     bell: 'bell',
     'chevron-down': 'chevron-down',

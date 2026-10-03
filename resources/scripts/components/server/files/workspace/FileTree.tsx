@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import tw from 'twin.macro';
 import { join } from 'pathe';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChevronDown, faChevronRight, faFile, faFolder, faFolderOpen } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@/components/elements/icons';
+import { faChevronDown, faChevronRight, faFile, faFolder, faFolderOpen } from '@/components/elements/icons';
 import loadDirectory, { FileObject } from '@/api/server/files/loadDirectory';
 import { httpErrorToHuman } from '@/api/http';
 

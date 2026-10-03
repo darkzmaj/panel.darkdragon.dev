@@ -1,7 +1,7 @@
 import React from 'react';
 import tw from 'twin.macro';
 import Icon from '@/components/elements/Icon';
-import { faExclamationTriangle } from '@fortawesome/free-solid-svg-icons';
+import { faExclamationTriangle } from '@/components/elements/icons';
 
 interface State {
     hasError: boolean;

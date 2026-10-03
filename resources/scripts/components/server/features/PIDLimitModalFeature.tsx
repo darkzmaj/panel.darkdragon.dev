@@ -7,8 +7,8 @@ import FlashMessageRender from '@/components/FlashMessageRender';
 import useFlash from '@/plugins/useFlash';
 import { SocketEvent } from '@/components/server/events';
 import { useStoreState } from 'easy-peasy';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faExclamationTriangle } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@/components/elements/icons';
+import { faExclamationTriangle } from '@/components/elements/icons';
 
 const PIDLimitModalFeature = () => {
     const [visible, setVisible] = useState(false);

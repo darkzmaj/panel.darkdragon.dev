@@ -1,7 +1,7 @@
 import React from 'react';
 import PageContentBlock from '@/components/elements/PageContentBlock';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faSyncAlt } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@/components/elements/icons';
+import { faArrowLeft, faSyncAlt } from '@/components/elements/icons';
 import styled, { keyframes } from 'styled-components/macro';
 import tw from 'twin.macro';
 import Button from '@/components/elements/Button';

@@ -4,7 +4,7 @@ import axios from 'axios';
 import { basename, dirname, join } from 'pathe';
 import { useHistory, useLocation, useParams } from 'react-router';
 import { Actions, useStoreActions } from 'easy-peasy';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { FontAwesomeIcon } from '@/components/elements/icons';
 import {
     faBars,
     faEllipsisH,
@@ -15,7 +15,7 @@ import {
     faTimes,
     faTrashAlt,
     faUpload,
-} from '@fortawesome/free-solid-svg-icons';
+} from '@/components/elements/icons';
 import { ApplicationStore } from '@/state';
 import { ServerContext } from '@/state/server';
 import { usePermissions } from '@/plugins/usePermissions';

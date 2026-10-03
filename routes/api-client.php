@@ -20,6 +20,15 @@ use Pterodactyl\Http\Middleware\Api\Client\Server\AuthenticateServerAccess;
 Route::get('/', [Client\ClientController::class, 'index'])->name('api:client.index');
 Route::get('/permissions', [Client\ClientController::class, 'permissions']);
 
+// Template browser for creating instances from the dashboard (administrators only, enforced by the requests).
+Route::prefix('/templates')->group(function () {
+    Route::get('/', [Client\Templates\TemplateBrowserController::class, 'index']);
+    Route::get('/owners', [Client\Templates\TemplateBrowserController::class, 'owners']);
+    Route::get('/{template}', [Client\Templates\TemplateBrowserController::class, 'show'])->whereNumber('template');
+    Route::post('/{template}/instances', [Client\Templates\TemplateBrowserController::class, 'store'])->whereNumber('template')->middleware('throttle:20,1');
+    Route::get('/{template}/instances/{instance}', [Client\Templates\TemplateBrowserController::class, 'status'])->whereNumber('template')->whereUuid('instance');
+});
+
 Route::prefix('/account')->middleware(AccountSubject::class)->group(function () {
     Route::prefix('/')->withoutMiddleware(RequireTwoFactorAuthentication::class)->group(function () {
         Route::get('/', [Client\AccountController::class, 'index'])->name('api:client.account');

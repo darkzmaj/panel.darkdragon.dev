@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Schedule, Task } from '@/api/server/schedules/getServerSchedules';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { FontAwesomeIcon } from '@/components/elements/icons';
 import {
     faArrowCircleDown,
     faClock,
@@ -9,7 +9,7 @@ import {
     faPencilAlt,
     faToggleOn,
     faTrashAlt,
-} from '@fortawesome/free-solid-svg-icons';
+} from '@/components/elements/icons';
 import deleteScheduleTask from '@/api/server/schedules/deleteScheduleTask';
 import { httpErrorToHuman } from '@/api/http';
 import SpinnerOverlay from '@/components/elements/SpinnerOverlay';

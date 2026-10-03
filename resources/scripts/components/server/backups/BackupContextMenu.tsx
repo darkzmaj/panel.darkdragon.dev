@@ -1,13 +1,6 @@
 import React, { useState } from 'react';
-import {
-    faBoxOpen,
-    faCloudDownloadAlt,
-    faEllipsisH,
-    faLock,
-    faTrashAlt,
-    faUnlock,
-} from '@fortawesome/free-solid-svg-icons';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faBoxOpen, faCloudDownloadAlt, faEllipsisH, faLock, faTrashAlt, faUnlock } from '@/components/elements/icons';
+import { FontAwesomeIcon } from '@/components/elements/icons';
 import DropdownMenu, { DropdownButtonRow } from '@/components/elements/DropdownMenu';
 import getBackupDownloadUrl from '@/api/server/backups/getBackupDownloadUrl';
 import useFlash from '@/plugins/useFlash';

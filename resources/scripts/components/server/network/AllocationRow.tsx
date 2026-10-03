@@ -1,8 +1,8 @@
 import React, { memo, useCallback, useState } from 'react';
 import isEqual from 'react-fast-compare';
 import tw from 'twin.macro';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faNetworkWired } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@/components/elements/icons';
+import { faNetworkWired } from '@/components/elements/icons';
 import InputSpinner from '@/components/elements/InputSpinner';
 import { Textarea } from '@/components/elements/Input';
 import Can from '@/components/elements/Can';

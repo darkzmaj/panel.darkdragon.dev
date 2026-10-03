@@ -1,23 +1,39 @@
 .stat_block {
-    @apply flex items-center rounded shadow-lg relative;
+    @apply flex items-center relative;
     @apply col-span-3 md:col-span-2 lg:col-span-6;
     @apply px-3 py-2 md:p-3 lg:p-4;
-
-    & > .status_bar {
-        @apply w-1 h-full absolute left-0 top-0 rounded-l sm:hidden;
-    }
+    background: var(--gb-surface);
+    border: 1px solid var(--gb-border-muted);
+    border-radius: var(--gb-radius-lg);
 
     & > .icon {
-        @apply hidden flex-shrink-0 items-center justify-center rounded-lg shadow-md w-12 h-12;
+        @apply hidden flex-shrink-0 items-center justify-center w-11 h-11;
         @apply transition-colors duration-500;
         @apply sm:flex sm:mr-4;
+        border-radius: 10px;
+        border: 1px solid var(--gb-border-muted);
+        background: var(--gb-bg);
+        color: var(--gb-primary);
+
+        &.warn {
+            background: rgb(var(--gb-warning) / 0.14);
+            color: rgb(var(--gb-warning));
+            border-color: transparent;
+        }
+
+        &.crit {
+            background: rgb(var(--gb-danger) / 0.14);
+            color: rgb(var(--gb-danger));
+            border-color: transparent;
+        }
 
         & > svg {
-            @apply w-6 h-6 m-auto;
+            @apply w-5 h-5 m-auto;
         }
     }
 }
 
+/* The console itself stays a terminal in both themes. */
 .terminal {
     @apply flex flex-col w-full;
 
@@ -31,7 +47,12 @@
     }
 
     & > .container {
-        @apply rounded-t p-1 sm:p-2 bg-black min-h-[16rem] flex-1 font-mono text-sm;
+        @apply p-1 sm:p-2 min-h-[16rem] flex-1 font-mono text-sm;
+        background: #070b11;
+        color: #d6deeb;
+        border: 1px solid var(--gb-border-muted);
+        border-bottom: 0;
+        border-radius: var(--gb-radius-lg) var(--gb-radius-lg) 0 0;
 
         & #terminal {
             @apply h-full;
@@ -41,23 +62,35 @@
             }
 
             &::-webkit-scrollbar-thumb {
-                @apply bg-gray-900;
+                background: #243044;
             }
         }
     }
 
     & .command_icon {
         @apply flex items-center top-0 left-0 absolute z-10 select-none h-full px-3 transition-colors duration-100;
+        color: #8fa0bd;
     }
 
     & .command_input {
-        @apply relative bg-gray-900 px-2 text-gray-100 pl-10 pr-4 py-2 w-full font-mono text-sm sm:rounded-b;
-        @apply focus:ring-0 outline-none focus-visible:outline-none;
-        @apply border-0 border-b-2 border-transparent transition-colors duration-100;
-        @apply active:border-cyan-500 focus:border-cyan-500;
+        @apply relative px-2 pl-10 pr-4 py-2 w-full font-mono text-sm;
+        @apply outline-none focus-visible:outline-none focus:ring-0;
+        background: #0c121b;
+        color: #e6edf7;
+        border: 1px solid var(--gb-border-muted);
+        border-top: 1px solid #1a2433;
+        border-radius: 0 0 var(--gb-radius-lg) var(--gb-radius-lg);
+        @apply transition-colors duration-100;
+
+        &:focus {
+            border-color: var(--gb-primary);
+        }
     }
 }
 
 .chart_container {
-    @apply bg-gray-600 rounded shadow-lg pt-2 border-b-4 border-gray-700 relative;
+    @apply pt-2 relative;
+    background: var(--gb-surface);
+    border: 1px solid var(--gb-border-muted);
+    border-radius: var(--gb-radius-lg);
 }
