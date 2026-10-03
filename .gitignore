@@ -35,3 +35,14 @@ resources/lang/locales.js
 /public/build
 /public/hot
 result
+
+# Local tooling, runtime state and updater working files
+/.updater
+/storage/updater
+/storage/app/private/*
+!/storage/app/private/.gitignore
+.phpunit.result.cache
+.idea
+*.pem
+*.key
+*.sqlite

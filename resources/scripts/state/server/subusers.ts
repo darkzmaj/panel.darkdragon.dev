@@ -34,7 +34,7 @@ export interface Subuser {
     uuid: string;
     username: string;
     email: string;
-    image: string;
+    image: string | null;
     twoFactorEnabled: boolean;
     createdAt: Date;
     permissions: SubuserPermission[];

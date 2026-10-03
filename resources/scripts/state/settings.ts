@@ -3,6 +3,7 @@ import { action, Action } from 'easy-peasy';
 export interface SiteSettings {
     name: string;
     locale: string;
+    logo: string | null;
     recaptcha: {
         enabled: boolean;
         siteKey: string;

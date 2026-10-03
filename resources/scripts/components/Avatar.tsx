@@ -6,14 +6,19 @@ const palette = ['#FFAD08', '#EDD75A', '#73B06F', '#0C8F8F', '#587291'];
 
 type Props = Omit<AvatarProps, 'colors'>;
 
-const _Avatar = ({ variant = 'beam', ...props }: AvatarProps) => (
-    <BoringAvatar colors={palette} variant={variant} {...props} />
-);
+// Renders the uploaded picture when there is one, otherwise a locally generated avatar seeded by the name.
+const _Avatar = ({ variant = 'beam', src, ...props }: AvatarProps & { src?: string | null }) =>
+    src ? (
+        <img src={src} alt={''} decoding={'async'} className={'block w-full h-full object-cover'} />
+    ) : (
+        <BoringAvatar colors={palette} variant={variant} {...props} />
+    );
 
 const _UserAvatar = ({ variant = 'beam', ...props }: Omit<Props, 'name'>) => {
     const uuid = useStoreState((state) => state.user.data?.uuid);
+    const avatarUrl = useStoreState((state) => state.user.data?.avatarUrl);
 
-    return <BoringAvatar colors={palette} name={uuid || 'system'} variant={variant} {...props} />;
+    return <_Avatar name={uuid || 'system'} src={avatarUrl} variant={variant} {...props} />;
 };
 
 _Avatar.displayName = 'Avatar';

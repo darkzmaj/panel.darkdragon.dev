@@ -13,5 +13,11 @@ Route::get('/locales/locale.json', Base\LocaleController::class)
     ->withoutMiddleware(['auth', RequireTwoFactorAuthentication::class])
     ->where('namespace', '.*');
 
+Route::get('/avatars/{uuid}', Base\AvatarController::class)
+    ->whereUuid('uuid')
+    ->middleware('auth')
+    ->withoutMiddleware(RequireTwoFactorAuthentication::class)
+    ->name('avatar');
+
 Route::get('/{react}', [Base\IndexController::class, 'index'])
     ->where('react', '^(?!(\/)?(api|auth|admin|daemon)).+');

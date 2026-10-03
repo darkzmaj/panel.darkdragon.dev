@@ -8,10 +8,13 @@ use Illuminate\Auth\AuthManager;
 use Illuminate\Http\JsonResponse;
 use Pterodactyl\Facades\Activity;
 use Illuminate\Support\Facades\RateLimiter;
+use Pterodactyl\Services\Media\AvatarService;
 use Pterodactyl\Services\Users\UserUpdateService;
 use Pterodactyl\Transformers\Api\Client\AccountTransformer;
 use Pterodactyl\Http\Requests\Api\Client\Account\UpdateEmailRequest;
+use Pterodactyl\Http\Requests\Api\Client\Account\UpdateAvatarRequest;
 use Pterodactyl\Http\Requests\Api\Client\Account\UpdatePasswordRequest;
+use Pterodactyl\Http\Requests\Api\Client\Account\UpdateUsernameRequest;
 use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 
 class AccountController extends ClientApiController
@@ -24,8 +27,11 @@ class AccountController extends ClientApiController
     /**
      * AccountController constructor.
      */
-    public function __construct(private AuthManager $manager, private UserUpdateService $updateService)
-    {
+    public function __construct(
+        private AuthManager $manager,
+        private UserUpdateService $updateService,
+        private AvatarService $avatarService,
+    ) {
         parent::__construct();
     }
 
@@ -59,6 +65,50 @@ class AccountController extends ClientApiController
                 ->property(['old' => $original, 'new' => $request->validated('email')])
                 ->log();
         }
+
+        return new JsonResponse([], Response::HTTP_NO_CONTENT);
+    }
+
+    /**
+     * Update the authenticated user's username. Everything else in the system refers to
+     * a user by their immutable ID or UUID, so no other records depend on the username.
+     */
+    public function updateUsername(UpdateUsernameRequest $request): JsonResponse
+    {
+        $original = $request->user()->username;
+        $user = $this->updateService->handle($request->user(), $request->validated());
+
+        if ($original !== $user->username) {
+            Activity::event('user:account.username-changed')
+                ->property(['old' => $original, 'new' => $user->username])
+                ->log();
+        }
+
+        return new JsonResponse(['username' => $user->username]);
+    }
+
+    /**
+     * Replace the authenticated user's profile picture.
+     *
+     * @throws \Pterodactyl\Exceptions\DisplayException
+     */
+    public function updateAvatar(UpdateAvatarRequest $request): JsonResponse
+    {
+        $user = $this->avatarService->store($request->user(), $request->file('avatar'));
+
+        Activity::event('user:account.avatar-changed')->log();
+
+        return new JsonResponse(['avatar_url' => $user->avatar_url]);
+    }
+
+    /**
+     * Remove the authenticated user's profile picture.
+     */
+    public function deleteAvatar(Request $request): JsonResponse
+    {
+        $this->avatarService->remove($request->user());
+
+        Activity::event('user:account.avatar-removed')->log();
 
         return new JsonResponse([], Response::HTTP_NO_CONTENT);
     }

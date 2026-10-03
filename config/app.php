@@ -6,11 +6,21 @@ return [
     |--------------------------------------------------------------------------
     | Application Version
     |--------------------------------------------------------------------------
-    | This value is set when creating a Pterodactyl release. You should not
-    | change this value if you are not maintaining your own internal versions.
+    | The version of this Panel, read from the VERSION file in the project root
+    | which is the single source of truth. It follows the "<upstream>-gobia.<n>"
+    | scheme, where <upstream> is the Pterodactyl release this fork is based on.
     */
 
-    'version' => 'canary',
+    'version' => trim((string) @file_get_contents(base_path('VERSION'))) ?: 'canary',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Upstream Pterodactyl Version
+    |--------------------------------------------------------------------------
+    | The upstream Pterodactyl release that the current version is based on.
+    */
+
+    'upstream_version' => explode('-', trim((string) @file_get_contents(base_path('VERSION'))))[0] ?: 'unknown',
 
     /*
     |--------------------------------------------------------------------------

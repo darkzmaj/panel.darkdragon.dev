@@ -1,72 +1,58 @@
-[![Logo Image](https://cdn.pterodactyl.io/logos/new/pterodactyl_logo.png)](https://pterodactyl.io)
+# panel.gobia.cloud
 
-![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/pterodactyl/panel/ci.yaml?label=Tests&style=for-the-badge&branch=1.0-develop)
-![Discord](https://img.shields.io/discord/122900397965705216?label=Discord&logo=Discord&logoColor=white&style=for-the-badge)
-![GitHub Releases](https://img.shields.io/github/downloads/pterodactyl/panel/latest/total?style=for-the-badge)
-![GitHub contributors](https://img.shields.io/github/contributors/pterodactyl/panel?style=for-the-badge)
+A customized game-server management panel derived from [Pterodactyl Panel](https://github.com/pterodactyl/panel).
 
-# Pterodactyl Panel
+| | |
+|---|---|
+| Panel version | see [`VERSION`](VERSION) (scheme: `<upstream>-gobia.<n>`, e.g. `1.15.1-gobia.1`) |
+| Upstream base | Pterodactyl Panel v1.15.1 (`e98678c5a1d07a74036660a459d87a4eb7c105c1`) |
+| Wings | unchanged, use upstream Wings |
 
-Pterodactyl® is a free, open-source game server management panel built with PHP, React, and Go. Designed with security
-in mind, Pterodactyl runs all game servers in isolated Docker containers while exposing a beautiful and intuitive
-UI to end users.
+The version lives only in `VERSION`; `config('app.version')` and `config('app.upstream_version')` are derived from it.
 
-Stop settling for less. Make game servers a first class citizen on your platform.
+## Branches
 
-![Image](https://cdn.pterodactyl.io/site-assets/pterodactyl_v1_demo.gif)
+- `main` - stable and releasable. Always builds and passes tests. Releases are tagged here.
+- `develop` - ongoing development. Open work happens here and is merged to `main` when stable.
 
-## Documentation
+Remotes: `origin` is this fork, `upstream` is official Pterodactyl.
 
-* [Panel Documentation](https://pterodactyl.io/panel/1.0/getting_started.html)
-* [Wings Documentation](https://pterodactyl.io/wings/1.0/installing.html)
-* [Community Guides](https://pterodactyl.io/community/about.html)
-* Or, get additional help [via Discord](https://discord.gg/pterodactyl)
+## Local development (Windows)
 
-## Sponsors
+The portable toolchain (PHP 8.3, Composer, MariaDB) lives **outside** the repository in `C:\Users\majko\devtools`.
 
-I would like to extend my sincere thanks to the following sponsors for helping fund Pterodactyl's development.
-[Interested in becoming a sponsor?](https://github.com/sponsors/pterodactyl)
+```powershell
+C:\Users\majko\devtools\start-panel.ps1     # MariaDB + web server (http://localhost:8000) + queue worker
+```
 
-| Company                                                                           | About                                                                                                                                                                                                                                           |
-|-----------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [**Infraly, LLC**](https://infraly.co/)                                           | Infraly is an infrastructure company powering the next generation of online services. Through their brands, Infraly delivers cutting-edge solutions across multiple markets. Their vertically integrated approach provides unmatched performance, scalability, and reliability, giving our customers full control.                                                                                     |
-| [**Hosturly**](https://hosturly.com/)                                             | Hosturly is an enterprise hosting provider. They provide cost-effective, high-performance, and reliable services, including VPS, Web, Dedicated, and Colocation.                                                                                |
-| [**Physgun**](https://physgun.com/)                                               | Physgun is a game server hosting provider. Most providers rent rack space and rebrand a panel. At Physgun, they engineer the performance, write the features, and staff the support. Physgun truly is game hosting perfected!                   |
-| [**WISP**](https://wisp.gg/)                                                      | WISP is an industry-leading SaaS platform for game server management, designed for hosting companies, gaming organizations, and enthusiasts. WISP combines modern, intuitive interfaces with powerful tools, making server deployment and administration seamless, scalable, and efficient.                                                                                                                 |
-| [**Buildurly**](https://buildurly.com/)                                           | Buildurly is a hardware procurement company. They deliver tailored, enterprise-grade hardware solutions designed around your unique needs. From sourcing to delivery, Buildurly's white-glove service ensures a seamless, worry-free, professional experience.                                                                                                                                          |
-| [**indifferent broccoli**](https://indifferentbroccoli.com/)                      | indifferent broccoli is a game server hosting and rental company. With them, you get top-notch computer power for your gaming sessions. They destroy lag, latency, and complexity--letting you focus on the fun stuff.                         |
+Requirements elsewhere: Node 22+, Yarn 1. Copy `.env.example` to `.env`, set `APP_KEY`, `HASHIDS_SALT` and the database credentials, then `php artisan migrate --seed`.
 
-### Supported Games
+**Never commit `.env`.** It holds `APP_KEY`, database credentials and the update token. It is git-ignored; keep it that way.
 
-Pterodactyl supports a wide variety of games by utilizing Docker containers to isolate each instance. This gives
-you the power to run game servers without bloating machines with a host of additional dependencies.
+## Build and test
 
-Some of our core supported games include:
+```bash
+composer install
+yarn install --frozen-lockfile
+yarn tsc && yarn lint            # TypeScript + ESLint
+yarn build:production            # production assets
+vendor/bin/php-cs-fixer fix --dry-run --diff
+vendor/bin/phpunit               # needs a database whose name contains "test" (see .env.ci)
+```
 
-* Minecraft — including Paper, Sponge, Bungeecord, Waterfall, and more
-* Rust
-* Terraria
-* Teamspeak
-* Mumble
-* Team Fortress 2
-* Counter Strike: Global Offensive
-* Garry's Mod
-* ARK: Survival Evolved
+## Releases and updates
 
-In addition to our standard nest of supported games, our community is constantly pushing the limits of this software
-and there are plenty more games available provided by the community. Some of these games include:
+Releases are deliberate tags (`v1.15.1-gobia.2`) on `main`. A GitHub Actions workflow runs every check, builds the production frontend and publishes `panel-<version>.tar.gz` plus its SHA-256 as a GitHub Release. Release packages already contain compiled assets and `vendor/`; production never builds anything.
 
-* Factorio
-* San Andreas: MP
-* Pocketmine MP
-* Squad
-* Xonotic
-* Starmade
-* Discord ATLBot, and most other Node.js/Python discord bots
-* [and many more...](https://eggs.pterodactyl.io)
+Administrators update from **Admin -> System -> Updates**. The Panel only installs releases published by this repository, verifies the checksum, backs up the database, installs, migrates and health-checks. See [`docs/updates.md`](docs/updates.md) for the architecture, token setup and the Linux helper.
 
-## License
+Upstream Pterodactyl changes are never applied on a server. They are merged here first:
 
-Pterodactyl® Copyright © 2015 - 2022 Dane Everitt and contributors.
+```bash
+git fetch upstream --tags
+git checkout develop && git merge v<new upstream tag>   # resolve conflicts, update VERSION to <new>-gobia.1
+# run the full checks, test locally, merge develop into main
+git tag v<new>-gobia.1 && git push origin main --tags     # CI builds and publishes the release
+```
 
-Code released under the [MIT License](./LICENSE.md).
+Performance measurements: [`docs/performance-baseline.md`](docs/performance-baseline.md), [`docs/performance-after.md`](docs/performance-after.md).

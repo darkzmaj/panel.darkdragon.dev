@@ -29,6 +29,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Branding
+    |--------------------------------------------------------------------------
+    |
+    | Hashes of the custom branding images uploaded by an administrator, used to
+    | cache-bust their URLs. A null value means the default image is in use.
+    */
+
+    'branding' => [
+        'logo' => null,
+        'favicon' => null,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Authentication
     |--------------------------------------------------------------------------
     |

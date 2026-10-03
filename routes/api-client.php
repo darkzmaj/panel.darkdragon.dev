@@ -31,6 +31,13 @@ Route::prefix('/account')->middleware(AccountSubject::class)->group(function () 
     Route::put('/email', [Client\AccountController::class, 'updateEmail'])
         ->middleware('throttle')
         ->name('api:client.account.update-email');
+    Route::put('/username', [Client\AccountController::class, 'updateUsername'])
+        ->middleware('throttle:10,1')
+        ->name('api:client.account.update-username');
+    Route::post('/avatar', [Client\AccountController::class, 'updateAvatar'])
+        ->middleware('throttle:10,1')
+        ->name('api:client.account.update-avatar');
+    Route::delete('/avatar', [Client\AccountController::class, 'deleteAvatar'])->name('api:client.account.delete-avatar');
     Route::put('/password', [Client\AccountController::class, 'updatePassword'])->name('api:client.account.update-password');
 
     Route::get('/activity', Client\ActivityLogController::class)->name('api:client.account.activity');

@@ -40,7 +40,7 @@ use Pterodactyl\Notifications\SendPasswordReset as ResetPasswordNotification;
  * @property bool $use_totp
  * @property string|null $totp_secret
  * @property \Illuminate\Support\Carbon|null $totp_authenticated_at
- * @property bool $gravatar
+ * @property string|null $avatar_hash
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
  * @property \Illuminate\Database\Eloquent\Collection|\Pterodactyl\Models\ApiKey[] $apiKeys
@@ -64,7 +64,7 @@ use Pterodactyl\Notifications\SendPasswordReset as ResetPasswordNotification;
  * @method static Builder|User whereCreatedAt($value)
  * @method static Builder|User whereEmail($value)
  * @method static Builder|User whereExternalId($value)
- * @method static Builder|User whereGravatar($value)
+ * @method static Builder|User whereAvatarHash($value)
  * @method static Builder|User whereId($value)
  * @method static Builder|User whereLanguage($value)
  * @method static Builder|User whereNameFirst($value)
@@ -132,7 +132,7 @@ class User extends Model implements
         'use_totp',
         'totp_secret',
         'totp_authenticated_at',
-        'gravatar',
+        'avatar_hash',
         'root_admin',
     ];
 
@@ -142,7 +142,6 @@ class User extends Model implements
     protected $casts = [
         'root_admin' => 'boolean',
         'use_totp' => 'boolean',
-        'gravatar' => 'boolean',
         'totp_authenticated_at' => 'datetime',
     ];
 
@@ -198,9 +197,21 @@ class User extends Model implements
      */
     public function toVueObject(): array
     {
-        return Collection::make($this->toArray())->except(['id', 'external_id'])
-            ->merge(['identifier' => $this->identifier])
+        return Collection::make($this->toArray())->except(['id', 'external_id', 'avatar_hash'])
+            ->merge(['identifier' => $this->identifier, 'avatar_url' => $this->avatar_url])
             ->toArray();
+    }
+
+    /**
+     * Return the cache-busted URL of the user's uploaded avatar, or null if they have not set one.
+     */
+    public function getAvatarUrlAttribute(): ?string
+    {
+        if (is_null($this->avatar_hash)) {
+            return null;
+        }
+
+        return route('avatar', ['uuid' => $this->uuid, 'v' => $this->avatar_hash], false);
     }
 
     /**

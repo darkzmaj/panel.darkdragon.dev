@@ -3,6 +3,7 @@
 namespace Pterodactyl\Http\ViewComposers;
 
 use Illuminate\View\View;
+use Pterodactyl\Services\Media\BrandingService;
 use Pterodactyl\Services\Helpers\AssetHashService;
 
 class AssetComposer
@@ -10,7 +11,7 @@ class AssetComposer
     /**
      * AssetComposer constructor.
      */
-    public function __construct(private AssetHashService $assetHashService)
+    public function __construct(private AssetHashService $assetHashService, private BrandingService $branding)
     {
     }
 
@@ -23,6 +24,7 @@ class AssetComposer
         $view->with('siteConfiguration', [
             'name' => config('app.name') ?? 'Pterodactyl',
             'locale' => config('app.locale') ?? 'en',
+            'logo' => $this->branding->url(BrandingService::LOGO),
             'recaptcha' => [
                 'enabled' => config('recaptcha.enabled', false),
                 'siteKey' => config('recaptcha.website_key') ?? '',

@@ -141,14 +141,14 @@ class UserController extends Controller
         if ($request->query('user_id')) {
             $user = User::query()->findOrFail($request->input('user_id'));
             // @phpstan-ignore-next-line property.notFound
-            $user->md5 = md5(strtolower($user->email));
+            $user->avatar = $user->avatar_url ?? '/assets/svgs/default-avatar.svg';
 
             return $user;
         }
 
         return $users->map(function ($item) {
             // @phpstan-ignore-next-line property.notFound
-            $item->md5 = md5(strtolower($item->email));
+            $item->avatar = $item->avatar_url ?? '/assets/svgs/default-avatar.svg';
 
             return $item;
         });

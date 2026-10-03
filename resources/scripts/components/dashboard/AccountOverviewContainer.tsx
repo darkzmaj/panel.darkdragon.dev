@@ -1,5 +1,7 @@
 import * as React from 'react';
 import ContentBox from '@/components/elements/ContentBox';
+import UpdateAvatarForm from '@/components/dashboard/forms/UpdateAvatarForm';
+import UpdateUsernameForm from '@/components/dashboard/forms/UpdateUsernameForm';
 import UpdatePasswordForm from '@/components/dashboard/forms/UpdatePasswordForm';
 import UpdateEmailAddressForm from '@/components/dashboard/forms/UpdateEmailAddressForm';
 import ConfigureTwoFactorForm from '@/components/dashboard/forms/ConfigureTwoFactorForm';
@@ -37,7 +39,15 @@ export default () => {
                 </MessageBox>
             )}
 
-            <Container css={[tw`lg:grid lg:grid-cols-3 mb-10`, state?.twoFactorRedirect ? tw`mt-4` : tw`mt-10`]}>
+            <Container css={[tw`lg:grid lg:grid-cols-3`, state?.twoFactorRedirect ? tw`mt-4` : tw`mt-10`]}>
+                <ContentBox title={'Profile Picture'} showFlashes={'account:avatar'}>
+                    <UpdateAvatarForm />
+                </ContentBox>
+                <ContentBox css={tw`mt-8 sm:mt-0 sm:ml-8`} title={'Update Username'} showFlashes={'account:username'}>
+                    <UpdateUsernameForm />
+                </ContentBox>
+            </Container>
+            <Container css={tw`lg:grid lg:grid-cols-3 mt-8 mb-10`}>
                 <ContentBox title={'Update Password'} showFlashes={'account:password'}>
                     <UpdatePasswordForm />
                 </ContentBox>

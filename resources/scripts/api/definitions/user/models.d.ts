@@ -5,7 +5,7 @@ interface User extends Model {
     uuid: string;
     username: string;
     email: string;
-    image: string;
+    image: string | null;
     twoFactorEnabled: boolean;
     createdAt: Date;
     permissions: SubuserPermission[];
