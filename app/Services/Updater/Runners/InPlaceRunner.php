@@ -23,6 +23,8 @@ class InPlaceRunner implements DeploymentRunner
      */
     private const PRESERVED = ['storage', '.env', '.git', 'node_modules'];
 
+    private const SWAPPED_BY_CONTENT = ['public'];
+
     public function __construct(ProcessRunner $processes, private ?string $base = null)
     {
         $this->processes = $processes;
@@ -45,12 +47,7 @@ class InPlaceRunner implements DeploymentRunner
         @mkdir($previous, 0750, true);
         $journal = [];
 
-        $entries = array_diff(scandir($stagedPath), ['.', '..']);
-        foreach ($entries as $name) {
-            if (in_array($name, self::PRESERVED, true)) {
-                continue;
-            }
-
+        foreach ($this->entries($stagedPath) as $name) {
             $live = $this->base . '/' . $name;
             try {
                 if (file_exists($live)) {
@@ -65,6 +62,34 @@ class InPlaceRunner implements DeploymentRunner
                 throw new UpdateException('Installing "' . $name . '" failed: ' . $exception->getMessage());
             }
         }
+    }
+
+    /**
+     * The paths to swap, relative to the installation. Directories listed in SWAPPED_BY_CONTENT are
+     * swapped child by child because a development web server keeps the document root open, which
+     * stops Windows from renaming the directory itself.
+     *
+     * @return string[]
+     */
+    private function entries(string $stagedPath): array
+    {
+        $entries = [];
+        foreach (array_diff(scandir($stagedPath), ['.', '..']) as $name) {
+            if (in_array($name, self::PRESERVED, true)) {
+                continue;
+            }
+
+            if (in_array($name, self::SWAPPED_BY_CONTENT, true) && is_dir($stagedPath . '/' . $name)) {
+                foreach (array_diff(scandir($stagedPath . '/' . $name), ['.', '..']) as $child) {
+                    $entries[] = $name . '/' . $child;
+                }
+                continue;
+            }
+
+            $entries[] = $name;
+        }
+
+        return $entries;
     }
 
     public function restoreFiles(string $backupDir): void

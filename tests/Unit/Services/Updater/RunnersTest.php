@@ -92,6 +92,24 @@ class RunnersTest extends UpdaterTestCase
         $this->assertSame('keep', file_get_contents($this->base . '/storage/keep.txt'));
     }
 
+    public function testPublicDirectoryIsSwappedByContentAndRestoredTheSameWay(): void
+    {
+        $runner = $this->inPlace();
+        $this->tree($this->base, ['public/index.php' => 'old', 'public/assets/old.js' => 'old']);
+        $this->tree($this->state . '/staged', ['public/index.php' => 'new', 'public/assets/new.js' => 'new']);
+        [$release] = $this->publish();
+
+        $runner->install($this->state . '/staged', $release, $this->state . '/backup');
+        $this->assertSame('new', file_get_contents($this->base . '/public/index.php'));
+        $this->assertFileExists($this->base . '/public/assets/new.js');
+        $this->assertFileDoesNotExist($this->base . '/public/assets/old.js');
+
+        $runner->restoreFiles($this->state . '/backup');
+        $this->assertSame('old', file_get_contents($this->base . '/public/index.php'));
+        $this->assertFileExists($this->base . '/public/assets/old.js');
+        $this->assertFileDoesNotExist($this->base . '/public/assets/new.js');
+    }
+
     public function testStagedStorageAndEnvironmentFilesAreNeverInstalled(): void
     {
         $runner = $this->inPlace();
