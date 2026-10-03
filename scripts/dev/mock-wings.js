@@ -57,6 +57,15 @@ const body = (req) =>
         req.on('end', () => resolve(Buffer.concat(chunks)));
     });
 
+// The Panel signs a JWT for browser uploads and downloads. The mock does not verify it, it only reads who it is for.
+const tokenClaims = (token) => {
+    try {
+        return JSON.parse(Buffer.from(String(token).split('.')[1], 'base64url').toString());
+    } catch {
+        return {};
+    }
+};
+
 const json = (res, data, status = 200) => {
     res.writeHead(status, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(data));
@@ -104,10 +113,25 @@ http.createServer(async (req, res) => {
             const name = /filename="([^"]+)"/.exec(part)[1];
             const start = part.indexOf('\r\n\r\n') + 4;
             const content = Buffer.from(part.slice(start, part.lastIndexOf('\r\n')), 'latin1');
-            const uuid = fs.readdirSync(dataDir)[0];
-            fs.writeFileSync(path.join(resolveInside(uuid, q.get('directory') || '/'), path.basename(name)), content);
+            const uuid = tokenClaims(q.get('token')).server_uuid || fs.readdirSync(dataDir)[0];
+            const target = path.join(resolveInside(uuid, q.get('directory') || '/'), path.basename(name));
+            fs.mkdirSync(path.dirname(target), { recursive: true });
+            fs.writeFileSync(target, content);
 
             return res.writeHead(200).end();
+        }
+
+        if (url.pathname === '/download/file' && req.method === 'GET') {
+            const claims = tokenClaims(q.get('token'));
+            const file = resolveInside(claims.server_uuid, claims.file_path);
+            const content = fs.readFileSync(file);
+            res.writeHead(200, {
+                'Content-Type': 'application/octet-stream',
+                'Content-Length': content.length,
+                'Content-Disposition': `attachment; filename="${path.basename(file)}"`,
+            });
+
+            return res.end(content);
         }
 
         if (parts[0] !== 'api' || parts[1] !== 'servers' || !parts[2]) return json(res, { error: 'not found' }, 404);
@@ -169,9 +193,34 @@ http.createServer(async (req, res) => {
             }
             case 'rename': {
                 const data = JSON.parse((await body(req)).toString());
-                data.files.forEach((f) => fs.renameSync(path.join(resolveInside(uuid, data.root), path.basename(f.from)), path.join(resolveInside(uuid, data.root), path.basename(f.to))));
+                // Like Wings: both names are relative to the root and may point into other folders. Nothing is overwritten.
+                data.files.forEach((f) => {
+                    const from = resolveInside(uuid, path.posix.join(data.root, f.from));
+                    const to = resolveInside(uuid, path.posix.join(data.root, f.to));
+                    if (fs.existsSync(to)) throw new Error('file already exists');
+                    fs.mkdirSync(path.dirname(to), { recursive: true });
+                    fs.renameSync(from, to);
+                });
 
                 return res.writeHead(204).end();
+            }
+            case 'copy': {
+                const data = JSON.parse((await body(req)).toString());
+                const source = resolveInside(uuid, data.location);
+                const ext = path.extname(source);
+                const stem = path.basename(source, ext);
+                let n = 1;
+                let target;
+                do {
+                    target = path.join(path.dirname(source), `${stem} copy${n > 1 ? ' ' + n : ''}${ext}`);
+                    n++;
+                } while (fs.existsSync(target));
+                fs.cpSync(source, target, { recursive: true });
+
+                return res.writeHead(204).end();
+            }
+            case 'download': {
+                return json(res, { error: 'not implemented' }, 404);
             }
             case 'delete': {
                 const data = JSON.parse((await body(req)).toString());

@@ -1,154 +1,42 @@
-import axios, { AxiosProgressEvent } from 'axios';
-import getFileUploadUrl from '@/api/server/files/getFileUploadUrl';
-import tw from 'twin.macro';
-import { Button } from '@/components/elements/button/index';
-import React, { useEffect, useRef } from 'react';
-import { ModalMask } from '@/components/elements/Modal';
-import Fade from '@/components/elements/Fade';
-import useEventListener from '@/plugins/useEventListener';
-import { useFlashKey } from '@/plugins/useFlash';
-import useFileManagerSwr from '@/plugins/useFileManagerSwr';
+import React, { useRef } from 'react';
+import { FolderUp, Upload } from 'lucide-react';
+import { Actions, useStoreActions } from 'easy-peasy';
+import { ApplicationStore } from '@/state';
 import { ServerContext } from '@/state/server';
-import { WithClassname } from '@/components/types';
-import Portal from '@/components/elements/Portal';
-import { CloudUploadIcon } from '@/components/elements/icons';
-import { useSignal } from '@preact/signals-react';
+import { uploadPicked } from '@/components/server/files/UploadPanel';
 
-function isFileOrDirectory(event: DragEvent): boolean {
-    if (!event.dataTransfer?.types) {
-        return false;
-    }
-
-    return event.dataTransfer.types.some((value) => value.toLowerCase() === 'files');
-}
-
-export default ({ className }: WithClassname) => {
-    const fileUploadInput = useRef<HTMLInputElement>(null);
-
-    const visible = useSignal(false);
-    const timeouts = useSignal<NodeJS.Timeout[]>([]);
-
-    const { mutate } = useFileManagerSwr();
-    const { addError, clearAndAddHttpError } = useFlashKey('files');
-
+// Picks files or a whole folder and hands them to the shared upload queue, which shows progress in the upload panel.
+export default () => {
+    const files = useRef<HTMLInputElement>(null);
+    const folder = useRef<HTMLInputElement>(null);
     const uuid = ServerContext.useStoreState((state) => state.server.data!.uuid);
     const directory = ServerContext.useStoreState((state) => state.files.directory);
-    const { clearFileUploads, removeFileUpload, pushFileUpload, setUploadProgress } = ServerContext.useStoreActions(
-        (actions) => actions.files
-    );
+    const toast = useStoreActions((actions: Actions<ApplicationStore>) => actions.toasts.push);
 
-    useEventListener(
-        'dragenter',
-        (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            if (isFileOrDirectory(e)) {
-                visible.value = true;
-            }
-        },
-        { capture: true }
-    );
-
-    useEventListener('dragexit', () => (visible.value = false), { capture: true });
-
-    useEventListener('keydown', () => (visible.value = false));
-
-    useEffect(() => {
-        return () => timeouts.value.forEach(clearTimeout);
-    }, []);
-
-    const onUploadProgress = (data: AxiosProgressEvent, name: string) => {
-        setUploadProgress({ name, loaded: data.loaded });
-    };
-
-    const onFileSubmission = (files: FileList) => {
-        clearAndAddHttpError();
-        const list = Array.from(files);
-        if (list.some((file) => !file.type && (!file.size || file.size === 4096))) {
-            return addError('Folder uploads are not supported.', 'Error');
-        }
-
-        const uploads = list.map((file) => {
-            const controller = new AbortController();
-            pushFileUpload({
-                name: file.name,
-                data: { abort: controller, loaded: 0, total: file.size },
-            });
-
-            return () =>
-                getFileUploadUrl(uuid).then((url) =>
-                    axios
-                        .post(
-                            url,
-                            { files: file },
-                            {
-                                signal: controller.signal,
-                                headers: { 'Content-Type': 'multipart/form-data' },
-                                params: { directory },
-                                onUploadProgress: (data) => onUploadProgress(data, file.name),
-                            }
-                        )
-                        .then(() => timeouts.value.push(setTimeout(() => removeFileUpload(file.name), 500)))
-                );
-        });
-
-        Promise.all(uploads.map((fn) => fn()))
-            .then(() => mutate())
-            .catch((error) => {
-                clearFileUploads();
-                clearAndAddHttpError(error);
-            });
+    const onPick = (input: HTMLInputElement) => {
+        if (!input.files?.length) return;
+        const count = uploadPicked(uuid, input.files, directory);
+        if (!count) toast({ type: 'error', message: 'Nothing could be uploaded from that selection.' });
+        input.value = '';
     };
 
     return (
         <>
-            <Portal>
-                <Fade appear in={visible.value} timeout={75} key={'upload_modal_mask'} unmountOnExit>
-                    <ModalMask
-                        onClick={() => (visible.value = false)}
-                        onDragOver={(e) => e.preventDefault()}
-                        onDrop={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-
-                            visible.value = false;
-                            if (!e.dataTransfer?.files.length) return;
-
-                            onFileSubmission(e.dataTransfer.files);
-                        }}
-                    >
-                        <div className={'w-full flex items-center justify-center pointer-events-none'}>
-                            <div
-                                className={
-                                    'flex items-center space-x-4 bg-black w-full ring-4 ring-blue-200 ring-opacity-60 rounded p-6 mx-10 max-w-sm'
-                                }
-                            >
-                                <CloudUploadIcon className={'w-10 h-10 flex-shrink-0'} />
-                                <p className={'font-header flex-1 text-lg text-neutral-100 text-center'}>
-                                    Drag and drop files to upload.
-                                </p>
-                            </div>
-                        </div>
-                    </ModalMask>
-                </Fade>
-            </Portal>
+            <input ref={files} type={'file'} multiple hidden onChange={(e) => onPick(e.currentTarget)} />
             <input
+                ref={folder}
                 type={'file'}
-                ref={fileUploadInput}
-                css={tw`hidden`}
-                onChange={(e) => {
-                    if (!e.currentTarget.files) return;
-
-                    onFileSubmission(e.currentTarget.files);
-                    if (fileUploadInput.current) {
-                        fileUploadInput.current.files = null;
-                    }
-                }}
-                multiple
+                hidden
+                // Not part of the standard typings, but supported by every current browser.
+                {...({ webkitdirectory: '', directory: '' } as Record<string, string>)}
+                onChange={(e) => onPick(e.currentTarget)}
             />
-            <Button className={className} onClick={() => fileUploadInput.current && fileUploadInput.current.click()}>
-                Upload
-            </Button>
+            <button type={'button'} className={'gb-btn gb-btn-sm'} onClick={() => files.current?.click()}>
+                <Upload aria-hidden /> Upload
+            </button>
+            <button type={'button'} className={'gb-btn gb-btn-sm'} onClick={() => folder.current?.click()}>
+                <FolderUp aria-hidden /> Folder
+            </button>
         </>
     );
 };

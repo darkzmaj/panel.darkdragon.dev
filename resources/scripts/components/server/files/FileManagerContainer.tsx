@@ -1,6 +1,5 @@
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import { httpErrorToHuman } from '@/api/http';
-import { CSSTransition } from 'react-transition-group';
 import Spinner from '@/components/elements/Spinner';
 import FileObjectRow from '@/components/server/files/FileObjectRow';
 import FileManagerBreadcrumbs from '@/components/server/files/FileManagerBreadcrumbs';
@@ -9,19 +8,22 @@ import NewDirectoryButton from '@/components/server/files/NewDirectoryButton';
 import { NavLink, useLocation } from 'react-router-dom';
 import Can from '@/components/elements/Can';
 import { ServerError } from '@/components/elements/ScreenBlock';
-import tw from 'twin.macro';
-import { Button } from '@/components/elements/button/index';
 import { ServerContext } from '@/state/server';
 import useFileManagerSwr from '@/plugins/useFileManagerSwr';
-import FileManagerStatus from '@/components/server/files/FileManagerStatus';
 import MassActionsBar from '@/components/server/files/MassActionsBar';
 import UploadButton from '@/components/server/files/UploadButton';
+import { UploadDropZone, UploadPanel, uploadDropped } from '@/components/server/files/UploadPanel';
+import { onUploadCompleted } from '@/components/server/files/uploadQueue';
+import FileActionsContext from '@/components/server/files/FileActionsContext';
+import useMoveEntries from '@/components/server/files/useMoveEntries';
+import { usePermissions } from '@/plugins/usePermissions';
 import ServerContentBlock from '@/components/elements/ServerContentBlock';
+import PageHeader from '@/components/elements/PageHeader';
 import { useStoreActions } from '@/state/hooks';
 import ErrorBoundary from '@/components/elements/ErrorBoundary';
 import { FileActionCheckbox } from '@/components/server/files/SelectFileCheckbox';
 import { hashToPath } from '@/helpers';
-import style from './style.module.css';
+import { FilePlus } from 'lucide-react';
 
 const sortFiles = (files: FileObject[]): FileObject[] => {
     const sortedFiles: FileObject[] = files
@@ -32,14 +34,17 @@ const sortFiles = (files: FileObject[]): FileObject[] => {
 
 export default () => {
     const id = ServerContext.useStoreState((state) => state.server.data!.id);
+    const uuid = ServerContext.useStoreState((state) => state.server.data!.uuid);
     const { hash } = useLocation();
     const { data: files, error, mutate } = useFileManagerSwr();
     const directory = ServerContext.useStoreState((state) => state.files.directory);
     const clearFlashes = useStoreActions((actions) => actions.flashes.clearFlashes);
     const setDirectory = ServerContext.useStoreActions((actions) => actions.files.setDirectory);
+    const [canCreate, canUpdate] = usePermissions(['file.create', 'file.update']);
 
     const setSelectedFiles = ServerContext.useStoreActions((actions) => actions.files.setSelectedFiles);
     const selectedFilesLength = ServerContext.useStoreState((state) => state.files.selectedFiles.length);
+    const { move, dialog } = useMoveEntries(uuid);
 
     useEffect(() => {
         clearFlashes('files');
@@ -51,9 +56,38 @@ export default () => {
         mutate();
     }, [directory]);
 
-    const onSelectAllClick = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setSelectedFiles(e.currentTarget.checked ? files?.map((file) => file.name) || [] : []);
-    };
+    // A finished upload into the folder on screen refreshes the list.
+    useEffect(
+        () =>
+            onUploadCompleted((completedUuid, completedDirectory) => {
+                if (completedUuid === uuid && completedDirectory === directory) mutate();
+            }),
+        [uuid, directory]
+    );
+
+    const actions = useMemo(
+        () => ({
+            canMove: canUpdate,
+            moveInto: (payload: { directory: string; names: string[] }, target: string) => {
+                if (!canUpdate) return;
+                move(payload.directory, payload.names, target).then((outcome) => {
+                    if (outcome.moved.length) setSelectedFiles([]);
+                    mutate();
+                });
+            },
+            dropFiles: (data: DataTransfer, target: string) => {
+                if (canCreate) uploadDropped(uuid, data, target);
+            },
+        }),
+        [uuid, canUpdate, canCreate, move]
+    );
+
+    const onSelectAllClick = useCallback(
+        (e: React.ChangeEvent<HTMLInputElement>) => {
+            setSelectedFiles(e.currentTarget.checked ? files?.map((file) => file.name) || [] : []);
+        },
+        [files]
+    );
 
     if (error) {
         return <ServerError message={httpErrorToHuman(error)} onRetry={() => mutate()} />;
@@ -61,56 +95,56 @@ export default () => {
 
     return (
         <ServerContentBlock title={'File Manager'} showFlashKey={'files'} heading={false}>
-            <ErrorBoundary>
-                <div className={'flex flex-wrap-reverse md:flex-nowrap mb-4'}>
-                    <FileManagerBreadcrumbs
-                        renderLeft={
-                            <FileActionCheckbox
-                                type={'checkbox'}
-                                css={tw`mx-4`}
-                                checked={selectedFilesLength === (files?.length === 0 ? -1 : files?.length)}
-                                onChange={onSelectAllClick}
-                            />
-                        }
-                    />
+            <FileActionsContext.Provider value={actions}>
+                <PageHeader title={'Files'} subtitle={'Browse, upload and edit the files of this instance.'}>
                     <Can action={'file.create'}>
-                        <div className={style.manager_actions}>
-                            <FileManagerStatus />
-                            <NewDirectoryButton />
-                            <UploadButton />
-                            <NavLink to={`/server/${id}/files/new${window.location.hash}`}>
-                                <Button>New File</Button>
-                            </NavLink>
-                        </div>
+                        <NewDirectoryButton />
+                        <UploadButton />
+                        <NavLink
+                            className={'gb-btn gb-btn-primary gb-btn-sm'}
+                            to={`/server/${id}/files/new${window.location.hash}`}
+                        >
+                            <FilePlus aria-hidden /> New file
+                        </NavLink>
                     </Can>
-                </div>
-            </ErrorBoundary>
-            {!files ? (
-                <Spinner size={'large'} centered />
-            ) : (
-                <>
-                    {!files.length ? (
-                        <p css={tw`text-sm text-neutral-400 text-center`}>This directory seems to be empty.</p>
+                </PageHeader>
+                <ErrorBoundary>
+                    <div className={'gb-file-bar'}>
+                        <FileActionCheckbox
+                            aria-label={'Select all'}
+                            checked={files ? selectedFilesLength === (files.length === 0 ? -1 : files.length) : false}
+                            onChange={onSelectAllClick}
+                        />
+                        <FileManagerBreadcrumbs />
+                    </div>
+                </ErrorBoundary>
+                <div className={'gb-list gb-files'}>
+                    {!files ? (
+                        <Spinner size={'large'} centered />
+                    ) : !files.length ? (
+                        <p className={'gb-empty'}>
+                            This directory is empty.
+                            {canCreate && ' Drop files here to upload them.'}
+                        </p>
                     ) : (
-                        <CSSTransition classNames={'fade'} timeout={150} appear in>
-                            <div>
-                                {files.length > 250 && (
-                                    <div css={tw`rounded bg-yellow-400 mb-px p-3`}>
-                                        <p css={tw`text-yellow-900 text-sm text-center`}>
-                                            This directory is too large to display in the browser, limiting the output
-                                            to the first 250 files.
-                                        </p>
-                                    </div>
-                                )}
-                                {sortFiles(files.slice(0, 250)).map((file) => (
-                                    <FileObjectRow key={file.key} file={file} />
-                                ))}
-                                <MassActionsBar />
-                            </div>
-                        </CSSTransition>
+                        <>
+                            {files.length > 250 && (
+                                <p className={'gb-empty'}>
+                                    This directory is too large to display in the browser, limiting the output to the
+                                    first 250 files.
+                                </p>
+                            )}
+                            {sortFiles(files.slice(0, 250)).map((file) => (
+                                <FileObjectRow key={file.key} file={file} />
+                            ))}
+                        </>
                     )}
-                </>
-            )}
+                </div>
+                <MassActionsBar />
+                <UploadDropZone uuid={uuid} directory={directory} enabled={canCreate} />
+                <UploadPanel />
+                {dialog}
+            </FileActionsContext.Provider>
         </ServerContentBlock>
     );
 };

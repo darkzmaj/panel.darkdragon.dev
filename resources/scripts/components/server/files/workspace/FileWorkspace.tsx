@@ -1,6 +1,5 @@
 import React, { Suspense, lazy, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import tw from 'twin.macro';
-import axios from 'axios';
 import { basename, dirname, join } from 'pathe';
 import { useHistory, useLocation, useParams } from 'react-router';
 import { Actions, useStoreActions } from 'easy-peasy';
@@ -27,12 +26,31 @@ import saveFileContents from '@/api/server/files/saveFileContents';
 import createDirectory from '@/api/server/files/createDirectory';
 import renameFiles from '@/api/server/files/renameFiles';
 import deleteFiles from '@/api/server/files/deleteFiles';
-import getFileUploadUrl from '@/api/server/files/getFileUploadUrl';
+import copyFile from '@/api/server/files/copyFile';
 import getFileDownloadUrl from '@/api/server/files/getFileDownloadUrl';
 import Spinner from '@/components/elements/Spinner';
 import Modal from '@/components/elements/Modal';
 import Input from '@/components/elements/Input';
 import Popover from '@/components/elements/Popover';
+import ContextMenu, { MenuItem, MenuState } from '@/components/elements/ContextMenu';
+import {
+    Copy,
+    CopyPlus,
+    Download,
+    FilePlus,
+    FolderInput,
+    FolderPlus as FolderPlusIcon,
+    FolderUp,
+    Pencil,
+    RefreshCw,
+    Trash2,
+    Upload as UploadIcon,
+} from 'lucide-react';
+import { copyText } from '@/components/server/files/FileDropdownMenu';
+import { displayPath, remapPath } from '@/components/server/files/fileOps';
+import useMoveEntries from '@/components/server/files/useMoveEntries';
+import { UploadDropZone, UploadPanel, uploadDropped, uploadPicked } from '@/components/server/files/UploadPanel';
+import { onUploadCompleted } from '@/components/server/files/uploadQueue';
 import { Button } from '@/components/elements/button/index';
 import FileTree, { Selection } from '@/components/server/files/workspace/FileTree';
 import { languageForFile, LANGUAGE_LABELS, MAX_BYTES, WARN_BYTES } from '@/components/server/files/workspace/languages';
@@ -65,7 +83,7 @@ interface Tab {
     error?: string;
 }
 
-type Prompt = { kind: 'file' | 'folder' | 'rename'; directory: string; initial: string } | null;
+type Prompt = { kind: 'file' | 'folder' | 'rename' | 'move'; directory: string; initial: string } | null;
 type Conflict = {
     path: string;
     remoteMtime?: number;
@@ -118,6 +136,7 @@ const useIsMobile = () => {
 };
 
 const iconButton = tw`px-2 py-1 text-sm text-neutral-300 hover:text-neutral-50 disabled:opacity-30 focus:outline-none focus:text-cyan-400`;
+const toolButton = 'gb-icon-btn gb-icon-btn-sm';
 
 export default () => {
     const { action } = useParams<{ action: 'new' | 'edit' }>();
@@ -152,10 +171,13 @@ export default () => {
     const [minimap, setMinimap] = useState(() => window.innerWidth >= 1100);
     const [problemsOpen, setProblemsOpen] = useState(false);
     const [moreOpen, setMoreOpen] = useState(false);
+    const [menu, setMenu] = useState<MenuState | null>(null);
+    const { move: moveEntries, dialog: conflictDialog } = useMoveEntries(uuid);
 
     const root = useRef<HTMLDivElement>(null);
     const editor = useRef<EditorHandle>(null);
     const upload = useRef<HTMLInputElement>(null);
+    const uploadFolder = useRef<HTMLInputElement>(null);
     const problemsButton = useRef<HTMLButtonElement>(null);
     const moreButton = useRef<HTMLButtonElement>(null);
     const validationTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
@@ -400,6 +422,46 @@ export default () => {
         return () => window.removeEventListener('keydown', onKey);
     }, [save]);
 
+    // --- keeping open files in step with renames and moves -----------------------------------------------------
+
+    // A renamed or moved file (or a file inside a renamed or moved folder) stays open with its text and unsaved edits.
+    const followMove = (from: string, to: string) => {
+        const affected = tabsRef.current.filter((t) => t.path === from || t.path.startsWith(from + '/'));
+        if (!affected.length) return;
+
+        affected.forEach((tab) => {
+            const next = remapPath(tab.path, from, to);
+            editor.current?.rename(tab.path, next, languageForFile(basename(next)));
+            clearTimeout(validationTimers.current[tab.path]);
+            delete validationTimers.current[tab.path];
+        });
+        setTabs((all) =>
+            all.map((t) => {
+                const next = remapPath(t.path, from, to);
+
+                return next === t.path
+                    ? t
+                    : { ...t, path: next, name: basename(next), language: languageForFile(basename(next)) };
+            })
+        );
+        setDiagnostics((all) =>
+            Object.fromEntries(Object.entries(all).map(([path, list]) => [remapPath(path, from, to), list]))
+        );
+        setActivePath((current) => (current ? remapPath(current, from, to) : current));
+        setSelection((current) => (current ? { ...current, path: remapPath(current.path, from, to) } : current));
+        setConflict((current) => (current ? { ...current, path: remapPath(current.path, from, to) } : current));
+    };
+
+    const moveInto = async (payload: { directory: string; names: string[] }, target: string) => {
+        if (!canUpdate) return;
+        const outcome = await moveEntries(payload.directory, payload.names, target);
+        outcome.moved.forEach((m) => followMove(m.from, m.to));
+        if (outcome.moved.length) {
+            refresh(payload.directory);
+            refresh(target);
+        }
+    };
+
     // --- explorer actions -------------------------------------------------------------------------------------
 
     const targetDirectory = selection ? (selection.isDirectory ? selection.path : dirname(selection.path)) : '/';
@@ -409,6 +471,15 @@ export default () => {
     const submitPrompt = async () => {
         if (!prompt) return;
         const name = promptValue.trim();
+
+        if (prompt.kind === 'move') {
+            if (!name.startsWith('/')) return fail('Enter the destination folder as a full path, such as /plugins.');
+            setPrompt(null);
+            await moveInto({ directory: prompt.directory, names: [prompt.initial] }, name);
+
+            return;
+        }
+
         if (!name || name.includes('/') || name === '.' || name === '..')
             return fail('Names cannot be empty or contain slashes.');
 
@@ -426,12 +497,10 @@ export default () => {
                 await createDirectory(uuid, prompt.directory, name);
                 refresh(prompt.directory);
                 setPrompt(null);
-            } else {
+            } else if (prompt.kind === 'rename') {
                 const from = join(prompt.directory, prompt.initial);
                 await renameFiles(uuid, prompt.directory, [{ from: prompt.initial, to: name }]);
-                tabsRef.current
-                    .filter((t) => t.path === from || t.path.startsWith(from + '/'))
-                    .forEach((t) => closeNow(t.path));
+                followMove(from, join(prompt.directory, name));
                 refresh(prompt.directory);
                 setPrompt(null);
             }
@@ -462,44 +531,148 @@ export default () => {
         }
     };
 
-    const startRename = () => {
-        if (!selection || selection.path === '/') return;
-        const blocker = blockedByUnsaved(selection.path);
-        if (blocker) return fail(`Save or close ${blocker.name} before renaming it.`);
-        setPrompt({ kind: 'rename', directory: dirname(selection.path), initial: basename(selection.path) });
-        setPromptValue(basename(selection.path));
+    const startRename = (target: Selection | null = selection) => {
+        if (!target || target.path === '/') return;
+        setPrompt({ kind: 'rename', directory: dirname(target.path), initial: basename(target.path) });
+        setPromptValue(basename(target.path));
     };
 
-    const startDelete = () => {
-        if (!selection || selection.path === '/') return;
-        const blocker = blockedByUnsaved(selection.path);
+    const startMove = (target: Selection) => {
+        setPrompt({ kind: 'move', directory: dirname(target.path), initial: basename(target.path) });
+        setPromptValue(dirname(target.path));
+    };
+
+    const startDelete = (target: Selection | null = selection) => {
+        if (!target || target.path === '/') return;
+        const blocker = blockedByUnsaved(target.path);
         if (blocker) return fail(`Save or close ${blocker.name} before deleting it.`);
-        setDeleting(selection);
+        setDeleting(target);
     };
 
-    const uploadFiles = async (files: FileList | null) => {
-        if (!files || !files.length) return;
+    const duplicate = async (target: Selection) => {
         setBusy(true);
         try {
-            await Promise.all(
-                Array.from(files).map(async (file) => {
-                    const url = await getFileUploadUrl(uuid);
-                    await axios.post(
-                        url,
-                        { files: file },
-                        { headers: { 'Content-Type': 'multipart/form-data' }, params: { directory: targetDirectory } }
-                    );
-                })
-            );
-            refresh(targetDirectory);
-            toast({ type: 'success', message: `Uploaded ${files.length} file${files.length === 1 ? '' : 's'}` });
+            await copyFile(uuid, target.path);
+            refresh(dirname(target.path));
         } catch (e) {
             fail(e);
         } finally {
             setBusy(false);
-            if (upload.current) upload.current.value = '';
         }
     };
+
+    const directoryOf = (target: Selection) => (target.isDirectory ? target.path : dirname(target.path));
+
+    // The one menu for the explorer: right click, the context menu key and the three-dot button all show it.
+    const openMenu = (target: Selection, x: number, y: number) => {
+        const items: MenuItem[] = [];
+        const isRoot = target.path === '/';
+        const where = directoryOf(target);
+
+        if (!target.isDirectory) {
+            items.push({ key: 'open', label: 'Open', icon: Pencil, onSelect: () => open(target.path) });
+        }
+        if (canCreate) {
+            items.push({
+                key: 'new-file',
+                label: 'New file',
+                icon: FilePlus,
+                separator: !target.isDirectory,
+                onSelect: () => {
+                    setPrompt({ kind: 'file', directory: where, initial: '' });
+                    setPromptValue('');
+                },
+            });
+            items.push({
+                key: 'new-folder',
+                label: 'New folder',
+                icon: FolderPlusIcon,
+                onSelect: () => {
+                    setPrompt({ kind: 'folder', directory: where, initial: '' });
+                    setPromptValue('');
+                },
+            });
+            items.push({
+                key: 'upload',
+                label: 'Upload files',
+                icon: UploadIcon,
+                onSelect: () => {
+                    setSelection({ path: where, isDirectory: true });
+                    upload.current?.click();
+                },
+            });
+        }
+        if (!isRoot) {
+            if (canUpdate) {
+                items.push({
+                    key: 'rename',
+                    label: 'Rename',
+                    icon: Pencil,
+                    separator: true,
+                    onSelect: () => startRename(target),
+                });
+                items.push({ key: 'move', label: 'Move', icon: FolderInput, onSelect: () => startMove(target) });
+            }
+            if (!target.isDirectory) {
+                items.push({
+                    key: 'download',
+                    label: 'Download',
+                    icon: Download,
+                    // eslint-disable-next-line @typescript-eslint/no-use-before-define
+                    onSelect: () => download(target.path),
+                });
+                if (canCreate) {
+                    items.push({
+                        key: 'duplicate',
+                        label: 'Duplicate',
+                        icon: CopyPlus,
+                        onSelect: () => duplicate(target),
+                    });
+                }
+            }
+            items.push({
+                key: 'copy-path',
+                label: 'Copy path',
+                icon: Copy,
+                onSelect: () =>
+                    copyText(target.path).then((ok) =>
+                        toast({
+                            type: ok ? 'success' : 'error',
+                            message: ok ? 'Path copied' : 'Could not copy the path',
+                        })
+                    ),
+            });
+            if (canDelete) {
+                items.push({
+                    key: 'delete',
+                    label: 'Delete',
+                    icon: Trash2,
+                    danger: true,
+                    separator: true,
+                    onSelect: () => startDelete(target),
+                });
+            }
+        } else {
+            items.push({
+                key: 'refresh',
+                label: 'Refresh',
+                icon: RefreshCw,
+                separator: true,
+                onSelect: () => refresh('/'),
+            });
+        }
+
+        setMenu({ x, y, items, title: isRoot ? '/home/container' : basename(target.path) });
+    };
+
+    const pickFiles = (input: HTMLInputElement) => {
+        if (!input.files?.length) return;
+        if (!uploadPicked(uuid, input.files, targetDirectory)) fail('Nothing could be uploaded from that selection.');
+        input.value = '';
+    };
+
+    // A finished upload refreshes the folder it landed in.
+    useEffect(() => onUploadCompleted((id, directory) => id === uuid && refresh(directory)), [uuid]);
 
     const download = async (path: string) => {
         try {
@@ -545,7 +718,7 @@ export default () => {
     );
 
     const explorerButtons = (
-        <div css={tw`flex items-center px-1 border-b border-neutral-700 flex-none`}>
+        <div className={'gb-explorer-tools'}>
             {[
                 [
                     'New file',
@@ -566,8 +739,9 @@ export default () => {
                     !canCreate,
                 ],
                 ['Upload files', faUpload, () => upload.current?.click(), !canCreate],
-                ['Rename', faPencilAlt, startRename, !selection || selection.path === '/' || !canUpdate],
-                ['Delete', faTrashAlt, startDelete, !selection || selection.path === '/' || !canDelete],
+                ['Upload folder', FolderUp, () => uploadFolder.current?.click(), !canCreate],
+                ['Rename', faPencilAlt, () => startRename(), !selection || selection.path === '/' || !canUpdate],
+                ['Delete', faTrashAlt, () => startDelete(), !selection || selection.path === '/' || !canDelete],
             ].map(([label, icon, onClick, disabled]) => (
                 <button
                     key={label as string}
@@ -576,7 +750,7 @@ export default () => {
                     aria-label={label as string}
                     disabled={(disabled as boolean) || busy}
                     onClick={onClick as () => void}
-                    css={iconButton}
+                    className={toolButton}
                 >
                     <FontAwesomeIcon icon={icon as any} fixedWidth />
                 </button>
@@ -588,16 +762,17 @@ export default () => {
                 aria-label={'Refresh'}
                 disabled={busy}
                 onClick={() => refresh(targetDirectory)}
-                css={iconButton}
+                className={toolButton}
             >
                 <FontAwesomeIcon icon={faSyncAlt} fixedWidth />
             </button>
+            <input ref={upload} type={'file'} multiple hidden onChange={(e) => pickFiles(e.currentTarget)} />
             <input
-                ref={upload}
+                ref={uploadFolder}
                 type={'file'}
-                multiple
-                css={tw`hidden`}
-                onChange={(e) => uploadFiles(e.currentTarget.files)}
+                hidden
+                {...({ webkitdirectory: '', directory: '' } as Record<string, string>)}
+                onChange={(e) => pickFiles(e.currentTarget)}
             />
         </div>
     );
@@ -605,7 +780,18 @@ export default () => {
     const explorer = (
         <>
             {explorerButtons}
-            <div css={tw`flex-1 overflow-auto py-1 min-h-0`}>
+            <div
+                css={tw`flex-1 overflow-auto py-1 min-h-0`}
+                onKeyDown={(e) => {
+                    if (e.key === 'F2' && canUpdate) {
+                        e.preventDefault();
+                        startRename();
+                    } else if (e.key === 'Delete' && canDelete) {
+                        e.preventDefault();
+                        startDelete();
+                    }
+                }}
+            >
                 <FileTree
                     uuid={uuid}
                     selection={selection}
@@ -613,8 +799,13 @@ export default () => {
                     openPaths={tabs.map((t) => t.path)}
                     dirtyPaths={dirtyPaths}
                     refreshToken={refreshToken}
+                    canMove={canUpdate}
+                    canUpload={canCreate}
                     onSelect={setSelection}
                     onOpen={open}
+                    onMenu={openMenu}
+                    onMoveInto={moveInto}
+                    onDropFiles={(data, directory) => canCreate && uploadDropped(uuid, data, directory)}
                 />
             </div>
         </>
@@ -645,17 +836,17 @@ export default () => {
 
     return (
         <div ref={root} css={tw`px-2 sm:px-4 pt-2`}>
-            <div css={tw`flex items-center mb-2 min-w-0`}>
+            <div className={'gb-workspace-head'}>
                 <button
                     type={'button'}
                     aria-label={treeOpen ? 'Hide file explorer' : 'Show file explorer'}
                     aria-expanded={treeOpen}
                     onClick={() => setTreeOpen((v) => !v)}
-                    css={[iconButton, tw`mr-1`]}
+                    className={toolButton}
                 >
                     <FontAwesomeIcon icon={faBars} />
                 </button>
-                <p css={tw`flex-1 min-w-0 truncate text-sm text-neutral-300`} title={activePath || ''}>
+                <p className={'gb-workspace-path'} title={activePath || ''}>
                     {activePath || 'File editor'}
                 </p>
                 <Button.Text type={'button'} onClick={() => history.push(`/server/${id}/files`)} css={tw`flex-none`}>
@@ -663,10 +854,10 @@ export default () => {
                 </Button.Text>
             </div>
 
-            <div css={tw`relative flex bg-neutral-900 rounded overflow-hidden shadow-lg`} style={{ height }}>
+            <div className={'gb-workspace'} style={{ height }}>
                 {treeOpen && !mobile && (
                     <>
-                        <aside css={tw`flex-none flex flex-col bg-neutral-800`} style={{ width: sidebarWidth }}>
+                        <aside className={'gb-explorer'} style={{ width: sidebarWidth }}>
                             {explorer}
                         </aside>
                         <div
@@ -680,7 +871,7 @@ export default () => {
                                 if (e.key === 'ArrowRight') setSidebarWidth((w) => Math.min(MAX_SIDEBAR, w + 16));
                             }}
                             style={{ cursor: 'col-resize' }}
-                            css={tw`flex-none w-1 bg-neutral-700 hover:bg-cyan-600 focus:bg-cyan-600 focus:outline-none`}
+                            className={'gb-resizer'}
                         />
                     </>
                 )}
@@ -689,7 +880,7 @@ export default () => {
                     <div
                         role={'tablist'}
                         aria-label={'Open files'}
-                        css={tw`flex-none flex overflow-x-auto bg-neutral-800 border-b border-neutral-700`}
+                        className={'gb-tabs'}
                         style={{ scrollbarWidth: 'thin' }}
                     >
                         {tabs.map((tab) => (
@@ -700,22 +891,17 @@ export default () => {
                                 title={tab.path}
                                 onClick={() => setActivePath(tab.path)}
                                 onAuxClick={(e) => e.button === 1 && requestClose(tab.path)}
-                                css={[
-                                    tw`flex items-center flex-none max-w-[14rem] pl-3 pr-1 text-sm border-r border-neutral-700 cursor-pointer border-t-2`,
-                                    tab.path === activePath
-                                        ? tw`bg-neutral-900 text-neutral-50 border-t-cyan-500`
-                                        : tw`text-neutral-400 hover:text-neutral-200 border-t-transparent`,
-                                ]}
+                                className={'gb-tab' + (tab.path === activePath ? ' active' : '')}
                             >
                                 <button
                                     type={'button'}
                                     onClick={() => setActivePath(tab.path)}
-                                    css={tw`py-2 truncate focus:outline-none focus:underline`}
+                                    className={'gb-tab-name'}
                                 >
                                     {tab.name}
                                 </button>
                                 {tab.dirty && (
-                                    <span aria-label={'unsaved changes'} css={tw`ml-1 text-cyan-400`}>
+                                    <span aria-label={'unsaved changes'} className={'gb-tree-dirty'}>
                                         &bull;
                                     </span>
                                 )}
@@ -726,7 +912,7 @@ export default () => {
                                         e.stopPropagation();
                                         requestClose(tab.path);
                                     }}
-                                    css={tw`ml-1 px-2 py-1 rounded text-neutral-500 hover:text-neutral-100 hover:bg-neutral-700 focus:outline-none focus:text-cyan-400`}
+                                    className={'gb-tab-close'}
                                 >
                                     <FontAwesomeIcon icon={faTimes} />
                                 </button>
@@ -736,9 +922,7 @@ export default () => {
                     </div>
 
                     {active?.status === 'ready' && (
-                        <div
-                            css={tw`flex-none flex items-center h-9 px-2 border-b border-neutral-800 bg-neutral-900 text-xs text-neutral-400`}
-                        >
+                        <div className={'gb-editor-bar'}>
                             <span css={tw`flex-1 min-w-0 truncate`}>
                                 {LANGUAGE_LABELS[active.language] || active.language}
                             </span>
@@ -929,15 +1113,8 @@ export default () => {
 
                 {mobile && treeOpen && (
                     <>
-                        <div
-                            css={tw`absolute inset-0 z-10 bg-black opacity-60`}
-                            onClick={() => setTreeOpen(false)}
-                            aria-hidden
-                        />
-                        <aside
-                            css={tw`absolute inset-y-0 left-0 z-20 w-72 max-w-[85%] flex flex-col bg-neutral-800 shadow-xl`}
-                            aria-label={'File explorer'}
-                        >
+                        <div className={'gb-drawer-mask'} onClick={() => setTreeOpen(false)} aria-hidden />
+                        <aside className={'gb-drawer'} aria-label={'File explorer'}>
                             {explorer}
                         </aside>
                     </>
@@ -952,10 +1129,18 @@ export default () => {
                 showSpinnerOverlay={busy}
             >
                 <h2 css={tw`text-xl mb-4 text-neutral-100`}>
-                    {prompt?.kind === 'file' ? 'New file' : prompt?.kind === 'folder' ? 'New folder' : 'Rename'}
+                    {prompt?.kind === 'file'
+                        ? 'New file'
+                        : prompt?.kind === 'folder'
+                        ? 'New folder'
+                        : prompt?.kind === 'move'
+                        ? `Move ${prompt.initial}`
+                        : 'Rename'}
                 </h2>
                 <p css={tw`text-xs text-neutral-400 mb-2`}>
-                    In {prompt?.directory === '/' ? '/home/container' : prompt?.directory}
+                    {prompt?.kind === 'move'
+                        ? 'Destination folder, as a full path'
+                        : `In ${displayPath(prompt?.directory || '/')}`}
                 </p>
                 <form
                     onSubmit={(e) => {
@@ -974,11 +1159,16 @@ export default () => {
                             Cancel
                         </Button.Text>
                         <Button type={'submit'} disabled={busy || !promptValue.trim()}>
-                            {prompt?.kind === 'rename' ? 'Rename' : 'Create'}
+                            {prompt?.kind === 'rename' ? 'Rename' : prompt?.kind === 'move' ? 'Move' : 'Create'}
                         </Button>
                     </div>
                 </form>
             </Modal>
+
+            <ContextMenu menu={menu} onClose={() => setMenu(null)} />
+            {conflictDialog}
+            <UploadDropZone uuid={uuid} directory={targetDirectory} enabled={canCreate} />
+            <UploadPanel />
 
             <Modal visible={!!closing} onDismissed={() => setClosing(null)} dismissable closeOnEscape>
                 <h2 css={tw`text-xl mb-3 text-neutral-100`}>Discard unsaved changes?</h2>

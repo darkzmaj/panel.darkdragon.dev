@@ -1,19 +1,18 @@
-import { FontAwesomeIcon } from '@/components/elements/icons';
-import { faFileAlt, faFileArchive, faFileImport, faFolder } from '@/components/elements/icons';
+import React, { memo, useContext } from 'react';
+import { Archive, File as FileIcon, FileInput, Folder } from 'lucide-react';
 import { encodePathSegments } from '@/helpers';
 import { differenceInHours, format, formatDistanceToNow } from 'date-fns';
-import React, { memo } from 'react';
 import { FileObject } from '@/api/server/files/loadDirectory';
 import FileDropdownMenu from '@/components/server/files/FileDropdownMenu';
 import { ServerContext } from '@/state/server';
 import { NavLink, useRouteMatch } from 'react-router-dom';
-import tw from 'twin.macro';
 import isEqual from 'react-fast-compare';
 import SelectFileCheckbox from '@/components/server/files/SelectFileCheckbox';
 import { usePermissions } from '@/plugins/usePermissions';
 import { join } from 'pathe';
 import { bytesToString } from '@/lib/formatters';
-import styles from './style.module.css';
+import FileActionsContext from '@/components/server/files/FileActionsContext';
+import { beginDrag, endDrag, useDropTarget } from '@/components/server/files/dragDrop';
 
 const Clickable: React.FC<{ file: FileObject }> = memo(({ file, children }) => {
     const [canRead] = usePermissions(['file.read']);
@@ -23,10 +22,11 @@ const Clickable: React.FC<{ file: FileObject }> = memo(({ file, children }) => {
     const match = useRouteMatch();
 
     return (file.isFile && (!file.isEditable() || !canReadContents)) || (!file.isFile && !canRead) ? (
-        <div className={styles.details}>{children}</div>
+        <div className={'gb-file-details'}>{children}</div>
     ) : (
         <NavLink
-            className={styles.details}
+            className={'gb-file-details'}
+            draggable={false}
             to={`${match.url}${file.isFile ? '/edit' : ''}#${encodePathSegments(join(directory, file.name))}`}
         >
             {children}
@@ -34,37 +34,65 @@ const Clickable: React.FC<{ file: FileObject }> = memo(({ file, children }) => {
     );
 }, isEqual);
 
-const FileObjectRow = ({ file }: { file: FileObject }) => (
-    <div
-        className={styles.file_row}
-        key={file.name}
-        onContextMenu={(e) => {
-            e.preventDefault();
-            window.dispatchEvent(new CustomEvent(`pterodactyl:files:ctx:${file.key}`, { detail: e.clientX }));
-        }}
-    >
-        <SelectFileCheckbox name={file.name} />
-        <Clickable file={file}>
-            <div css={tw`flex-none text-neutral-400 ml-6 mr-4 text-lg pl-3`}>
-                {file.isFile ? (
-                    <FontAwesomeIcon
-                        icon={file.isSymlink ? faFileImport : file.isArchiveType() ? faFileArchive : faFileAlt}
-                    />
-                ) : (
-                    <FontAwesomeIcon icon={faFolder} />
-                )}
-            </div>
-            <div css={tw`flex-1 truncate`}>{file.name}</div>
-            {file.isFile && <div css={tw`w-1/6 text-right mr-4 hidden sm:block`}>{bytesToString(file.size)}</div>}
-            <div css={tw`w-1/5 text-right mr-4 hidden md:block`} title={file.modifiedAt.toString()}>
-                {Math.abs(differenceInHours(file.modifiedAt, new Date())) > 48
-                    ? format(file.modifiedAt, 'MMM do, yyyy h:mma')
-                    : formatDistanceToNow(file.modifiedAt, { addSuffix: true })}
-            </div>
-        </Clickable>
-        <FileDropdownMenu file={file} />
-    </div>
-);
+const FileObjectRow = ({ file }: { file: FileObject }) => {
+    const store = ServerContext.useStore();
+    const directory = ServerContext.useStoreState((state) => state.files.directory);
+    const { moveInto, dropFiles, canMove } = useContext(FileActionsContext);
+    const target = useDropTarget({
+        directory: join(directory, file.name),
+        enabled: !file.isFile,
+        onMove: moveInto,
+        onFiles: dropFiles,
+    });
+
+    return (
+        <div
+            {...(file.isFile ? {} : target.props)}
+            className={
+                'gb-file-row' + (target.state === 'ok' ? ' drop-ok' : target.state === 'denied' ? ' drop-denied' : '')
+            }
+            draggable={canMove}
+            data-name={file.name}
+            onDragStart={(e) => {
+                const selected = store.getState().files.selectedFiles;
+                const names = selected.includes(file.name) ? selected : [file.name];
+                beginDrag(e, { directory, names });
+            }}
+            onDragEnd={endDrag}
+            onContextMenu={(e) => {
+                e.preventDefault();
+                window.dispatchEvent(
+                    new CustomEvent(`pterodactyl:files:ctx:${file.key}`, { detail: { x: e.clientX, y: e.clientY } })
+                );
+            }}
+        >
+            <SelectFileCheckbox name={file.name} />
+            <Clickable file={file}>
+                <span className={'gb-file-icon'}>
+                    {file.isFile ? (
+                        file.isSymlink ? (
+                            <FileInput aria-hidden />
+                        ) : file.isArchiveType() ? (
+                            <Archive aria-hidden />
+                        ) : (
+                            <FileIcon aria-hidden />
+                        )
+                    ) : (
+                        <Folder aria-hidden />
+                    )}
+                </span>
+                <span className={'gb-file-name'}>{file.name}</span>
+                <span className={'gb-file-size'}>{file.isFile ? bytesToString(file.size) : ''}</span>
+                <span className={'gb-file-date'} title={file.modifiedAt.toString()}>
+                    {Math.abs(differenceInHours(file.modifiedAt, new Date())) > 48
+                        ? format(file.modifiedAt, 'MMM do, yyyy h:mma')
+                        : formatDistanceToNow(file.modifiedAt, { addSuffix: true })}
+                </span>
+            </Clickable>
+            <FileDropdownMenu file={file} />
+        </div>
+    );
+};
 
 export default memo(FileObjectRow, (prevProps, nextProps) => {
     /* eslint-disable @typescript-eslint/no-unused-vars */

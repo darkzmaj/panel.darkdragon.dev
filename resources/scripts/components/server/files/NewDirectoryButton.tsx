@@ -12,6 +12,7 @@ import { useFlashKey } from '@/plugins/useFlash';
 import useFileManagerSwr from '@/plugins/useFileManagerSwr';
 import { WithClassname } from '@/components/types';
 import FlashMessageRender from '@/components/FlashMessageRender';
+import { FolderPlus } from 'lucide-react';
 import { Dialog, DialogWrapperContext } from '@/components/elements/dialog';
 import Code from '@/components/elements/Code';
 import asDialog from '@/hoc/asDialog';
@@ -111,9 +112,13 @@ export default ({ className }: WithClassname) => {
     return (
         <>
             <NewDirectoryDialog open={open} onClose={setOpen.bind(this, false)} />
-            <Button.Text onClick={setOpen.bind(this, true)} className={className}>
-                Create Directory
-            </Button.Text>
+            <button
+                type={'button'}
+                onClick={setOpen.bind(this, true)}
+                className={'gb-btn gb-btn-sm ' + (className || '')}
+            >
+                <FolderPlus aria-hidden /> New folder
+            </button>
         </>
     );
 };
