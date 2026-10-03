@@ -22,7 +22,7 @@
             <link rel="stylesheet" href="/themes/gobia/admin.css?v={{ @filemtime(public_path('themes/gobia/admin.css')) ?: 1 }}">
         @show
     </head>
-    <body class="gb-body gb-admin">
+    <body class="gb-body gb-admin{{ !empty($gbSubnav) ? ' has-subnav' : '' }}">
         @inject('branding', 'Pterodactyl\Services\Media\BrandingService')
         @php
             $route = Route::currentRouteName() ?? '';

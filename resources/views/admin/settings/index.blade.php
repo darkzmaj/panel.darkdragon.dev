@@ -6,7 +6,7 @@
 @endsection
 
 @section('content-header')
-    <h1>Panel Settings<small>Configure Pterodactyl to your liking.</small></h1>
+    <h1>Panel Settings<small>Name, language and sign-in requirements.</small></h1>
     <ol class="breadcrumb">
         <li><a href="{{ route('admin.index') }}">Dashboard</a></li>
         <li class="active">Settings</li>
@@ -72,5 +72,4 @@
             </div>
         </div>
     </div>
-    @include('partials.admin.settings.branding')
 @endsection

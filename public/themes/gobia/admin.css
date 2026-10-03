@@ -298,3 +298,44 @@ a.gb-stat:hover { background: var(--gb-surface-2); }
 .gb-facts dt { color: var(--gb-text-3); font-weight: 500; }
 .gb-facts dd { margin: 0; }
 @media (max-width: 900px) { .gb-tfiles { grid-template-columns: minmax(0, 1fr); } .gb-upload { grid-template-columns: minmax(0, 1fr) 24px; } .gb-upload-bar, .gb-upload small { grid-column: 1 / -1; } }
+
+/* ------------------------------------------------------------------ settings: local menu on the left */
+.has-subnav section.content { display: grid; grid-template-columns: 232px minmax(0, 1fr); column-gap: 24px; align-items: start; }
+.has-subnav section.content > * { grid-column: 2; min-width: 0; }
+.has-subnav section.content > .gb-subnav { grid-column: 1; grid-row: 1 / span 60; position: sticky; top: calc(var(--gb-topbar-h) + 16px); }
+.gb-subnav { display: flex; flex-direction: column; gap: 2px; padding: 10px; background: var(--gb-surface); border: 1px solid var(--gb-border-muted); border-radius: var(--gb-radius-lg); }
+.gb-subnav-title { margin: 6px 10px 8px; font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gb-text-3); }
+.gb-subnav a { display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 12px; border-radius: 10px; color: var(--gb-text-2) !important; font-weight: 600; text-decoration: none !important; }
+.gb-subnav a:hover { background: var(--gb-surface-2); color: var(--gb-text-strong) !important; }
+.gb-subnav a.active { background: var(--gb-primary); color: var(--gb-primary-fg) !important; }
+.gb-subnav a .fa { width: 16px; height: 16px; }
+@media (max-width: 900px) {
+    .has-subnav section.content { display: block; }
+    .has-subnav section.content > .gb-subnav { position: static; flex-direction: row; flex-wrap: nowrap; overflow-x: auto; margin-bottom: 16px; }
+    .gb-subnav-title { display: none; }
+    .gb-subnav a { flex: none; }
+}
+.gb-asset-preview { display: flex; align-items: center; justify-content: center; min-height: 96px; padding: 16px; border: 1px dashed var(--gb-border); border-radius: var(--gb-radius-md); background: var(--gb-bg); }
+.gb-asset-preview img { max-width: 100%; width: auto; height: auto; }
+
+input[type='file'] { max-width: 100%; color: var(--gb-text-2); font-size: 13px; }
+input[type='file']::file-selector-button { margin-right: 12px; height: 34px; padding: 0 14px; border: 1px solid var(--gb-border); border-radius: 8px; background: var(--gb-surface-2); color: var(--gb-text); font: inherit; font-weight: 600; cursor: pointer; }
+input[type='file']::file-selector-button:hover { border-color: var(--gb-primary); }
+
+/* ------------------------------------------------------------------ tables: row menu and usage bars */
+.gb-admin-menu { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border: 0; border-radius: 8px; background: transparent; color: var(--gb-text-2); cursor: pointer; }
+.gb-admin-menu:hover, .gb-admin-menu[aria-expanded='true'] { background: var(--gb-surface-2); color: var(--gb-text-strong); }
+.gb-admin-menu:focus-visible { outline: 2px solid var(--gb-focus); }
+body > .gb-dropdown-menu { min-width: 190px; padding: 6px; background: var(--gb-surface); border: 1px solid var(--gb-border-muted); border-radius: var(--gb-radius-md); box-shadow: var(--gb-shadow-pop); }
+body > .gb-dropdown-menu > a, body > .gb-dropdown-menu > button { display: flex; align-items: center; gap: 10px; width: 100%; height: 38px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; color: var(--gb-text) !important; font: inherit; font-size: 14px; text-decoration: none !important; cursor: pointer; }
+body > .gb-dropdown-menu > a:hover, body > .gb-dropdown-menu > a:focus-visible, body > .gb-dropdown-menu > button:hover { background: var(--gb-surface-2); outline: none; color: var(--gb-text-strong) !important; }
+body > .gb-dropdown-menu .danger { color: rgb(var(--gb-danger)) !important; }
+.gb-bar-meter { height: 6px; margin-bottom: 4px; border-radius: 999px; background: var(--gb-surface-2); overflow: hidden; }
+.gb-bar-meter > div { height: 100%; border-radius: inherit; background: var(--gb-primary); }
+.gb-bar-meter.warn > div { background: rgb(var(--gb-warning)); }
+.gb-bar-meter.danger > div { background: rgb(var(--gb-danger)); }
+.gb-node-table td { vertical-align: middle !important; }
+.gb-node-table td, .gb-node-table th { white-space: nowrap; }
+.gb-node-table .label { margin-right: 2px; }
+/* Visually hidden text inside a scrolling table must be clipped by it, not by the page. */
+.gb-admin .table-responsive { position: relative; }

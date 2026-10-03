@@ -21,6 +21,7 @@ class ServerController extends Controller
         $servers = QueryBuilder::for(Server::query()->with('node', 'user', 'allocation'))
             ->allowedFilters([
                 AllowedFilter::exact('owner_id'),
+                AllowedFilter::exact('node_id'),
                 AllowedFilter::custom('*', new AdminServerFilter()),
             ])
             ->paginate(config()->get('pterodactyl.paginate.admin.servers'));

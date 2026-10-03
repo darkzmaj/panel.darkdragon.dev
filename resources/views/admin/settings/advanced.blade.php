@@ -6,7 +6,7 @@
 @endsection
 
 @section('content-header')
-    <h1>Advanced Settings<small>Configure advanced settings for Pterodactyl.</small></h1>
+    <h1>Advanced Settings<small>Fine-tune connections, timeouts and limits.</small></h1>
     <ol class="breadcrumb">
         <li><a href="{{ route('admin.index') }}">Dashboard</a></li>
         <li class="active">Settings</li>

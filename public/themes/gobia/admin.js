@@ -47,6 +47,71 @@
         });
     }
 
+    // ---- Row menus (the three-dot button in tables). One implementation: the menu is lifted to the body so a
+    // scrolling table never clips it, placed beside its button, and closed by Escape, a click elsewhere or a choice.
+    var openRowMenu = null;
+    function closeRowMenu(refocus) {
+        if (!openRowMenu) return;
+        var o = openRowMenu;
+        openRowMenu = null;
+        o.menu.hidden = true;
+        o.menu.style.cssText = '';
+        o.home.appendChild(o.menu);
+        o.button.setAttribute('aria-expanded', 'false');
+        if (refocus) o.button.focus();
+    }
+    function placeRowMenu(o) {
+        var r = o.button.getBoundingClientRect();
+        var m = o.menu;
+        m.style.position = 'fixed';
+        m.style.zIndex = '80';
+        m.style.right = 'auto';
+        m.style.width = 'max-content';
+        m.style.left = '0px';
+        m.style.top = '0px';
+        var w = m.offsetWidth;
+        var h = m.offsetHeight;
+        var left = Math.max(8, Math.min(r.right - w, window.innerWidth - w - 8));
+        var top = r.bottom + 6 + h > window.innerHeight - 8 && r.top - 6 - h > 8 ? r.top - 6 - h : r.bottom + 6;
+        m.style.left = left + 'px';
+        m.style.top = top + 'px';
+        m.style.right = 'auto';
+    }
+    document.addEventListener('click', function (e) {
+        var button = e.target.closest && e.target.closest('[data-gb-menu]');
+        if (button) {
+            e.stopPropagation();
+            var wasOpen = openRowMenu && openRowMenu.button === button;
+            closeRowMenu(false);
+            if (wasOpen) return;
+            var menu = button.nextElementSibling;
+            if (!menu || !menu.classList.contains('gb-dropdown-menu')) return;
+            openRowMenu = { button: button, menu: menu, home: button.parentNode };
+            document.body.appendChild(menu);
+            menu.hidden = false;
+            button.setAttribute('aria-expanded', 'true');
+            placeRowMenu(openRowMenu);
+            var first = menu.querySelector('[role=menuitem]');
+            if (first) first.focus();
+            return;
+        }
+        if (openRowMenu && !openRowMenu.menu.contains(e.target)) closeRowMenu(false);
+    });
+    document.addEventListener('keydown', function (e) {
+        if (!openRowMenu) return;
+        if (e.key === 'Escape') { e.preventDefault(); closeRowMenu(true); }
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+            e.preventDefault();
+            var items = Array.prototype.slice.call(openRowMenu.menu.querySelectorAll('[role=menuitem]'));
+            var index = items.indexOf(document.activeElement);
+            index = e.key === 'ArrowDown' ? (index + 1) % items.length : (index - 1 + items.length) % items.length;
+            items[index].focus();
+        }
+        if (e.key === 'Tab') closeRowMenu(false);
+    });
+    window.addEventListener('resize', function () { closeRowMenu(false); });
+    window.addEventListener('scroll', function () { closeRowMenu(false); }, true);
+
     // ---- Theme choice (applied at once, then stored on the account)
     function markTheme() {
         var current = document.documentElement.getAttribute('data-theme-pref') || 'system';

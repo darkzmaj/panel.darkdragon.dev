@@ -88,6 +88,12 @@ const map = {
     user: 'user',
     users: 'users',
     wrench: 'sliders-horizontal',
+    'picture-o': 'image',
+    envelope: 'mail',
+    'paint-brush': 'palette',
+    code: 'code',
+    'cloud-download': 'cloud-download',
+    'plug': 'plug',
 };
 
 const dir = path.join(__dirname, '../node_modules/lucide-react/dist/esm/icons');

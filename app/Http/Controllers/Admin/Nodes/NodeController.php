@@ -16,7 +16,12 @@ class NodeController extends Controller
     public function index(Request $request): View
     {
         $nodes = QueryBuilder::for(
-            Node::query()->with('location')->withCount('servers')
+            Node::query()
+                ->with('location')
+                ->withCount(['servers', 'allocations', 'allocations as allocations_used_count' => fn ($query) => $query->whereNotNull('server_id')])
+                ->withSum('servers as allocated_memory', 'memory')
+                ->withSum('servers as allocated_disk', 'disk')
+                ->withSum('servers as allocated_cpu', 'cpu')
         )
             ->allowedFilters(['uuid', 'name'])
             ->allowedSorts(['id'])

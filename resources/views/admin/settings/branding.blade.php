@@ -1,10 +1,27 @@
-{{-- Logo and favicon uploads, shown on the General settings tab. --}}
+@extends('layouts.admin')
+@include('partials/admin.settings.nav', ['activeTab' => 'branding'])
+
+@section('title')
+    Branding
+@endsection
+
+@section('content-header')
+    <h1>Branding<small>The logo and favicon shown across the Panel.</small></h1>
+    <ol class="breadcrumb">
+        <li><a href="{{ route('admin.index') }}">Dashboard</a></li>
+        <li>Settings</li>
+        <li class="active">Branding</li>
+    </ol>
+@endsection
+
+@section('content')
+    @yield('settings::nav')
+    <p class="text-muted" style="margin-top:0;">Until you upload your own, the Panel uses the Gobia Cloud logo and icon. Uploads replace them everywhere, including the login page and the browser tab.</p>
 @inject('branding', 'Pterodactyl\Services\Media\BrandingService')
-<h3 class="gb-section-title" id="branding">Branding</h3>
     <div class="row">
         @foreach([
-            'logo' => ['title' => 'Panel Logo', 'help' => 'Shown on the login page and in the navigation bar. PNG only, up to 2 MB. Larger images are scaled down to fit within 512x256 pixels.', 'default' => '/assets/svgs/pterodactyl.svg', 'url' => $branding->url('logo'), 'height' => '96px'],
-            'favicon' => ['title' => 'Favicon', 'help' => 'Shown in the browser tab. PNG only, up to 512 KB. A square image is recommended.', 'default' => '/favicons/favicon-96x96.png', 'url' => $branding->url('favicon'), 'height' => '48px'],
+            'logo' => ['title' => 'Panel Logo', 'help' => 'Shown on the login page and in the navigation bar. PNG only, up to 2 MB. Larger images are scaled down to fit within 512x256 pixels.', 'default' => '/themes/gobia/img/logo-text-480.png', 'url' => $branding->url('logo'), 'height' => '96px'],
+            'favicon' => ['title' => 'Favicon', 'help' => 'Shown in the browser tab. PNG only, up to 512 KB. A square image is recommended.', 'default' => '/themes/gobia/img/icon-256.png', 'url' => $branding->url('favicon'), 'height' => '48px'],
         ] as $asset => $meta)
             <div class="col-md-6">
                 <div class="box">
@@ -14,8 +31,8 @@
                     <div class="box-body">
                         <div class="form-group">
                             <label class="control-label">Current {{ strtolower($meta['title']) }}</label>
-                            <div style="background:#e7ecf2;padding:10px;text-align:center;">
-                                <img src="{{ $meta['url'] ?? $meta['default'] }}" alt="{{ $meta['title'] }}" style="max-width:100%;max-height:{{ $meta['height'] }};width:auto;height:auto;">
+                            <div class="gb-asset-preview">
+                                <img src="{{ $meta['url'] ?? $meta['default'] }}" alt="{{ $meta['title'] }}" style="max-height:{{ $meta['height'] }};">
                             </div>
                             <p class="text-muted small">{{ $meta['url'] ? 'Using a custom image.' : 'Using the default image.' }}</p>
                         </div>
@@ -42,3 +59,5 @@
             </div>
         @endforeach
     </div>
+
+@endsection

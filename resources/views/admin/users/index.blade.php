@@ -80,7 +80,13 @@
                                 <td class="text-center">{{ $user->servers_count + $user->subuser_of_count }}</td>
                                 <td>{{ $user->created_at->format('Y-m-d') }}</td>
                                 <td>{{ $user->last_activity_at ? \Carbon\Carbon::parse($user->last_activity_at)->diffForHumans() : '-' }}</td>
-                                <td class="text-right"><a href="{{ route('admin.users.view', $user->id) }}" class="btn btn-xs btn-default">Edit</a></td>
+                                <td class="text-right">
+                                    <button type="button" class="gb-admin-menu" data-gb-menu aria-label="Actions for {{ $user->username }}" aria-haspopup="menu" aria-expanded="false"><i class="fa fa-ellipsis"></i></button>
+                                    <div class="gb-dropdown-menu" role="menu" hidden>
+                                        <a role="menuitem" href="{{ route('admin.users.view', $user->id) }}"><i class="fa fa-pencil"></i> Edit user</a>
+                                        <a role="menuitem" href="{{ route('admin.servers', ['filter[owner_id]' => $user->id]) }}"><i class="fa fa-server"></i> Instances</a>
+                                    </div>
+                                </td>
                             </tr>
                         @empty
                             <tr><td colspan="10" class="text-center gb-muted">No users match these filters.</td></tr>

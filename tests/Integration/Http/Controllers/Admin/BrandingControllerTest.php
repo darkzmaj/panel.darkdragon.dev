@@ -26,7 +26,7 @@ class BrandingControllerTest extends HttpTestCase
         foreach (['logo' => [512, 256], 'favicon' => [256, 256]] as $asset => [$maxWidth, $maxHeight]) {
             $this->actingAs($admin)
                 ->post('/admin/settings/branding/' . $asset, [$asset => UploadedFile::fake()->createWithContent($asset . '.png', AccountProfileTest::pngBytes(1000, 1000))])
-                ->assertRedirect(route('admin.settings') . '#branding');
+                ->assertRedirect(route('admin.settings.branding'));
 
             $stored = Storage::disk('local')->get('branding/' . $asset . '.png');
             [$width, $height] = getimagesizefromstring($stored);
@@ -47,7 +47,7 @@ class BrandingControllerTest extends HttpTestCase
                 ->assertHeader('Content-Type', 'image/png')
                 ->assertHeader('Cache-Control', 'immutable, max-age=31536000, public');
 
-            $this->actingAs($admin)->delete('/admin/settings/branding/' . $asset)->assertRedirect(route('admin.settings') . '#branding');
+            $this->actingAs($admin)->delete('/admin/settings/branding/' . $asset)->assertRedirect(route('admin.settings.branding'));
             config(['pterodactyl.branding.' . $asset => null]);
             Storage::disk('local')->assertMissing('branding/' . $asset . '.png');
             $this->app['auth']->forgetGuards();
