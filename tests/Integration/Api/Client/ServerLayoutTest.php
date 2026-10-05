@@ -228,4 +228,28 @@ class ServerLayoutTest extends ClientApiIntegrationTestCase
         $this->actingAs($stranger)->putJson("/api/client/account/layout/servers/$alpha/color", ['color' => '#ffffff'])->assertStatus(400);
         $this->assertDatabaseMissing('user_server_icon_colors', ['server_id' => $this->servers['Alpha']->id]);
     }
+
+    public function testRecentColoursAreNewestFirstDeduplicatedAndLimitedToFive(): void
+    {
+        $alpha = $this->servers['Alpha']->uuid;
+        $recent = fn () => $this->actingAs($this->user)->getJson('/api/client/account/layout')->json('recent_colors');
+
+        foreach (['#111111', '#222222', '#333333', '#444444', '#555555', '#666666'] as $hex) {
+            $this->actingAs($this->user)->putJson("/api/client/account/layout/servers/$alpha/color", ['color' => $hex])->assertOk();
+        }
+        $this->assertSame(['#666666', '#555555', '#444444', '#333333', '#222222'], $recent());
+
+        // Reusing an older colour moves it to the front instead of adding a second copy.
+        $this->actingAs($this->user)->putJson("/api/client/account/layout/servers/$alpha/color", ['color' => '#333333'])->assertOk();
+        $this->assertSame(['#333333', '#666666', '#555555', '#444444', '#222222'], $recent());
+
+        // Case is normalised, and resetting a colour does not erase the history.
+        $this->actingAs($this->user)->putJson("/api/client/account/layout/servers/$alpha/color", ['color' => '#AABBCC'])->assertOk();
+        $this->actingAs($this->user)->putJson("/api/client/account/layout/servers/$alpha/color", ['color' => null])->assertOk();
+        $this->assertSame('#aabbcc', $recent()[0]);
+        $this->assertCount(5, $recent());
+
+        $other = User::factory()->create();
+        $this->assertSame([], $this->actingAs($other)->getJson('/api/client/account/layout')->json('recent_colors'));
+    }
 }

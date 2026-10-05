@@ -29,6 +29,12 @@ const SHEET_BREAKPOINT = 640;
 export default ({ menu, onClose }: { menu: MenuState | null; onClose: () => void }) => {
     const [anchor, setAnchor] = useState<HTMLSpanElement | null>(null);
     const sheet = useRef<HTMLDivElement>(null);
+    // The finger that opened the sheet is still down; lifting it sends a click to whatever is under it, which would be
+    // the backdrop and close the sheet again at once. Backdrop clicks right after opening are therefore ignored.
+    const openedAt = useRef(0);
+    useEffect(() => {
+        if (menu) openedAt.current = Date.now();
+    }, [menu]);
     const isSheet = typeof window !== 'undefined' && window.innerWidth < SHEET_BREAKPOINT;
 
     useEffect(() => {
@@ -74,7 +80,11 @@ export default ({ menu, onClose }: { menu: MenuState | null; onClose: () => void
 
     if (isSheet) {
         return createPortal(
-            <div className={'gb-sheet-mask'} onClick={onClose} onContextMenu={(e) => e.preventDefault()}>
+            <div
+                className={'gb-sheet-mask'}
+                onClick={() => Date.now() - openedAt.current > 500 && onClose()}
+                onContextMenu={(e) => e.preventDefault()}
+            >
                 <div
                     ref={sheet}
                     role={'menu'}

@@ -2,15 +2,14 @@ import React, { memo, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Cpu, HardDrive, MemoryStick, Server as ServerIcon } from 'lucide-react';
 import { Server } from '@/api/server/getServer';
-import getServerResourceUsage, { ServerStats } from '@/api/server/getServerResourceUsage';
+import { ServerStats } from '@/api/server/getServerResourceUsage';
+import { subscribeStats } from '@/components/dashboard/statsHub';
 import { bytesToString, ip, mbToBytes } from '@/lib/formatters';
 import isEqual from 'react-fast-compare';
 
 // Determines if the current value is in an alarm threshold so it can be shown in red rather
 // than the more faded default style.
 const isAlarmState = (current: number, limit: number): boolean => limit > 0 && current / (limit * 1024 * 1024) >= 0.9;
-
-type Timer = ReturnType<typeof setInterval>;
 
 const Stat = memo(
     ({
@@ -39,37 +38,32 @@ const Stat = memo(
 Stat.displayName = 'Stat';
 
 // One instance in the list: status, name and description, node and address, then live CPU / memory / storage.
-export default ({ server, className, color }: { server: Server; className?: string; color?: string | null }) => {
-    const interval = useRef<Timer>(null) as React.MutableRefObject<Timer>;
+const ServerRow = ({ server, className, color }: { server: Server; className?: string; color?: string | null }) => {
     const [isSuspended, setIsSuspended] = useState(server.status === 'suspended');
     const [stats, setStats] = useState<ServerStats | null>(null);
-
-    const getStats = () =>
-        getServerResourceUsage(server.uuid)
-            .then((data) => setStats(data))
-            .catch((error) => {
-                // 409 means the server is installing or transferring, so it has no live usage yet. That is not an error.
-                if (error?.response?.status !== 409) console.error(error);
-            });
 
     useEffect(() => {
         setIsSuspended(stats?.isSuspended || server.status === 'suspended');
     }, [stats?.isSuspended, server.status]);
 
+    // Live numbers come from the shared hub, and only while this row is on screen and the server can report them.
+    const ref = useRef<HTMLAnchorElement>(null);
+    const [visible, setVisible] = useState(true);
     useEffect(() => {
-        // No need for a request when there is nothing to show because the server is suspended.
-        if (isSuspended || server.isNodeUnderMaintenance) return;
+        const el = ref.current;
+        if (!el || typeof IntersectionObserver === 'undefined') return undefined;
+        const observer = new IntersectionObserver(([entry]) => setVisible(entry.isIntersecting), {
+            rootMargin: '200px',
+        });
+        observer.observe(el);
 
-        getStats();
-        interval.current = setInterval(() => {
-            // Background tabs do not need live usage numbers.
-            if (!document.hidden) getStats();
-        }, 30000);
+        return () => observer.disconnect();
+    }, []);
+    useEffect(() => {
+        if (isSuspended || server.isNodeUnderMaintenance || !visible) return undefined;
 
-        return () => {
-            interval.current && clearInterval(interval.current);
-        };
-    }, [isSuspended, server.isNodeUnderMaintenance]);
+        return subscribeStats(server.uuid, setStats);
+    }, [server.uuid, isSuspended, server.isNodeUnderMaintenance, visible]);
 
     const alarms = { cpu: false, memory: false, disk: false };
     if (stats) {
@@ -110,7 +104,7 @@ export default ({ server, className, color }: { server: Server; className?: stri
         : 'gb-dot-warning';
 
     return (
-        <Link to={`/server/${server.id}`} className={'gb-server-row ' + (className || '')}>
+        <Link innerRef={ref} to={`/server/${server.id}`} className={'gb-server-row ' + (className || '')}>
             <span
                 className={'gb-file-icon'}
                 style={
@@ -175,3 +169,6 @@ export default ({ server, className, color }: { server: Server; className?: stri
         </Link>
     );
 };
+
+// Rows only re-render when their own server or colour changes, so one row's live numbers never redraw the list.
+export default memo(ServerRow, isEqual);

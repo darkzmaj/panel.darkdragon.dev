@@ -5,8 +5,6 @@ import { Menu, X } from 'lucide-react';
 import { ApplicationStore } from '@/state';
 import http from '@/api/http';
 import UserMenu from '@/components/UserMenu';
-import SearchContainer from '@/components/dashboard/search/SearchContainer';
-import NotificationBell from '@/components/shell/NotificationBell';
 import GobiaFooter from '@/components/elements/GobiaFooter';
 import SpinnerOverlay from '@/components/elements/SpinnerOverlay';
 import { ShellProvider, useShell } from '@/components/shell/ShellContext';
@@ -36,7 +34,7 @@ interface Props {
 }
 
 const Shell: React.FC<Props> = ({ sidebar, footer, children }) => {
-    const { header, drawerOpen, setDrawerOpen } = useShell();
+    const { drawerOpen, setDrawerOpen } = useShell();
     const location = useLocation();
     const name = useStoreState((state: ApplicationStore) => state.settings.data!.name);
     const [loggingOut, setLoggingOut] = useState(false);
@@ -76,13 +74,7 @@ const Shell: React.FC<Props> = ({ sidebar, footer, children }) => {
                     </button>
                     <Brand />
                 </div>
-                <div className={'gb-topbar-title'}>
-                    <h1>{header.title}</h1>
-                    {header.subtitle && <p>{header.subtitle}</p>}
-                </div>
                 <div className={'gb-topbar-actions'}>
-                    <SearchContainer />
-                    <NotificationBell />
                     <UserMenu onLogout={logout} />
                 </div>
             </header>

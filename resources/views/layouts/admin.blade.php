@@ -43,10 +43,6 @@
                         @endif
                     </a>
                 </div>
-                <div class="gb-topbar-title">
-                    <h1>@yield('topbar-title', 'Administration')</h1>
-                    <p>{{ config('app.name', 'Gobia Cloud') }} Infrastructure</p>
-                </div>
                 <div class="gb-topbar-actions">
                     <a href="{{ route('index') }}" class="gb-btn gb-btn-sm gb-hide-sm" title="Leave the admin area"><i class="fa fa-server"></i> Instances</a>
                     <div class="gb-dropdown" id="gbUserMenu">

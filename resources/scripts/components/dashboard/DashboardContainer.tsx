@@ -186,6 +186,7 @@ export default () => {
             <ContextMenu menu={menu} onClose={() => setMenu(null)} />
             <IconColorModal
                 server={coloring}
+                recent={layout?.recent_colors || []}
                 onClose={() => setColoring(null)}
                 onChanged={(fresh) => mutateLayout(fresh, false)}
             />

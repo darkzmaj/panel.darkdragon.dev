@@ -148,6 +148,7 @@
     --gb-bg: rgb(var(--n-900));
     --gb-surface: rgb(var(--n-800));
     --gb-surface-2: rgb(var(--n-700));
+    --gb-hover: rgb(var(--n-700) / 0.7);
     --gb-border: rgb(var(--n-600));
     --gb-border-muted: rgb(var(--n-600) / 0.55);
     --gb-text: rgb(var(--n-100));
@@ -251,9 +252,10 @@ body.gb-body h4,
     top: 0;
     z-index: 40;
     height: var(--gb-topbar-h);
-    display: grid;
-    grid-template-columns: calc(var(--gb-sidebar-w) + var(--gb-gutter) * 2) minmax(0, 1fr) auto;
+    display: flex;
+    justify-content: space-between;
     align-items: center;
+    padding-left: 0;
     padding-right: var(--gb-gutter);
     background: var(--gb-bg);
     border-bottom: 1px solid var(--gb-border-muted);
@@ -375,7 +377,7 @@ body.gb-body h4,
 .gb-drawer-backdrop { display: none; }
 
 @media (max-width: 1023px) {
-    .gb-topbar { grid-template-columns: auto minmax(0, 1fr) auto; padding-left: 12px; padding-right: 12px; gap: 8px; }
+    .gb-topbar { padding-left: 12px; padding-right: 12px; gap: 8px; }
     .gb-topbar-brand { padding-left: 0; }
     .gb-icon-btn.gb-menu-toggle { display: inline-flex; }
     .gb-layout { grid-template-columns: minmax(0, 1fr); }
@@ -670,15 +672,21 @@ textarea.gb-input { height: auto; padding: 10px 12px; min-height: 96px; resize: 
 .gb-server-item { position: relative; display: flex; align-items: stretch; border-top: 1px solid var(--gb-border-muted); transition: background var(--gb-duration), box-shadow var(--gb-duration); }
 .gb-server-item:first-child { border-top: 0; }
 .gb-server-item:hover { background: rgb(var(--n-700) / 0.5); }
-.gb-server-item.dragging { opacity: 0.45; }
-.gb-server-item.drop-target { box-shadow: inset 0 2px 0 var(--gb-primary); }
+.gb-server-item { touch-action: pan-y; -webkit-touch-callout: none; }
+.gb-server-item.arming { background: var(--gb-primary-soft); }
+.gb-server-item.lifted, .gb-server-item.dragging { background: var(--gb-surface-2); box-shadow: var(--gb-shadow-pop); border-radius: var(--gb-radius-md); }
+.gb-server-item.lifted { transform: scale(1.01); transition: transform var(--gb-duration); }
+.gb-reordering, .gb-reordering * { user-select: none; cursor: grabbing; }
+.gb-row-more { align-self: center; margin-right: 10px; flex: none; opacity: 0; }
+.gb-server-item:hover .gb-row-more, .gb-row-more:focus-visible { opacity: 1; }
+@media (pointer: coarse) { .gb-row-more { opacity: 0.8; } .gb-server-item { user-select: none; -webkit-user-select: none; } }
 .gb-grip { flex: none; width: 36px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .gb-grip button { background: transparent; border: 0; padding: 2px; color: var(--gb-text-3); opacity: 0; cursor: pointer; line-height: 0; border-radius: 6px; }
 .gb-grip button svg { width: 16px; height: 16px; }
 .gb-server-item:hover .gb-grip button, .gb-grip button:focus-visible { opacity: 1; }
 .gb-grip button:hover { color: var(--gb-text-strong); background: var(--gb-surface-2); }
 .gb-grip button:disabled { opacity: 0.25; cursor: default; }
-@media (pointer: coarse) { .gb-grip button { opacity: 0.8; } }
+@media (pointer: coarse) { .gb-grip { display: none; } }
 .gb-server-row { flex: 1; min-width: 0; display: grid; align-items: center; gap: 12px; padding: 12px 16px 12px 0; text-decoration: none; color: var(--gb-text); grid-template-columns: 40px minmax(0, 2.2fr) minmax(0, 1.3fr) minmax(0, 2fr); }
 .gb-server-row:hover { text-decoration: none; color: var(--gb-text); }
 .gb-server-name { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
@@ -927,3 +935,11 @@ div.gb-file-details { cursor: default; }
 .gb-file-row.drop-ok, .gb-tree-row.drop-ok { transition: background var(--gb-duration), box-shadow var(--gb-duration); }
 .gb-dropzone > div { transition: transform var(--gb-duration); }
 .gb-main-inner { min-width: 0; overflow-x: clip; }
+
+/* ------------------------------------------------------------------ compact instance rows on phones */
+@media (max-width: 700px) {
+    .gb-server-desc { display: none; }
+    .gb-server-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .gb-server-stats .gb-metric:nth-child(3) { display: none; }
+    .gb-server-row { padding-top: 10px; padding-bottom: 10px; }
+}

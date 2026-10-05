@@ -72,7 +72,11 @@ body.gb-admin { background: var(--gb-bg); color: var(--gb-text); font-family: va
 .gb-admin .table > thead > tr > th:first-child, .gb-admin .table > tbody > tr:first-child > th:first-child { border-top-left-radius: 0; }
 .gb-admin .table > tbody > tr > td, .gb-admin .table > thead > tr > td { padding: 12px 16px; border: 0; border-top: 1px solid var(--gb-border-muted); vertical-align: middle; color: var(--gb-text); }
 .gb-admin .table > tbody > tr:first-child > td { border-top: 0; }
-.gb-admin .table-hover > tbody > tr:hover > td, .gb-admin .table-hover > tbody > tr:hover > th { background: rgb(var(--n-700) / 0.55); }
+/* Bootstrap and the old Pterodactyl theme paint the whole <tr> on hover (#f5f5f5 / #33404d). That colour used to show
+   through the translucent cell colour below and turned dark tables grey, so the row itself must never be painted. */
+.gb-admin .table > tbody > tr, .gb-admin .table > tbody > tr:hover, .gb-admin .table-hover > tbody > tr:hover, .gb-admin .table-striped > tbody > tr:nth-of-type(odd), .gb-admin .table > tbody > tr.active, .gb-admin .table > tbody > tr.active:hover { background-color: transparent !important; }
+.gb-admin .table-hover > tbody > tr:hover > td, .gb-admin .table-hover > tbody > tr:hover > th { background: var(--gb-hover); }
+.gb-admin .table > tbody > tr.active > td { background: var(--gb-primary-soft); }
 .gb-admin .table-condensed > tbody > tr > td { padding: 8px 12px; }
 .gb-admin .table-bordered, .gb-admin .table-bordered > tbody > tr > td { border-color: var(--gb-border-muted); }
 .gb-admin .table-responsive { border: 0; margin-bottom: 0; }
@@ -369,3 +373,9 @@ body > .gb-dropdown-menu .danger { color: rgb(var(--gb-danger)) !important; }
 .gb-node.is-offline { border-color: var(--gb-border); }
 .gb-node.is-offline .gb-meter, .gb-node.is-offline .gb-node-facts { opacity: 0.7; }
 @media (max-width: 767px) { .gb-nodes { grid-template-columns: 1fr; } .gb-gauge-top { gap: 14px; } .gb-gauges-lg .gb-gauge svg { width: 96px; height: 96px; } }
+
+/* Tab bars scroll sideways on narrow screens without showing a browser scrollbar. */
+.gb-tabs, .gb-admin .nav-tabs-custom > .nav-tabs { scrollbar-width: none; -ms-overflow-style: none; }
+.gb-tabs::-webkit-scrollbar, .gb-admin .nav-tabs-custom > .nav-tabs::-webkit-scrollbar { display: none; }
+.gb-tabs { flex-wrap: nowrap; }
+.gb-tabs li { flex: none; }

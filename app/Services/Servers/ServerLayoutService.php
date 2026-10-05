@@ -15,6 +15,8 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  */
 class ServerLayoutService
 {
+    public const RECENT_COLORS = 5;
+
     public const MAX_CATEGORIES = 20;
 
     /**
@@ -54,6 +56,7 @@ class ServerLayoutService
             ->groupBy('category_id');
 
         return [
+            'recent_colors' => array_values((array) json_decode((string) DB::table('users')->where('id', $user->id)->value('recent_icon_colors'), true)),
             'servers' => $accessible->map(fn ($server) => [
                 'uuid' => $server->uuid,
                 'identifier' => $server->uuidShort,
@@ -90,10 +93,12 @@ class ServerLayoutService
             return;
         }
 
-        DB::table('user_server_icon_colors')->updateOrInsert(
-            ['user_id' => $user->id, 'server_id' => $server->id],
-            ['color' => strtolower($color)]
-        );
+        $color = strtolower($color);
+        DB::table('user_server_icon_colors')->updateOrInsert(['user_id' => $user->id, 'server_id' => $server->id], ['color' => $color]);
+
+        // Newest first, no duplicates, at most five.
+        $recent = array_values(array_unique([$color, ...(array) json_decode((string) DB::table('users')->where('id', $user->id)->value('recent_icon_colors'), true)]));
+        DB::table('users')->where('id', $user->id)->update(['recent_icon_colors' => json_encode(array_slice($recent, 0, self::RECENT_COLORS))]);
     }
 
     /**

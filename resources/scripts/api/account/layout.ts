@@ -16,6 +16,8 @@ export interface LayoutCategory {
 }
 
 export interface ServerLayout {
+    // The colours this person applied most recently, newest first (at most five).
+    recent_colors: string[];
     servers: LayoutServer[];
     order: string[];
     categories: LayoutCategory[];
