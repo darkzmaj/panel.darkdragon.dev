@@ -134,6 +134,7 @@
         "clean": "cd public/assets && find . \\( -name \"*.js\" -o -name \"*.map\" \\) -type f -delete",
         "test": "jest",
         "tsc": "tsc --noEmit",
+        "budget": "node scripts/check-bundle-budget.js",
         "lint": "eslint ./resources/scripts/**/*.{ts,tsx} --ext .ts,.tsx",
         "watch": "cross-env NODE_ENV=development ./node_modules/.bin/webpack --watch --progress",
         "build": "cross-env NODE_ENV=development ./node_modules/.bin/webpack --progress",

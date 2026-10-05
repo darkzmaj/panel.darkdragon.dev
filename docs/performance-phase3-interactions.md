@@ -1,7 +1,7 @@
 # Phase 3 interactions: input latency, dashboard rendering and clicks
 
 Measured in headless Chromium against the local Panel (`127.0.0.1:8000`, PHP dev server, mock Wings), production build.
-The dashboard list is paginated (15 rows per page by default, `APP_PAGINATE_FRONT_SERVERS`), so the rendered list never
+The dashboard list is paginated (50 rows per page by default, `APP_PAGINATE_FRONT_SERVERS`), so the rendered list never
 grows beyond one page; that is why no virtualization was added. To check the worst case the profile below used 50 rows.
 
 ## What was profiled
