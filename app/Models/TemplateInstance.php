@@ -56,6 +56,7 @@ class TemplateInstance extends Model
         'attempts' => 'int',
         'node_id' => 'int',
         'overrides' => 'array',
+        'stage_ms' => 'array',
         'expires_at' => 'datetime',
         'state_changed_at' => 'datetime',
     ];

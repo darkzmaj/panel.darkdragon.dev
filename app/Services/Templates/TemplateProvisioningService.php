@@ -135,7 +135,22 @@ class TemplateProvisioningService
 
     private function transition(TemplateInstance $instance, string $state): void
     {
-        $instance->forceFill(['state' => $state, 'state_changed_at' => CarbonImmutable::now()])->save();
+        $instance->forceFill(['state' => $state, 'state_changed_at' => CarbonImmutable::now(), 'stage_ms' => $this->stageTimings($instance)])->save();
+    }
+
+    /**
+     * The timings so far plus the time spent in the stage that is ending now.
+     *
+     * @return array<string, int>
+     */
+    private function stageTimings(TemplateInstance $instance): array
+    {
+        $timings = $instance->stage_ms ?? [];
+        if ($instance->state_changed_at) {
+            $timings[$instance->state] = ($timings[$instance->state] ?? 0) + (int) round($instance->state_changed_at->diffInMilliseconds(CarbonImmutable::now(), true));
+        }
+
+        return $timings;
     }
 
     private function begin(TemplateInstance $instance): int
@@ -189,7 +204,8 @@ class TemplateProvisioningService
         $instance->forceFill(['server_id' => $server->id])->save();
         $this->transition($instance, TemplateInstance::STATE_INSTALLING);
 
-        return self::POLL_SECONDS;
+        // The first look at the install is made quickly: small installs are done within a second or two.
+        return 1;
     }
 
     /**
@@ -271,7 +287,10 @@ class TemplateProvisioningService
             throw new DisplayException('The server installation timed out.');
         }
 
-        return self::POLL_SECONDS;
+        // Look soon after the install started, when quick installs finish, and back off for long ones.
+        $elapsed = $since ? $since->diffInSeconds(CarbonImmutable::now(), true) : 0;
+
+        return $elapsed < 15 ? 1 : ($elapsed < 90 ? 2 : self::POLL_SECONDS);
     }
 
     private function deployFiles(TemplateInstance $instance): int
@@ -342,6 +361,7 @@ class TemplateProvisioningService
         $settings = $this->snapshot($instance)['settings'];
         $instance->forceFill([
             'state' => TemplateInstance::STATE_READY,
+            'stage_ms' => $this->stageTimings($instance),
             'state_changed_at' => CarbonImmutable::now(),
             'error' => null,
             'failed_stage' => null,
