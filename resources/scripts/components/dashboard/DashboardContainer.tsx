@@ -16,7 +16,14 @@ import { httpErrorToHuman, PaginatedResult } from '@/api/http';
 import PageContentBlock from '@/components/elements/PageContentBlock';
 import Pagination from '@/components/elements/Pagination';
 import { SkeletonRows } from '@/components/elements/Skeleton';
-import { getLayout, LayoutServer, saveCategoryOrder, saveOrder, ServerLayout } from '@/api/account/layout';
+import {
+    getLayout,
+    getLayoutSummary,
+    LayoutServer,
+    saveCategoryOrder,
+    saveOrder,
+    ServerLayout,
+} from '@/api/account/layout';
 import ServerFilterBar, { ServerFilter } from '@/components/dashboard/ServerFilterBar';
 import SortableServerList from '@/components/dashboard/SortableServerList';
 import CategoryEditorModal from '@/components/dashboard/CategoryEditorModal';
@@ -46,7 +53,13 @@ export default () => {
         data: layout,
         error: layoutError,
         mutate: mutateLayout,
-    } = useSWR<ServerLayout>('/api/client/account/layout', getLayout, { revalidateOnFocus: false });
+    } = useSWR<ServerLayout>('/api/client/account/layout?lite', getLayoutSummary, { revalidateOnFocus: false });
+    // The full list of servers and category members is only needed while the category editor is open.
+    const { data: fullLayout, mutate: mutateFull } = useSWR<ServerLayout>(
+        editing ? '/api/client/account/layout' : null,
+        getLayout,
+        { revalidateOnFocus: false }
+    );
 
     const categoryId = filter.kind === 'category' ? filter.id : undefined;
     const type = filter.kind === 'you' ? 'owner' : filter.kind === 'other' ? 'other' : undefined;
@@ -96,9 +109,16 @@ export default () => {
             });
     };
 
-    const colors = Object.fromEntries((layout?.servers || []).map((s) => [s.uuid, s.color]));
+    const colors: Record<string, string | null> =
+        layout?.colors ?? Object.fromEntries((layout?.servers || []).map((s) => [s.uuid, s.color]));
     const openMenu = (server: Server, x: number, y: number) => {
-        const layoutServer = layout?.servers.find((s) => s.uuid === server.uuid);
+        const layoutServer: LayoutServer = {
+            uuid: server.uuid,
+            identifier: server.id,
+            name: server.name,
+            owned: false,
+            color: colors[server.uuid] ?? null,
+        };
         setMenu({
             x,
             y,
@@ -192,7 +212,7 @@ export default () => {
             />
             <CategoryEditorModal
                 visible={editing}
-                layout={layout}
+                layout={fullLayout}
                 onClose={() => setEditing(false)}
                 onChanged={(fresh, deleted) => {
                     // Leave a deleted category first: the list below must never be refetched for an id that no longer exists.
@@ -203,6 +223,7 @@ export default () => {
                     // has no layout to hand back, so drop the category from what is on screen first and then confirm.
                     if (fresh) {
                         mutateLayout(fresh, false);
+                        mutateFull(fresh, false);
                     } else if (deleted !== undefined && layout) {
                         mutateLayout(
                             { ...layout, categories: layout.categories.filter((c) => c.id !== deleted) },
@@ -211,6 +232,7 @@ export default () => {
                     } else {
                         mutateLayout();
                     }
+                    if (deleted !== undefined) mutateFull();
                     mutate();
                 }}
             />

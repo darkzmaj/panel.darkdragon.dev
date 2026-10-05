@@ -301,12 +301,13 @@ class User extends Model implements
      */
     public function accessibleServers(): Builder
     {
+        // Both halves use an index (owner_id, and subusers.user_id) instead of joining every server to its subusers and
+        // grouping the result, which had to read the whole servers table for every request.
         return Server::query()
             ->select('servers.*')
-            ->leftJoin('subusers', 'subusers.server_id', '=', 'servers.id')
             ->where(function (Builder $builder) {
-                $builder->where('servers.owner_id', $this->id)->orWhere('subusers.user_id', $this->id);
-            })
-            ->groupBy('servers.id');
+                $builder->where('servers.owner_id', $this->id)
+                    ->orWhereIn('servers.id', fn ($sub) => $sub->select('subusers.server_id')->from('subusers')->where('subusers.user_id', $this->id));
+            });
     }
 }

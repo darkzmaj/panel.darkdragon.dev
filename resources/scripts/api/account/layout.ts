@@ -18,12 +18,18 @@ export interface LayoutCategory {
 export interface ServerLayout {
     // The colours this person applied most recently, newest first (at most five).
     recent_colors: string[];
+    // Only in the short form of the layout: colour by server uuid. The full form carries it on each server instead.
+    colors?: Record<string, string>;
     servers: LayoutServer[];
     order: string[];
     categories: LayoutCategory[];
 }
 
 export const getLayout = async (): Promise<ServerLayout> => (await http.get('/api/client/account/layout')).data;
+
+// The short form: categories without members, colours and recent colours. Its size does not depend on the server count.
+export const getLayoutSummary = async (): Promise<ServerLayout> =>
+    (await http.get('/api/client/account/layout', { params: { lite: 1 } })).data;
 
 export const saveOrder = async (servers: string[]): Promise<ServerLayout> =>
     (await http.put('/api/client/account/layout/order', { servers })).data;

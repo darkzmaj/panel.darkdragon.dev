@@ -48,6 +48,7 @@ class Kernel extends HttpKernel
         TrimStrings::class,
         ConvertEmptyStringsToNull::class,
         SetSecurityHeaders::class,
+        Middleware\ServerTiming::class,
     ];
 
     protected $middlewarePriority = [

@@ -10,6 +10,7 @@ use Pterodactyl\Services\Servers\ServerLayoutService;
 use Pterodactyl\Models\Filters\MultiFieldServerFilter;
 use Pterodactyl\Transformers\Api\Client\ServerTransformer;
 use Pterodactyl\Http\Requests\Api\Client\GetServersRequest;
+use Pterodactyl\Transformers\Api\Client\ServerListTransformer;
 
 class ClientController extends ClientApiController
 {
@@ -28,11 +29,14 @@ class ClientController extends ClientApiController
     public function index(GetServersRequest $request): array
     {
         $user = $request->user();
-        $transformer = $this->getTransformer(ServerTransformer::class);
+        // ?lite=1 (the dashboard) asks for the short description of each server, which needs a fixed handful of queries
+        // however many servers are listed. Everything else keeps the complete representation.
+        $lite = $request->boolean('lite');
+        $transformer = $this->getTransformer($lite ? ServerListTransformer::class : ServerTransformer::class);
 
         // Start the query builder and ensure we eager load any requested relationships from the request.
         $builder = QueryBuilder::for(
-            Server::query()->with($this->getIncludesForTransformer($transformer, ['node']))
+            Server::query()->with($lite ? ['node', 'allocation', 'transfer'] : $this->getIncludesForTransformer($transformer, ['node']))
         )->allowedFilters([
             'uuid',
             'name',
@@ -54,16 +58,16 @@ class ClientController extends ClientApiController
             } else {
                 $builder = $type === 'admin-all'
                     ? $builder
-                    : $builder->whereNotIn('servers.id', $user->accessibleServers()->pluck('id')->all());
+                    : $builder->whereNotIn('servers.id', $user->accessibleServers()->reorder()->select('servers.id'));
             }
         } elseif ($type === 'owner') {
             $builder = $builder->where('servers.owner_id', $user->id);
         } elseif ($type === 'other') {
             // Servers other people own that have been shared with this user.
             $builder = $builder->where('servers.owner_id', '!=', $user->id)
-                ->whereIn('servers.id', $user->accessibleServers()->pluck('id')->all());
+                ->whereIn('servers.id', $user->accessibleServers()->reorder()->select('servers.id'));
         } else {
-            $builder = $builder->whereIn('servers.id', $user->accessibleServers()->pluck('id')->all());
+            $builder = $builder->whereIn('servers.id', $user->accessibleServers()->reorder()->select('servers.id'));
         }
 
         // The signed in user's own arrangement: their global order, or the order inside one of their categories.

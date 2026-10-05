@@ -31,7 +31,6 @@ class ServerLayoutService
             ->leftJoin('user_server_preferences as usp', function ($join) use ($user) {
                 $join->on('usp.server_id', '=', 'servers.id')->where('usp.user_id', '=', $user->id);
             })
-            ->groupBy('usp.position')
             ->orderByRaw('usp.position IS NULL')
             ->orderBy('usp.position')
             ->orderBy('servers.name')
@@ -42,6 +41,31 @@ class ServerLayoutService
     /**
      * @return array{servers: array, order: string[], categories: array}
      */
+    /**
+     * What the dashboard needs on every load: the user's categories (without their members), the colours they chose and
+     * their recent colours. It deliberately leaves out the list of every accessible server and their order, which
+     * grows with the number of servers and is only needed by the category editor (see layout()).
+     *
+     * @return array{recent_colors: string[], colors: array<string, string>, servers: array, order: array, categories: array}
+     */
+    public function summary(User $user): array
+    {
+        $colors = DB::table('user_server_icon_colors as c')
+            ->join('servers as s', 's.id', '=', 'c.server_id')
+            ->where('c.user_id', $user->id)
+            ->whereIn('c.server_id', $user->accessibleServers()->reorder()->select('servers.id'))
+            ->pluck('c.color', 's.uuid');
+
+        return [
+            'recent_colors' => array_values((array) json_decode((string) DB::table('users')->where('id', $user->id)->value('recent_icon_colors'), true)),
+            'colors' => $colors->all(),
+            'servers' => [],
+            'order' => [],
+            'categories' => DB::table('user_server_categories')->where('user_id', $user->id)->orderBy('position')->orderBy('id')->get()
+                ->map(fn ($category) => ['id' => $category->id, 'name' => $category->name, 'servers' => []])->all(),
+        ];
+    }
+
     public function layout(User $user): array
     {
         $accessible = $this->accessible($user);

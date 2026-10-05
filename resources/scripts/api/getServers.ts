@@ -13,6 +13,8 @@ export default ({ query, ...params }: QueryParams): Promise<PaginatedResult<Serv
         http.get('/api/client', {
             params: {
                 'filter[*]': query,
+                // The dashboard only needs the short description of each server.
+                lite: 1,
                 ...params,
             },
         })

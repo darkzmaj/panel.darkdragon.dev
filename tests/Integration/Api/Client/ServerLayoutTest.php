@@ -252,4 +252,29 @@ class ServerLayoutTest extends ClientApiIntegrationTestCase
         $other = User::factory()->create();
         $this->assertSame([], $this->actingAs($other)->getJson('/api/client/account/layout')->json('recent_colors'));
     }
+
+    public function testTheSummaryLayoutIsSmallAndStillCarriesColoursCategoriesAndRecents(): void
+    {
+        $alpha = $this->servers['Alpha']->uuid;
+        $this->actingAs($this->user)->putJson("/api/client/account/layout/servers/$alpha/color", ['color' => '#112233'])->assertOk();
+        $this->actingAs($this->user)->postJson('/api/client/account/layout/categories', ['name' => 'Hubs', 'servers' => $this->uuids('Alpha', 'Bravo')])->assertCreated();
+
+        $summary = $this->actingAs($this->user)->getJson('/api/client/account/layout?lite=1')->assertOk()->json();
+
+        $this->assertSame([], $summary['servers']);
+        $this->assertSame([], $summary['order']);
+        $this->assertSame([$alpha => '#112233'], $summary['colors']);
+        $this->assertSame(['#112233'], $summary['recent_colors']);
+        $this->assertSame('Hubs', $summary['categories'][0]['name']);
+        $this->assertSame([], $summary['categories'][0]['servers'], 'members are only sent with the full layout');
+    }
+
+    public function testTheSummaryDoesNotRevealColoursOfServersTheUserCanNoLongerOpen(): void
+    {
+        $alpha = $this->servers['Alpha'];
+        $this->actingAs($this->user)->putJson("/api/client/account/layout/servers/{$alpha->uuid}/color", ['color' => '#445566'])->assertOk();
+        $alpha->forceFill(['owner_id' => User::factory()->create()->id])->save();
+
+        $this->assertSame([], $this->actingAs($this->user)->getJson('/api/client/account/layout?lite=1')->json('colors'));
+    }
 }

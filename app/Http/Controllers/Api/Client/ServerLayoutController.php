@@ -21,7 +21,8 @@ class ServerLayoutController extends ClientApiController
 
     public function index(ClientApiRequest $request): JsonResponse
     {
-        return new JsonResponse($this->layout->layout($request->user()));
+        // ?lite=1 is the dashboard's everyday request; the full layout is fetched when the category editor opens.
+        return new JsonResponse($request->boolean('lite') ? $this->layout->summary($request->user()) : $this->layout->layout($request->user()));
     }
 
     public function reorder(ServerOrderRequest $request): JsonResponse
