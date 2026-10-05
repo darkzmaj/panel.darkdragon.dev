@@ -379,3 +379,25 @@ body > .gb-dropdown-menu .danger { color: rgb(var(--gb-danger)) !important; }
 .gb-tabs::-webkit-scrollbar, .gb-admin .nav-tabs-custom > .nav-tabs::-webkit-scrollbar { display: none; }
 .gb-tabs { flex-wrap: nowrap; }
 .gb-tabs li { flex: none; }
+
+/* ------------------------------------------------------------------ AdminLTE info/small boxes (node and instance pages) */
+.gb-admin .info-box, .gb-admin .small-box { background: var(--gb-surface) !important; color: var(--gb-text) !important; border: 1px solid var(--gb-border-muted); border-radius: var(--gb-radius-lg); box-shadow: none; overflow: hidden; }
+.gb-admin .info-box[class*='bg-'] .info-box-text, .gb-admin .info-box[class*='bg-'] .info-box-number, .gb-admin .info-box[class*='bg-'] .progress-description { color: var(--gb-text-strong) !important; }
+.gb-admin .info-box .info-box-text { color: var(--gb-text-3) !important; }
+.gb-admin .info-box-content { flex: 1; min-width: 0; padding: 0 !important; }
+.gb-admin .info-box.bg-green .info-box-icon, .gb-admin .info-box.bg-aqua .info-box-icon { background: rgb(var(--gb-success) / 0.14) !important; color: rgb(var(--gb-success)) !important; }
+.gb-admin .info-box.bg-yellow .info-box-icon, .gb-admin .info-box.bg-orange .info-box-icon { background: rgb(var(--gb-warning) / 0.14) !important; color: rgb(var(--gb-warning)) !important; }
+.gb-admin .info-box.bg-red .info-box-icon, .gb-admin .info-box.bg-maroon .info-box-icon { background: rgb(var(--gb-danger) / 0.14) !important; color: rgb(var(--gb-danger)) !important; }
+.gb-admin .info-box .progress { margin-top: 8px; }
+.gb-admin .info-box-icon > i { display: block; width: 20px; height: 20px; margin: 12px; line-height: 1; }
+.gb-admin .small-box { display: flex; flex-direction: column; margin-bottom: 12px; padding: 0; }
+.gb-admin .small-box > .inner { padding: 16px 18px 8px; }
+.gb-admin .small-box h3 { margin: 0 0 2px; font-size: 22px; }
+.gb-admin .small-box p { margin: 0; font-size: 13px; color: var(--gb-text-3) !important; }
+.gb-admin .small-box > .icon { display: none; }
+.gb-admin .small-box-footer { display: block; padding: 10px 18px; margin-top: 8px; border-top: 1px solid var(--gb-border-muted); font-size: 13px; }
+.gb-admin .small-box.bg-yellow, .gb-admin .small-box.bg-orange { border-color: rgb(var(--gb-warning) / 0.5); }
+.gb-admin .small-box.bg-maroon, .gb-admin .small-box.bg-red { border-color: rgb(var(--gb-danger) / 0.5); }
+.gb-admin .small-box.bg-blue { border-color: rgb(var(--p-500) / 0.5); }
+.gb-admin .info-box-text, .gb-admin .info-box-number { display: block; }
+.gb-admin .info-box-number { margin-top: 2px; }
