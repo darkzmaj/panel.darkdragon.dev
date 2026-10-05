@@ -74,10 +74,26 @@ const LoginContainer = ({ history }: RouteComponentProps) => {
             })}
         >
             {({ isSubmitting, setSubmitting, submitForm }) => (
-                <LoginFormContainer title={'Login to Continue'} css={tw`w-full flex`}>
-                    <Field light type={'text'} label={'Username or Email'} name={'username'} disabled={isSubmitting} />
+                <LoginFormContainer title={'Login'} subtitle={'Sign in to your Gobia account.'} css={tw`w-full flex`}>
+                    <Field
+                        light
+                        type={'text'}
+                        id={'login-email'}
+                        label={'Email'}
+                        name={'username'}
+                        autoComplete={'username'}
+                        disabled={isSubmitting}
+                    />
                     <div css={tw`mt-6`}>
-                        <Field light type={'password'} label={'Password'} name={'password'} disabled={isSubmitting} />
+                        <Field
+                            light
+                            type={'password'}
+                            id={'login-password'}
+                            label={'Password'}
+                            name={'password'}
+                            autoComplete={'current-password'}
+                            disabled={isSubmitting}
+                        />
                     </div>
                     <div css={tw`mt-6`}>
                         <Button type={'submit'} size={'xlarge'} isLoading={isSubmitting} disabled={isSubmitting}>

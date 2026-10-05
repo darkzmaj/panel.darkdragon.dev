@@ -39,7 +39,7 @@ const Stat = memo(
 Stat.displayName = 'Stat';
 
 // One instance in the list: status, name and description, node and address, then live CPU / memory / storage.
-export default ({ server, className }: { server: Server; className?: string }) => {
+export default ({ server, className, color }: { server: Server; className?: string; color?: string | null }) => {
     const interval = useRef<Timer>(null) as React.MutableRefObject<Timer>;
     const [isSuspended, setIsSuspended] = useState(server.status === 'suspended');
     const [stats, setStats] = useState<ServerStats | null>(null);
@@ -47,7 +47,10 @@ export default ({ server, className }: { server: Server; className?: string }) =
     const getStats = () =>
         getServerResourceUsage(server.uuid)
             .then((data) => setStats(data))
-            .catch((error) => console.error(error));
+            .catch((error) => {
+                // 409 means the server is installing or transferring, so it has no live usage yet. That is not an error.
+                if (error?.response?.status !== 409) console.error(error);
+            });
 
     useEffect(() => {
         setIsSuspended(stats?.isSuspended || server.status === 'suspended');
@@ -108,7 +111,14 @@ export default ({ server, className }: { server: Server; className?: string }) =
 
     return (
         <Link to={`/server/${server.id}`} className={'gb-server-row ' + (className || '')}>
-            <span className={'gb-file-icon'}>
+            <span
+                className={'gb-file-icon'}
+                style={
+                    color
+                        ? ({ color, background: color + '1f', borderColor: color + '55' } as React.CSSProperties)
+                        : undefined
+                }
+            >
                 <ServerIcon aria-hidden />
             </span>
             <span className={'gb-server-name'}>

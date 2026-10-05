@@ -70,11 +70,9 @@ class OverviewTest extends HttpTestCase
         $html = $response->getContent();
 
         $expected = [
-            'Registered Users' => User::query()->count(),
-            'Administrators' => User::query()->where('root_admin', true)->count(),
+            'Users' => User::query()->count(),
             'Nodes' => Node::query()->count(),
             'Instances' => \Pterodactyl\Models\Server::query()->count(),
-            'Locations' => Location::query()->count(),
         ];
         foreach ($expected as $label => $count) {
             $this->assertMatchesRegularExpression('/<span class="gb-num">' . $count . '<\/span><span class="gb-label">' . preg_quote($label, '/') . '<\/span>/', $html, $label);

@@ -200,4 +200,32 @@ class ServerLayoutTest extends ClientApiIntegrationTestCase
         $this->getJson('/api/client/account/layout')->assertUnauthorized();
         $this->putJson('/api/client/account/layout/order', ['servers' => []])->assertUnauthorized();
     }
+
+    public function testIconColorsAreStoredPerUserAndClearable(): void
+    {
+        $alpha = $this->servers['Alpha']->uuid;
+        $other = User::factory()->create();
+        Subuser::query()->create(['user_id' => $other->id, 'server_id' => $this->servers['Alpha']->id, 'permissions' => ['websocket.connect']]);
+        $color = fn (User $u) => collect($this->actingAs($u)->getJson('/api/client/account/layout')->json('servers'))->firstWhere('uuid', $alpha)['color'];
+
+        $this->actingAs($this->user)->putJson("/api/client/account/layout/servers/$alpha/color", ['color' => '#A855F7'])->assertOk();
+        $this->assertSame('#a855f7', $color($this->user));
+        $this->assertNull($color($other), 'another user keeps the default colour');
+
+        $this->actingAs($this->user)->putJson("/api/client/account/layout/servers/$alpha/color", ['color' => null])->assertOk();
+        $this->assertNull($color($this->user));
+    }
+
+    public function testIconColorsAreValidatedAndOnlyForServersTheUserCanOpen(): void
+    {
+        $alpha = $this->servers['Alpha']->uuid;
+        foreach (['red', '#12345', '#12345g', 'javascript:1', '#1234567'] as $bad) {
+            $this->actingAs($this->user)->putJson("/api/client/account/layout/servers/$alpha/color", ['color' => $bad])->assertUnprocessable();
+        }
+        $this->actingAs($this->user)->putJson("/api/client/account/layout/servers/$alpha/color", [])->assertUnprocessable();
+
+        $stranger = User::factory()->create();
+        $this->actingAs($stranger)->putJson("/api/client/account/layout/servers/$alpha/color", ['color' => '#ffffff'])->assertStatus(400);
+        $this->assertDatabaseMissing('user_server_icon_colors', ['server_id' => $this->servers['Alpha']->id]);
+    }
 }

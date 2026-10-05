@@ -11,7 +11,7 @@ interface Props {
 }
 
 const SpinnerOverlay: React.FC<Props> = ({ size, fixed, visible, backgroundOpacity, children }) => (
-    <Fade timeout={150} in={visible} unmountOnExit>
+    <Fade timeout={120} in={visible} unmountOnExit>
         <div
             css={[
                 tw`top-0 left-0 flex items-center justify-center w-full h-full rounded flex-col z-40`,

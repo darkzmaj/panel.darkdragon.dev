@@ -11,7 +11,7 @@ import DashboardContainer from '@/components/dashboard/DashboardContainer';
 import { NotFound } from '@/components/elements/ScreenBlock';
 import TransitionRouter from '@/TransitionRouter';
 import RouteSuspense from '@/components/elements/RouteSuspense';
-import routes from '@/routers/accountRoutes';
+import routes, { preloadAccountPages } from '@/routers/accountRoutes';
 
 const accountPath = (path: string) => `/account/${path}`.replace('//', '/');
 
@@ -72,7 +72,12 @@ export default () => {
                         Instances
                     </NavItem>
                     <NavLabel>Account</NavLabel>
-                    <NavItem to={'/account'} icon={Settings}>
+                    <NavItem
+                        to={'/account'}
+                        icon={Settings}
+                        onMouseEnter={preloadAccountPages}
+                        onFocus={preloadAccountPages}
+                    >
                         Account
                     </NavItem>
                     {rootAdmin && (

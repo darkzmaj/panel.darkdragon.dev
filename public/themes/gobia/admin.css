@@ -339,3 +339,33 @@ body > .gb-dropdown-menu .danger { color: rgb(var(--gb-danger)) !important; }
 .gb-node-table .label { margin-right: 2px; }
 /* Visually hidden text inside a scrolling table must be clipped by it, not by the page. */
 .gb-admin .table-responsive { position: relative; }
+
+/* ------------------------------------------------------------------ admin overview, larger layout */
+.gb-stats-lg { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+.gb-stats-lg .gb-stat { padding: 20px 22px; gap: 16px; }
+.gb-stat-icon { display: grid; place-items: center; flex: none; width: 52px; height: 52px; border-radius: 14px; background: var(--gb-primary-soft); color: var(--gb-primary); }
+.gb-stat-icon i { width: 24px; height: 24px; }
+.gb-stats-lg .gb-stat > i { display: none; }
+.gb-stats-lg .gb-num { font-size: 30px; }
+.gb-stats-lg .gb-label { font-size: 14px; color: var(--gb-text-2); }
+.gb-stats-lg .gb-note { display: block; margin-top: 2px; font-size: 12px; color: var(--gb-text-3); }
+.gb-gauges-lg { grid-template-columns: repeat(auto-fit, minmax(255px, 1fr)); gap: 16px; }
+.gb-gauges-lg .gb-gauge { display: block; padding: 22px; }
+.gb-gauge-top { display: flex; align-items: center; gap: 20px; }
+.gb-gauges-lg .gb-gauge svg { width: 120px; height: 120px; }
+.gb-gauge .gb-ring-fg { transition: stroke-dasharray 0.3s var(--gb-ease); }
+.gb-gauges-lg .gb-ring-text { font-size: 26px; }
+.gb-gauge-value { font-size: 26px; line-height: 1.15; font-weight: 700; color: var(--gb-text-strong); font-family: var(--gb-font-display); }
+.gb-gauge-caption { font-size: 13px; color: var(--gb-text-3); }
+.gb-gauges-lg dl { margin: 18px 0 0; padding-top: 14px; border-top: 1px solid var(--gb-border-muted); font-size: 13px; }
+.gb-gauges-lg dl div + div { margin-top: 6px; }
+.gb-nodes { grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 16px; }
+.gb-node { padding: 22px; }
+.gb-node header a { font-size: 17px; }
+.gb-node-facts { display: grid; grid-template-columns: repeat(3, auto); gap: 8px 16px; margin: 4px 0 6px; padding-bottom: 12px; border-bottom: 1px solid var(--gb-border-muted); font-size: 12px; }
+.gb-node-facts div { display: block; }
+.gb-node-facts dt { color: var(--gb-text-3); font-weight: 500; }
+.gb-node-facts dd { margin: 0; color: var(--gb-text); font-weight: 600; }
+.gb-node.is-offline { border-color: var(--gb-border); }
+.gb-node.is-offline .gb-meter, .gb-node.is-offline .gb-node-facts { opacity: 0.7; }
+@media (max-width: 767px) { .gb-nodes { grid-template-columns: 1fr; } .gb-gauge-top { gap: 14px; } .gb-gauges-lg .gb-gauge svg { width: 96px; height: 96px; } }

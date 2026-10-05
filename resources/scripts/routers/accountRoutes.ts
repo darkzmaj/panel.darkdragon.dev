@@ -25,12 +25,41 @@ const AppearanceContainer = lazy(
     () => import(/* webpackChunkName: "account-pages" */ '@/components/dashboard/AppearanceContainer')
 );
 
+// All account pages share one chunk, so fetching any one of them fetches them all. Called on hover and focus.
+export const preloadAccountPages = () => {
+    void import(/* webpackChunkName: "account-pages" */ '@/components/dashboard/ProfileContainer');
+};
+
 export default [
-    { path: '/', name: 'Profile', icon: User, component: ProfileContainer, exact: true },
-    { path: '/security', name: 'Security', icon: ShieldCheck, component: SecurityContainer },
-    { path: '/access', name: 'Access', icon: Users, component: AccessContainer },
-    { path: '/activity', name: 'Activity', icon: Activity, component: ActivityLogContainer },
-    { path: '/api', name: 'API Credentials', icon: KeyRound, component: AccountApiContainer },
-    { path: '/ssh', name: 'SSH Keys', icon: Terminal, component: AccountSSHContainer },
-    { path: '/appearance', name: 'Appearance', icon: Palette, component: AppearanceContainer },
+    { path: '/', name: 'Profile', icon: User, component: ProfileContainer, exact: true, preload: preloadAccountPages },
+    {
+        path: '/security',
+        name: 'Security',
+        icon: ShieldCheck,
+        component: SecurityContainer,
+        preload: preloadAccountPages,
+    },
+    { path: '/access', name: 'Access', icon: Users, component: AccessContainer, preload: preloadAccountPages },
+    {
+        path: '/activity',
+        name: 'Activity',
+        icon: Activity,
+        component: ActivityLogContainer,
+        preload: preloadAccountPages,
+    },
+    {
+        path: '/api',
+        name: 'API Credentials',
+        icon: KeyRound,
+        component: AccountApiContainer,
+        preload: preloadAccountPages,
+    },
+    { path: '/ssh', name: 'SSH Keys', icon: Terminal, component: AccountSSHContainer, preload: preloadAccountPages },
+    {
+        path: '/appearance',
+        name: 'Appearance',
+        icon: Palette,
+        component: AppearanceContainer,
+        preload: preloadAccountPages,
+    },
 ] as RouteDefinition[];

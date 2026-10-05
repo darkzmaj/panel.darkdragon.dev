@@ -135,7 +135,6 @@ const useIsMobile = () => {
     return mobile;
 };
 
-const iconButton = tw`px-2 py-1 text-sm text-neutral-300 hover:text-neutral-50 disabled:opacity-30 focus:outline-none focus:text-cyan-400`;
 const toolButton = 'gb-icon-btn gb-icon-btn-sm';
 
 export default () => {
@@ -813,22 +812,12 @@ export default () => {
 
     const toggles = (
         <>
-            <label css={tw`flex items-center cursor-pointer text-xs text-neutral-300 px-2 py-1`}>
-                <input
-                    type={'checkbox'}
-                    checked={wordWrap}
-                    onChange={(e) => setWordWrap(e.currentTarget.checked)}
-                    css={tw`mr-2`}
-                />
+            <label className={'gb-toggle'}>
+                <input type={'checkbox'} checked={wordWrap} onChange={(e) => setWordWrap(e.currentTarget.checked)} />
                 Word wrap
             </label>
-            <label css={tw`flex items-center cursor-pointer text-xs text-neutral-300 px-2 py-1`}>
-                <input
-                    type={'checkbox'}
-                    checked={minimap}
-                    onChange={(e) => setMinimap(e.currentTarget.checked)}
-                    css={tw`mr-2`}
-                />
+            <label className={'gb-toggle'}>
+                <input type={'checkbox'} checked={minimap} onChange={(e) => setMinimap(e.currentTarget.checked)} />
                 Minimap
             </label>
         </>
@@ -924,102 +913,83 @@ export default () => {
                     </div>
 
                     {active?.status === 'ready' && (
-                        <div className={'gb-editor-bar'}>
-                            <span css={tw`flex-1 min-w-0 truncate`}>
-                                {LANGUAGE_LABELS[active.language] || active.language}
-                            </span>
-                            <button
-                                ref={problemsButton}
-                                type={'button'}
-                                onClick={() => setProblemsOpen((v) => !v)}
-                                aria-haspopup={'listbox'}
-                                aria-expanded={problemsOpen}
-                                disabled={problems.length === 0}
-                                css={[
-                                    tw`mr-2 px-2 py-1 rounded focus:outline-none focus:ring-2 focus:ring-cyan-600`,
-                                    errorCount
-                                        ? tw`text-red-300`
-                                        : problems.length
-                                        ? tw`text-yellow-300`
-                                        : tw`text-neutral-500`,
-                                ]}
-                            >
-                                {problems.length === 0
-                                    ? 'No problems'
-                                    : `${
-                                          errorCount
-                                              ? `${errorCount} error${errorCount === 1 ? '' : 's'}`
-                                              : `${problems.length} warning${problems.length === 1 ? '' : 's'}`
-                                      }`}
-                            </button>
-                            <Popover
-                                anchor={problemsButton.current}
-                                open={problemsOpen}
-                                onClose={() => setProblemsOpen(false)}
-                                align={'end'}
-                                role={'listbox'}
-                                label={'Problems'}
-                                className={
-                                    'w-96 max-w-[90vw] py-1 rounded bg-neutral-800 border border-neutral-700 shadow-lg'
-                                }
-                            >
-                                {problems.map((p, i) => (
-                                    <button
-                                        key={i}
-                                        type={'button'}
-                                        role={'option'}
-                                        aria-selected={false}
-                                        onClick={() => {
-                                            setProblemsOpen(false);
-                                            editor.current?.reveal(active.path, p.line, p.column);
-                                        }}
-                                        className={
-                                            'block w-full text-left px-3 py-2 text-xs text-neutral-200 hover:bg-neutral-700 focus:bg-neutral-700 focus:outline-none'
-                                        }
-                                    >
-                                        <span className={p.severity === 'error' ? 'text-red-300' : 'text-yellow-300'}>
-                                            {p.severity === 'error' ? 'Error' : 'Warning'}
-                                        </span>
-                                        {' · '}line {p.line}, column {p.column}
-                                        <span className={'block text-neutral-400'}>{p.message}</span>
-                                    </button>
-                                ))}
-                            </Popover>
-                            {!mobile && <div css={tw`flex items-center`}>{toggles}</div>}
-                            {mobile && (
-                                <>
-                                    <button
-                                        ref={moreButton}
-                                        type={'button'}
-                                        aria-label={'Editor options'}
-                                        aria-haspopup={'menu'}
-                                        aria-expanded={moreOpen}
-                                        onClick={() => setMoreOpen((v) => !v)}
-                                        css={[iconButton, tw`mr-1`]}
-                                    >
-                                        <FontAwesomeIcon icon={faEllipsisH} />
-                                    </button>
-                                    <Popover
-                                        anchor={moreButton.current}
-                                        open={moreOpen}
-                                        onClose={() => setMoreOpen(false)}
-                                        align={'end'}
-                                        label={'Editor options'}
-                                        className={'py-1 rounded bg-neutral-800 border border-neutral-700 shadow-lg'}
-                                    >
-                                        {toggles}
-                                    </Popover>
-                                </>
+                        <>
+                            <div className={'gb-editor-bar'}>
+                                <span className={'gb-editor-lang'}>
+                                    {LANGUAGE_LABELS[active.language] || active.language}
+                                </span>
+                                <button
+                                    ref={problemsButton}
+                                    type={'button'}
+                                    onClick={() => setProblemsOpen((v) => !v)}
+                                    aria-expanded={problemsOpen}
+                                    disabled={problems.length === 0}
+                                    className={
+                                        'gb-editor-problems' +
+                                        (errorCount ? ' error' : problems.length ? ' warning' : '')
+                                    }
+                                >
+                                    {problems.length === 0
+                                        ? 'No problems'
+                                        : `${problems.length} problem${problems.length === 1 ? '' : 's'}`}
+                                </button>
+                                <span className={'gb-editor-spacer'} />
+                                {!mobile && <div className={'gb-editor-toggles'}>{toggles}</div>}
+                                {mobile && (
+                                    <>
+                                        <button
+                                            ref={moreButton}
+                                            type={'button'}
+                                            aria-label={'Editor options'}
+                                            aria-haspopup={'menu'}
+                                            aria-expanded={moreOpen}
+                                            onClick={() => setMoreOpen((v) => !v)}
+                                            className={'gb-icon-btn gb-icon-btn-sm'}
+                                        >
+                                            <FontAwesomeIcon icon={faEllipsisH} />
+                                        </button>
+                                        <Popover
+                                            anchor={moreButton.current}
+                                            open={moreOpen}
+                                            onClose={() => setMoreOpen(false)}
+                                            align={'end'}
+                                            label={'Editor options'}
+                                            className={'gb-menu'}
+                                        >
+                                            <div className={'gb-editor-toggles stacked'}>{toggles}</div>
+                                        </Popover>
+                                    </>
+                                )}
+                                <button
+                                    type={'button'}
+                                    className={'gb-btn gb-btn-primary gb-btn-sm'}
+                                    disabled={!canUpdate || busy || !active.dirty}
+                                    onClick={() => save()}
+                                >
+                                    Save
+                                </button>
+                            </div>
+                            {problemsOpen && problems.length > 0 && (
+                                <ul className={'gb-problems'} aria-label={'Problems'}>
+                                    {problems.map((p, i) => (
+                                        <li key={i}>
+                                            <button
+                                                type={'button'}
+                                                onClick={() => editor.current?.reveal(active.path, p.line, p.column)}
+                                            >
+                                                <span className={p.severity === 'error' ? 'error' : 'warning'}>
+                                                    {p.severity === 'error' ? 'Error' : 'Warning'}
+                                                </span>
+                                                <em>
+                                                    Line {p.line}:{p.column}
+                                                </em>
+                                                {p.message}
+                                            </button>
+                                        </li>
+                                    ))}
+                                </ul>
                             )}
-                            <Button
-                                type={'button'}
-                                disabled={!canUpdate || busy || !active.dirty}
-                                onClick={() => save()}
-                                css={tw`!py-1 !px-3 !text-xs ml-1`}
-                            >
-                                Save
-                            </Button>
-                        </div>
+                        </>
                     )}
 
                     <div css={tw`flex-1 min-h-0 relative`}>

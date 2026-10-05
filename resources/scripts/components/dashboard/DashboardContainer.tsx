@@ -2,11 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { Actions, useStoreActions } from 'easy-peasy';
 import tw from 'twin.macro';
 import PageHeader from '@/components/elements/PageHeader';
-import { Plus } from 'lucide-react';
+import { ExternalLink, FolderPlus, Palette, Plus } from 'lucide-react';
+import ContextMenu, { MenuState } from '@/components/elements/ContextMenu';
+import IconColorModal from '@/components/dashboard/IconColorModal';
 import { useStoreState } from 'easy-peasy';
 import CreateInstanceModal from '@/components/dashboard/create/CreateInstanceModal';
 import useSWR from 'swr';
-import { useLocation } from 'react-router-dom';
+import { useHistory, useLocation } from 'react-router-dom';
 import { Server } from '@/api/server/getServer';
 import getServers from '@/api/getServers';
 import { ApplicationStore } from '@/state';
@@ -14,7 +16,7 @@ import { httpErrorToHuman, PaginatedResult } from '@/api/http';
 import PageContentBlock from '@/components/elements/PageContentBlock';
 import Pagination from '@/components/elements/Pagination';
 import { SkeletonRows } from '@/components/elements/Skeleton';
-import { getLayout, saveCategoryOrder, saveOrder, ServerLayout } from '@/api/account/layout';
+import { getLayout, LayoutServer, saveCategoryOrder, saveOrder, ServerLayout } from '@/api/account/layout';
 import ServerFilterBar, { ServerFilter } from '@/components/dashboard/ServerFilterBar';
 import SortableServerList from '@/components/dashboard/SortableServerList';
 import CategoryEditorModal from '@/components/dashboard/CategoryEditorModal';
@@ -33,6 +35,9 @@ export default () => {
     const [filter, setFilter] = useState<ServerFilter>({ kind: 'all' });
     const [editing, setEditing] = useState(false);
     const [creating, setCreating] = useState(false);
+    const [menu, setMenu] = useState<MenuState | null>(null);
+    const [coloring, setColoring] = useState<LayoutServer | null>(null);
+    const history = useHistory();
     const rootAdmin = useStoreState((state: ApplicationStore) => state.user.data!.rootAdmin);
     const toast = useStoreActions((actions: Actions<ApplicationStore>) => actions.toasts.push);
 
@@ -91,6 +96,40 @@ export default () => {
             });
     };
 
+    const colors = Object.fromEntries((layout?.servers || []).map((s) => [s.uuid, s.color]));
+    const openMenu = (server: Server, x: number, y: number) => {
+        const layoutServer = layout?.servers.find((s) => s.uuid === server.uuid);
+        setMenu({
+            x,
+            y,
+            title: server.name,
+            items: [
+                {
+                    key: 'open',
+                    label: 'Open',
+                    icon: ExternalLink,
+                    onSelect: () => history.push(`/server/${server.id}`),
+                },
+                ...(layoutServer
+                    ? [
+                          {
+                              key: 'color',
+                              label: 'Change icon colour',
+                              icon: Palette,
+                              onSelect: () => setColoring(layoutServer),
+                          },
+                          {
+                              key: 'category',
+                              label: 'Add to category',
+                              icon: FolderPlus,
+                              onSelect: () => setEditing(true),
+                          },
+                      ]
+                    : []),
+            ],
+        });
+    };
+
     return (
         <PageContentBlock title={'Dashboard'}>
             <PageHeader title={'Instances'} subtitle={'Everything you own or have been given access to.'}>
@@ -131,7 +170,7 @@ export default () => {
                 <Pagination data={servers} onPageSelect={setPage}>
                     {({ items }) =>
                         items.length > 0 ? (
-                            <SortableServerList servers={items} onReorder={reorder} />
+                            <SortableServerList servers={items} colors={colors} onReorder={reorder} onMenu={openMenu} />
                         ) : (
                             <p className={'gb-list'} css={tw`text-center text-sm text-neutral-400 py-10`}>
                                 {EMPTY[filter.kind]}
@@ -144,6 +183,12 @@ export default () => {
             {rootAdmin && (
                 <CreateInstanceModal visible={creating} onClose={() => setCreating(false)} onCreated={() => mutate()} />
             )}
+            <ContextMenu menu={menu} onClose={() => setMenu(null)} />
+            <IconColorModal
+                server={coloring}
+                onClose={() => setColoring(null)}
+                onChanged={(fresh) => mutateLayout(fresh, false)}
+            />
             <CategoryEditorModal
                 visible={editing}
                 layout={layout}

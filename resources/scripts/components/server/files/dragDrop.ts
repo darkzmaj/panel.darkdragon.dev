@@ -11,6 +11,14 @@ export const beginDrag = (e: React.DragEvent, payload: DragPayload) => {
     e.dataTransfer.setData('text/plain', payload.names.join('\n'));
     e.dataTransfer.effectAllowed = 'copyMove';
     current = payload;
+
+    // A small pill with the name (or the count) travels with the pointer instead of a screenshot of the whole row.
+    const ghost = document.createElement('div');
+    ghost.className = 'gb-drag-ghost';
+    ghost.textContent = payload.names.length === 1 ? payload.names[0] : `${payload.names.length} items`;
+    document.body.appendChild(ghost);
+    e.dataTransfer.setDragImage(ghost, 12, 12);
+    setTimeout(() => ghost.remove(), 0);
 };
 
 export const endDrag = () => {

@@ -59,6 +59,7 @@ Route::prefix('/account')->middleware(AccountSubject::class)->group(function () 
     Route::prefix('/layout')->group(function () {
         Route::get('/', [Client\ServerLayoutController::class, 'index'])->name('api:client.account.layout');
         Route::put('/order', [Client\ServerLayoutController::class, 'reorder']);
+        Route::put('/servers/{uuid}/color', [Client\ServerLayoutController::class, 'iconColor'])->whereUuid('uuid');
         Route::put('/categories/order', [Client\ServerLayoutController::class, 'reorderCategories']);
         Route::post('/categories', [Client\ServerLayoutController::class, 'storeCategory'])->middleware('throttle:30,1');
         Route::put('/categories/{category}', [Client\ServerLayoutController::class, 'updateCategory'])->whereNumber('category');

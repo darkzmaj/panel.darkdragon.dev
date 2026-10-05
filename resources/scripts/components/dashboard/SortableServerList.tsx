@@ -5,7 +5,9 @@ import ServerRow from '@/components/dashboard/ServerRow';
 
 interface Props {
     servers: Server[];
+    colors?: Record<string, string | null>;
     onReorder: (servers: Server[]) => void;
+    onMenu?: (server: Server, x: number, y: number) => void;
 }
 
 const move = (list: Server[], from: number, to: number) => {
@@ -18,7 +20,7 @@ const move = (list: Server[], from: number, to: number) => {
 
 // Instance rows that can be rearranged. A row is dragged by its slim grip, which is also a focusable control
 // (arrow keys move the row) and, on touch screens where dragging is unavailable, is joined by move buttons.
-export default ({ servers, onReorder }: Props) => {
+export default ({ servers, colors, onReorder, onMenu }: Props) => {
     const [dragging, setDragging] = useState<string | null>(null);
     const [over, setOver] = useState<string | null>(null);
     const [armed, setArmed] = useState<string | null>(null);
@@ -64,6 +66,11 @@ export default ({ servers, onReorder }: Props) => {
                             if (from >= 0 && from !== index) onReorder(move(servers, from, index));
                         }}
                         onDragEnd={finish}
+                        onContextMenu={(e) => {
+                            if (!onMenu) return;
+                            e.preventDefault();
+                            onMenu(server, e.clientX, e.clientY);
+                        }}
                     >
                         <div className={'gb-grip'}>
                             <button
@@ -103,7 +110,7 @@ export default ({ servers, onReorder }: Props) => {
                                 </>
                             )}
                         </div>
-                        <ServerRow server={server} />
+                        <ServerRow server={server} color={colors?.[server.uuid]} />
                     </li>
                 ))}
             </ul>

@@ -51,7 +51,6 @@ class AdminPagesTest extends HttpTestCase
             foreach (array_keys($pages) as $item) {
                 $this->assertStringContainsString($item, $html, "$url should list $item in its menu");
             }
-            $this->assertStringContainsString('Appearance', $html);
             $this->assertMatchesRegularExpression('/class="active"\s+aria-current="page"\s*>\s*<i class="fa [a-z -]+"><\/i> ' . preg_quote($label, '/') . '/', $html, "$label should be marked as the current page");
         }
     }

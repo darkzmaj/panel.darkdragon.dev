@@ -44,7 +44,7 @@ const ModalContainer = styled.div<{ alignTop?: boolean }>`
     margin-bottom: auto;
 
     & > .close-icon {
-        ${tw`absolute p-2 cursor-pointer transition-all duration-150 ease-linear`};
+        ${tw`absolute p-2 cursor-pointer transition-all duration-100 ease-linear`};
         top: 14px;
         right: 14px;
         z-index: 2;
@@ -95,7 +95,7 @@ const Modal: React.FC<ModalProps> = ({
     useEffect(() => setRender(visible), [visible]);
 
     return (
-        <Fade in={render} timeout={150} appear={appear || true} unmountOnExit onExited={() => onDismissed()}>
+        <Fade in={render} timeout={120} appear={appear || true} unmountOnExit onExited={() => onDismissed()}>
             <ModalMask
                 onClick={(e) => e.stopPropagation()}
                 onContextMenu={(e) => e.stopPropagation()}
@@ -127,7 +127,7 @@ const Modal: React.FC<ModalProps> = ({
                         </div>
                     )}
                     {showSpinnerOverlay && (
-                        <Fade timeout={150} appear in>
+                        <Fade timeout={120} appear in>
                             <div
                                 css={tw`absolute w-full h-full rounded flex items-center justify-center`}
                                 style={{
@@ -141,7 +141,7 @@ const Modal: React.FC<ModalProps> = ({
                         </Fade>
                     )}
                     <div
-                        css={tw`p-4 sm:p-6 overflow-y-auto transition-all duration-150`}
+                        css={tw`p-4 sm:p-6 overflow-y-auto transition-all duration-100`}
                         style={{
                             background: 'var(--gb-surface)',
                             border: '1px solid var(--gb-border-muted)',

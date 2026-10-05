@@ -31,6 +31,14 @@ class ServerLayoutController extends ClientApiController
         return new JsonResponse($this->layout->layout($request->user()));
     }
 
+    public function iconColor(ClientApiRequest $request, string $uuid): JsonResponse
+    {
+        $data = $request->validate(['color' => ['present', 'nullable', 'regex:/^#[0-9a-fA-F]{6}$/']]);
+        $this->layout->setIconColor($request->user(), $uuid, $data['color']);
+
+        return new JsonResponse($this->layout->layout($request->user()));
+    }
+
     public function storeCategory(ServerCategoryRequest $request): JsonResponse
     {
         $this->layout->createCategory($request->user(), $request->validated('name'), $request->validated('servers', []));

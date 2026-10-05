@@ -70,6 +70,10 @@ export default () => {
             canMove: canUpdate,
             moveInto: (payload: { directory: string; names: string[] }, target: string) => {
                 if (!canUpdate) return;
+                // Show the result at once; if the move fails the revalidation below puts the rows back.
+                if (target !== payload.directory) {
+                    mutate((current) => current?.filter((f) => !payload.names.includes(f.name)), false);
+                }
                 move(payload.directory, payload.names, target).then((outcome) => {
                     if (outcome.moved.length) setSelectedFiles([]);
                     mutate();

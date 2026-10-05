@@ -45,6 +45,7 @@ class ServerLayoutService
         $accessible = $this->accessible($user);
         $byId = $accessible->keyBy('id');
 
+        $colors = DB::table('user_server_icon_colors')->where('user_id', $user->id)->pluck('color', 'server_id');
         $categories = DB::table('user_server_categories')->where('user_id', $user->id)->orderBy('position')->orderBy('id')->get();
         $members = DB::table('user_server_category_members')
             ->whereIn('category_id', $categories->pluck('id'))
@@ -58,6 +59,7 @@ class ServerLayoutService
                 'identifier' => $server->uuidShort,
                 'name' => $server->name,
                 'owned' => (int) $server->owner_id === $user->id,
+                'color' => $colors->get($server->id),
             ])->values()->all(),
             'order' => $accessible->keys()->all(),
             'categories' => $categories->map(fn ($category) => [
@@ -71,6 +73,27 @@ class ServerLayoutService
                     ->all(),
             ])->all(),
         ];
+    }
+
+    /**
+     * Sets (or clears, with null) the user's own icon colour for a server they can currently open.
+     *
+     * @throws DisplayException
+     */
+    public function setIconColor(User $user, string $uuid, ?string $color): void
+    {
+        $server = $this->accessible($user)->get($uuid) ?? throw new DisplayException('That server is not available to you.');
+
+        if ($color === null) {
+            DB::table('user_server_icon_colors')->where(['user_id' => $user->id, 'server_id' => $server->id])->delete();
+
+            return;
+        }
+
+        DB::table('user_server_icon_colors')->updateOrInsert(
+            ['user_id' => $user->id, 'server_id' => $server->id],
+            ['color' => strtolower($color)]
+        );
     }
 
     /**

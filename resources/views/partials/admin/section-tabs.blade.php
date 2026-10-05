@@ -19,7 +19,6 @@
         'advanced' => ['Advanced', route('admin.settings.advanced'), 'fa-wrench'],
         'api' => ['Application API', route('admin.api.index'), 'fa-code'],
         'updates' => ['Updates', route('admin.system.updates'), 'fa-cloud-download'],
-        'appearance' => ['Appearance', url('/account/appearance'), 'fa-paint-brush'],
     ];
 @endphp
 @if($section === 'settings')
