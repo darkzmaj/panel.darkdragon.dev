@@ -9,10 +9,8 @@ import {
     faEllipsisH,
     faFileMedical,
     faFolderPlus,
-    faPencilAlt,
     faSyncAlt,
     faTimes,
-    faTrashAlt,
     faUpload,
 } from '@/components/elements/icons';
 import { ApplicationStore } from '@/state';
@@ -94,8 +92,8 @@ type Conflict = {
 } | null;
 
 const WIDTH_KEY = 'gobia:explorer-width';
-const MIN_SIDEBAR = 180;
-const MAX_SIDEBAR = 480;
+const MIN_SIDEBAR = 200;
+const MAX_SIDEBAR = 500;
 const MOBILE = 768;
 
 // Height of the workspace: whatever is left of the viewport below its own top edge, so it adapts to the header,
@@ -161,9 +159,9 @@ export default () => {
     const [treeOpen, setTreeOpen] = useState(() => window.innerWidth >= MOBILE);
     const [sidebarWidth, setSidebarWidth] = useState(() => {
         try {
-            return Math.min(MAX_SIDEBAR, Math.max(MIN_SIDEBAR, Number(localStorage.getItem(WIDTH_KEY)) || 256));
+            return Math.min(MAX_SIDEBAR, Math.max(MIN_SIDEBAR, Number(localStorage.getItem(WIDTH_KEY)) || 280));
         } catch {
-            return 256;
+            return 280;
         }
     });
     const [wordWrap, setWordWrap] = useState(false);
@@ -739,8 +737,6 @@ export default () => {
                 ],
                 ['Upload files', faUpload, () => upload.current?.click(), !canCreate],
                 ['Upload folder', FolderUp, () => uploadFolder.current?.click(), !canCreate],
-                ['Rename', faPencilAlt, () => startRename(), !selection || selection.path === '/' || !canUpdate],
-                ['Delete', faTrashAlt, () => startDelete(), !selection || selection.path === '/' || !canDelete],
             ].map(([label, icon, onClick, disabled]) => (
                 <button
                     key={label as string}

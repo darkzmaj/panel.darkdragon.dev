@@ -623,7 +623,7 @@ textarea.gb-input { height: auto; padding: 10px 12px; min-height: 96px; resize: 
 .gb-auth-pitch > div { width: 100%; max-width: 520px; }
 .gb-auth-pitch h2 { margin: 0 0 10px; font-size: clamp(30px, 3.2vw, 46px); line-height: 1.1; font-weight: 700; }
 .gb-auth-pitch p { margin: 0 0 32px; font-size: 17px; color: var(--gb-text-2); }
-.gb-auth-main { display: flex; align-items: center; justify-content: center; padding: 120px 24px 48px; }
+.gb-auth-main { position: relative; display: flex; align-items: center; justify-content: center; padding: 120px 24px 48px; }
 .gb-auth-box { width: 100%; max-width: 440px; background: var(--gb-surface); border: 1px solid var(--gb-border-muted); border-radius: var(--gb-radius-xl); padding: 32px; box-shadow: var(--gb-shadow-card); }
 .gb-auth-box h1 { margin: 0 0 6px; font-size: 28px; }
 .gb-auth-box > p { margin: 0 0 22px; color: var(--gb-text-2); }
@@ -853,8 +853,8 @@ div.gb-file-details { cursor: default; }
 .gb-tree-row { position: relative; display: flex; align-items: center; border-radius: 8px; transition: background var(--gb-duration); }
 .gb-tree-row:hover { background: var(--gb-surface-2); }
 .gb-tree-row.selected { background: var(--gb-primary-soft); }
-.gb-tree-row > button[role='treeitem'] { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; height: 30px; padding-right: 8px; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; border-radius: 8px; }
-.gb-tree-row > button[role='treeitem']:focus-visible { outline: 2px solid var(--gb-focus); outline-offset: -2px; }
+.gb-tree-row > button:first-child { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; height: 30px; padding-right: 8px; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; border-radius: 8px; }
+.gb-tree-row > button:first-child:focus-visible { outline: 2px solid var(--gb-focus); outline-offset: -2px; }
 .gb-tree-row > button[draggable='true'] { cursor: grab; }
 .gb-tree-chevron { width: 14px; height: 14px; flex: none; color: var(--gb-text-3); }
 .gb-tree-folder { width: 16px; height: 16px; flex: none; color: rgb(var(--p-500)); }
@@ -943,3 +943,35 @@ div.gb-file-details { cursor: default; }
     .gb-server-stats .gb-metric:nth-child(3) { display: none; }
     .gb-server-row { padding-top: 10px; padding-bottom: 10px; }
 }
+.gb-preview-search { display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; height: 30px; border: 1px solid var(--gb-border-muted); border-radius: 8px; color: var(--gb-text-3); }
+.gb-preview-search:focus-within { border-color: rgb(var(--p-500)); }
+.gb-preview-search input { width: 110px; border: 0; outline: 0; background: transparent; color: var(--gb-text); font: inherit; font-size: 12px; }
+.gb-preview-search input::placeholder { color: var(--gb-text-3); }
+.gb-preview-rows { min-height: 190px; }
+button.gb-preview-row { width: 100%; border-left: 0; border-right: 0; border-bottom: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+button.gb-preview-row:hover { background: var(--gb-hover); }
+button.gb-preview-row.active { background: var(--gb-primary-soft); }
+.gb-preview-row:first-child { border-top: 0; }
+.gb-preview-empty { margin: 0; padding: 28px 16px; color: var(--gb-text-3); font-size: 13px; text-align: center; }
+.gb-auth-logo { top: 28px; }
+@media (max-width: 900px) { .gb-auth-logo { top: 24px; } }
+@media (max-width: 700px), (pointer: coarse) { .gb-grip { display: none; } .gb-server-row { padding-left: 14px; } }
+
+/* ------------------------------------------------------------------ explorer tree: one indent per level, root as workspace */
+.gb-tree { padding: 6px 8px 12px; }
+.gb-tree-row > button:first-child { height: 32px; gap: 6px; padding-right: 6px; }
+.gb-tree-chevron { width: 16px; height: 16px; flex: none; }
+span.gb-tree-chevron { display: inline-block; }
+.gb-tree-folder, .gb-tree-file { width: 16px; height: 16px; }
+.gb-tree-file { color: var(--gb-text-3); }
+.gb-tree-row.root > button:first-child { height: 36px; padding-left: 8px; font-weight: 700; color: var(--gb-text-strong); }
+.gb-tree-row.root .gb-tree-name { font-family: var(--gb-font-mono); font-size: 12.5px; font-weight: 600; letter-spacing: 0; }
+.gb-tree-row.selected { background: var(--gb-primary-soft); }
+.gb-tree-row.selected .gb-tree-name { color: var(--gb-text-strong); }
+.gb-tree-group { position: relative; }
+.gb-tree-group::before { content: ''; position: absolute; top: 0; bottom: 0; left: var(--guide, 16px); width: 1px; background: var(--gb-border-muted); pointer-events: none; }
+.gb-explorer-tools { padding: 8px; gap: 4px; }
+.gb-explorer-tools .gb-icon-btn { width: 34px; height: 34px; }
+.gb-explorer-tools .gb-icon-btn svg { width: 17px; height: 17px; }
+.gb-topbar-brand img { height: 38px; }
+.gb-auth-logo img { height: 64px; }

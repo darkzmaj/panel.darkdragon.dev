@@ -24,7 +24,7 @@
     </head>
     <body>
         <main>
-            <img src="/themes/gobia/img/icon-64.png" alt="">
+            <img src="/themes/gobia/img/icon-64.png?v=4" alt="">
             <h1>Down for maintenance</h1>
             <p id="message">The Panel is being updated and will be back shortly.</p>
             <div class="bar" id="bar"><div id="fill"></div></div>

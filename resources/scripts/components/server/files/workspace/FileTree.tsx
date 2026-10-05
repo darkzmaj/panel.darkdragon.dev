@@ -72,6 +72,7 @@ const TreeRow = (p: RowProps) => {
             {...(isDirectory ? target.props : {})}
             className={
                 'gb-tree-row' +
+                (!p.item ? ' root' : '') +
                 (p.isSelected || p.isActive ? ' selected' : '') +
                 (target.state === 'ok' ? ' drop-ok' : target.state === 'denied' ? ' drop-denied' : '')
             }
@@ -93,7 +94,7 @@ const TreeRow = (p: RowProps) => {
             >
                 {isDirectory ? (
                     <>
-                        <Chevron className={'gb-tree-chevron'} aria-hidden />
+                        {p.item ? <Chevron className={'gb-tree-chevron'} aria-hidden /> : null}
                         {p.isOpen ? (
                             <FolderOpen className={'gb-tree-folder'} aria-hidden />
                         ) : (
@@ -215,7 +216,7 @@ export default ({
             const isOpen = expanded.has(path);
 
             return (
-                <div key={path}>
+                <div key={path} className={'gb-tree-group'} style={{ ['--guide' as string]: `${depth * 14 + 15}px` }}>
                     <TreeRow
                         directory={directory}
                         item={item}

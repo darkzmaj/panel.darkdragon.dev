@@ -46,7 +46,7 @@ body.gb-admin { background: var(--gb-bg); color: var(--gb-text); font-family: va
 .gb-admin .content-header .breadcrumb { display: none; }
 .gb-admin .content { padding: 0; min-height: 0; }
 .gb-admin .row { margin-left: -8px; margin-right: -8px; }
-.gb-admin .row > [class*='col-'] { padding-left: 8px; padding-right: 8px; }
+.gb-admin .row > [class*='col-'], .gb-admin .row > form > [class*='col-'] { padding-left: 8px; padding-right: 8px; }
 
 /* ---- boxes (cards) */
 .gb-admin .box { position: relative; margin-bottom: 16px; background: var(--gb-surface); border: 1px solid var(--gb-border-muted); border-top: 1px solid var(--gb-border-muted); border-radius: var(--gb-radius-lg); box-shadow: var(--gb-shadow-card); width: 100%; }

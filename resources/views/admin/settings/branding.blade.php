@@ -20,8 +20,8 @@
 @inject('branding', 'Pterodactyl\Services\Media\BrandingService')
     <div class="row">
         @foreach([
-            'logo' => ['title' => 'Panel Logo', 'help' => 'Shown on the login page and in the navigation bar. PNG only, up to 2 MB. Larger images are scaled down to fit within 512x256 pixels.', 'default' => '/themes/gobia/img/logo-text-480.png', 'url' => $branding->url('logo'), 'height' => '96px'],
-            'favicon' => ['title' => 'Favicon', 'help' => 'Shown in the browser tab. PNG only, up to 512 KB. A square image is recommended.', 'default' => '/themes/gobia/img/icon-256.png', 'url' => $branding->url('favicon'), 'height' => '48px'],
+            'logo' => ['title' => 'Panel Logo', 'help' => 'Shown on the login page and in the navigation bar. PNG only, up to 2 MB. Larger images are scaled down to fit within 512x256 pixels.', 'default' => '/themes/gobia/img/logo-text-480.png?v=4', 'url' => $branding->url('logo'), 'height' => '96px'],
+            'favicon' => ['title' => 'Favicon', 'help' => 'Shown in the browser tab. PNG only, up to 512 KB. A square image is recommended.', 'default' => '/themes/gobia/img/icon-256.png?v=4', 'url' => $branding->url('favicon'), 'height' => '48px'],
         ] as $asset => $meta)
             <div class="col-md-6">
                 <div class="box">

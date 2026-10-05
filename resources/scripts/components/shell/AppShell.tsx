@@ -16,9 +16,11 @@ export const Brand = () => {
     return (
         <Link to={'/'} className={'gb-topbar-brand'} style={{ textDecoration: 'none' }} aria-label={name}>
             <img
-                src={logo || '/themes/gobia/img/logo-text-240.png'}
+                src={logo || '/themes/gobia/img/logo-text-240.png?v=4'}
                 srcSet={
-                    logo ? undefined : '/themes/gobia/img/logo-text-240.png 1x, /themes/gobia/img/logo-text-480.png 2x'
+                    logo
+                        ? undefined
+                        : '/themes/gobia/img/logo-text-240.png?v=4 1x, /themes/gobia/img/logo-text-480.png?v=4 2x'
                 }
                 alt={name}
             />
@@ -83,7 +85,7 @@ const Shell: React.FC<Props> = ({ sidebar, footer, children }) => {
                     <aside className={'gb-sidebar'} aria-label={'Primary'}>
                         <nav className={'gb-sidebar-scroll'}>{sidebar}</nav>
                         <Link to={'/account'} className={'gb-sidebar-foot'}>
-                            <img src={'/themes/gobia/img/icon-64.png'} alt={''} />
+                            <img src={'/themes/gobia/img/icon-64.png?v=4'} alt={''} />
                             {footer || (
                                 <span style={{ minWidth: 0 }}>
                                     <strong>{name}</strong>

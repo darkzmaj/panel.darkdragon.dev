@@ -39,7 +39,7 @@
                         @if($logo = $branding->url('logo'))
                             <img src="{{ $logo }}" alt="{{ config('app.name', 'Gobia Cloud') }}">
                         @else
-                            <img src="/themes/gobia/img/logo-text-240.png" srcset="/themes/gobia/img/logo-text-240.png 1x, /themes/gobia/img/logo-text-480.png 2x" alt="{{ config('app.name', 'Gobia Cloud') }}">
+                            <img src="/themes/gobia/img/logo-text-240.png?v=4" srcset="/themes/gobia/img/logo-text-240.png?v=4 1x, /themes/gobia/img/logo-text-480.png?v=4 2x" alt="{{ config('app.name', 'Gobia Cloud') }}">
                         @endif
                     </a>
                 </div>
@@ -91,7 +91,7 @@
                             </a>
                         </nav>
                         <a class="gb-sidebar-foot" href="{{ route('index') }}">
-                            <img src="/themes/gobia/img/icon-64.png" alt="">
+                            <img src="/themes/gobia/img/icon-64.png?v=4" alt="">
                             <span style="min-width:0">
                                 <strong>{{ config('app.name', 'Gobia Cloud') }}</strong>
                                 <span>Back to instances</span>

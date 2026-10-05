@@ -3,7 +3,7 @@
     <div class="gb-footer-inner">
         <div class="gb-footer-grid">
             <div class="gb-footer-brand">
-                <img src="/themes/gobia/img/logo-text-240.png" srcset="/themes/gobia/img/logo-text-240.png 1x, /themes/gobia/img/logo-text-480.png 2x" alt="Gobia Cloud" width="177" height="56">
+                <img src="/themes/gobia/img/logo-text-240.png?v=4" srcset="/themes/gobia/img/logo-text-240.png?v=4 1x, /themes/gobia/img/logo-text-480.png?v=4 2x" alt="Gobia Cloud" width="177" height="56">
                 <p><strong>{{ $gobiaFooter['tagline_strong'] }}</strong>{{ $gobiaFooter['tagline'] }}</p>
             </div>
             @foreach($gobiaFooter['columns'] as $column)

@@ -18,17 +18,6 @@ export default forwardRef<HTMLFormElement, Props>(({ title, subtitle, ...props }
 
     return (
         <div className={'gb-auth'}>
-            <div className={'gb-auth-logo'}>
-                <img
-                    src={logo || '/themes/gobia/img/logo-text-240.png'}
-                    srcSet={
-                        logo
-                            ? undefined
-                            : '/themes/gobia/img/logo-text-240.png 1x, /themes/gobia/img/logo-text-480.png 2x'
-                    }
-                    alt={name}
-                />
-            </div>
             <div className={'gb-auth-split'}>
                 <section className={'gb-auth-pitch'}>
                     <div>
@@ -38,6 +27,17 @@ export default forwardRef<HTMLFormElement, Props>(({ title, subtitle, ...props }
                     </div>
                 </section>
                 <main className={'gb-auth-main'}>
+                    <div className={'gb-auth-logo'}>
+                        <img
+                            src={logo || '/themes/gobia/img/logo-text-240.png?v=4'}
+                            srcSet={
+                                logo
+                                    ? undefined
+                                    : '/themes/gobia/img/logo-text-240.png?v=4 1x, /themes/gobia/img/logo-text-480.png?v=4 2x'
+                            }
+                            alt={name}
+                        />
+                    </div>
                     <div className={'gb-auth-box'}>
                         {title && <h1>{title}</h1>}
                         {subtitle && <p>{subtitle}</p>}

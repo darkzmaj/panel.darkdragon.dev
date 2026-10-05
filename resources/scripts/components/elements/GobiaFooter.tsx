@@ -14,8 +14,10 @@ const GobiaFooter = () => {
                 <div className={'gb-footer-grid'}>
                     <div className={'gb-footer-brand'}>
                         <img
-                            src={'/themes/gobia/img/logo-text-240.png'}
-                            srcSet={'/themes/gobia/img/logo-text-240.png 1x, /themes/gobia/img/logo-text-480.png 2x'}
+                            src={'/themes/gobia/img/logo-text-240.png?v=4'}
+                            srcSet={
+                                '/themes/gobia/img/logo-text-240.png?v=4 1x, /themes/gobia/img/logo-text-480.png?v=4 2x'
+                            }
                             alt={'Gobia Cloud'}
                             width={177}
                             height={56}
