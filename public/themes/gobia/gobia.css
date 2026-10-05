@@ -619,8 +619,8 @@ textarea.gb-input { height: auto; padding: 10px 12px; min-height: 96px; resize: 
 .gb-auth-logo { position: absolute; top: 28px; left: 0; right: 0; z-index: 2; display: flex; justify-content: center; pointer-events: none; }
 .gb-auth-logo img { height: 52px; width: auto; }
 .gb-auth-split { flex: 1; display: grid; grid-template-columns: 1fr 1fr; min-height: 100vh; }
-.gb-auth-pitch { display: flex; align-items: center; justify-content: center; padding: 120px 48px 48px; border-right: 1px solid var(--gb-border-muted); background: radial-gradient(circle at 60% 55%, rgb(var(--p-500) / 0.08), transparent 55%); }
-.gb-auth-pitch > div { width: 100%; max-width: 520px; }
+.gb-auth-pitch { position: relative; display: flex; align-items: center; justify-content: center; padding: 120px 48px 48px; border-right: 1px solid var(--gb-border-muted); background: radial-gradient(circle at 60% 55%, rgb(var(--p-500) / 0.08), transparent 55%); }
+.gb-auth-pitch > div:not(.gb-auth-logo) { width: 100%; max-width: 520px; }
 .gb-auth-pitch h2 { margin: 0 0 10px; font-size: clamp(30px, 3.2vw, 46px); line-height: 1.1; font-weight: 700; }
 .gb-auth-pitch p { margin: 0 0 32px; font-size: 17px; color: var(--gb-text-2); }
 .gb-auth-main { position: relative; display: flex; align-items: center; justify-content: center; padding: 120px 24px 48px; }
@@ -975,3 +975,6 @@ span.gb-tree-chevron { display: inline-block; }
 .gb-explorer-tools .gb-icon-btn svg { width: 17px; height: 17px; }
 .gb-topbar-brand img { height: 38px; }
 .gb-auth-logo img { height: 64px; }
+
+.gb-auth-logo-phone { display: none; }
+@media (max-width: 900px) { .gb-auth-logo-phone { display: flex; } }

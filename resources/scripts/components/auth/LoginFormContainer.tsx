@@ -20,6 +20,17 @@ export default forwardRef<HTMLFormElement, Props>(({ title, subtitle, ...props }
         <div className={'gb-auth'}>
             <div className={'gb-auth-split'}>
                 <section className={'gb-auth-pitch'}>
+                    <div className={'gb-auth-logo gb-auth-logo-desktop'}>
+                        <img
+                            src={logo || '/themes/gobia/img/logo-text-240.png?v=4'}
+                            srcSet={
+                                logo
+                                    ? undefined
+                                    : '/themes/gobia/img/logo-text-240.png?v=4 1x, /themes/gobia/img/logo-text-480.png?v=4 2x'
+                            }
+                            alt={name}
+                        />
+                    </div>
                     <div>
                         <h2>Your servers, wherever you are.</h2>
                         <p>Start, watch and manage every instance from one place.</p>
@@ -27,7 +38,7 @@ export default forwardRef<HTMLFormElement, Props>(({ title, subtitle, ...props }
                     </div>
                 </section>
                 <main className={'gb-auth-main'}>
-                    <div className={'gb-auth-logo'}>
+                    <div className={'gb-auth-logo gb-auth-logo-phone'}>
                         <img
                             src={logo || '/themes/gobia/img/logo-text-240.png?v=4'}
                             srcSet={
