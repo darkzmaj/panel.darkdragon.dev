@@ -926,3 +926,4 @@ div.gb-file-details { cursor: default; }
 .gb-drag-ghost { position: fixed; top: -100px; left: -100px; max-width: 240px; padding: 8px 14px; border-radius: 10px; background: var(--gb-primary); color: var(--gb-primary-fg); font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: var(--gb-shadow-pop); }
 .gb-file-row.drop-ok, .gb-tree-row.drop-ok { transition: background var(--gb-duration), box-shadow var(--gb-duration); }
 .gb-dropzone > div { transition: transform var(--gb-duration); }
+.gb-main-inner { min-width: 0; overflow-x: clip; }
