@@ -90,7 +90,7 @@ class TemplateSftpService
         $credential = TemplateSftpCredential::query()->where('username', $username)->first();
 
         // Always do the hash comparison, so a missing user costs the same time as a wrong password.
-        $valid = Hash::check($password, $credential?->password_hash ?? Hash::make(Str::random(16)));
+        $valid = Hash::check($password, $credential->password_hash ?? Hash::make(Str::random(16)));
         if (!$credential || !$valid || !$credential->isActive()) {
             RateLimiter::hit($ipKey, self::LOCKOUT_SECONDS);
             RateLimiter::hit($userKey, self::LOCKOUT_SECONDS);

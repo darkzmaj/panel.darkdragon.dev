@@ -78,12 +78,12 @@ class NodeStatsService
                 'instances_running' => $probe['running'] ?? null,
                 'ram' => [
                     'total' => (int) $node->memory * 1024 * 1024,
-                    'allocated' => (int) $node->allocated_memory * 1024 * 1024,
+                    'allocated' => (int) $node->getAttribute('allocated_memory') * 1024 * 1024,
                     'used' => $probe['memory_bytes'] ?? null,
                 ],
                 'storage' => [
                     'total' => (int) $node->disk * 1024 * 1024,
-                    'allocated' => (int) $node->allocated_disk * 1024 * 1024,
+                    'allocated' => (int) $node->getAttribute('allocated_disk') * 1024 * 1024,
                     'used' => $probe['disk_bytes'] ?? null,
                 ],
                 // 100 % means every core is fully busy. Null when the node did not report both numbers.

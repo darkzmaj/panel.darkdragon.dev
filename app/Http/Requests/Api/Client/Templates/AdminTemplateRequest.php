@@ -12,6 +12,6 @@ class AdminTemplateRequest extends ClientApiRequest
 {
     public function authorize(): bool
     {
-        return (bool) $this->user()?->root_admin;
+        return (bool) $this->user()->root_admin;
     }
 }

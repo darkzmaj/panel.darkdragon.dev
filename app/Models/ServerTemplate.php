@@ -45,6 +45,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
  * @property Egg $egg
  * @property Nest $nest
  * @property Node|null $node
+ * @property Location|null $location
  * @property \Illuminate\Database\Eloquent\Collection<int, Node> $allowedNodes
  * @property \Illuminate\Database\Eloquent\Collection<int, ServerTemplateFile> $files
  * @property \Illuminate\Database\Eloquent\Collection<int, TemplateInstance> $instances

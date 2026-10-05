@@ -315,7 +315,7 @@ class TemplateService
     {
         $working = $this->files->scan($template);
         $published = $template->files()->get()->keyBy('path');
-        $publishedAt = $template->published_at?->timestamp ?? 0;
+        $publishedAt = $template->published_at->timestamp ?? 0;
 
         $added = $modified = [];
         $seen = [];

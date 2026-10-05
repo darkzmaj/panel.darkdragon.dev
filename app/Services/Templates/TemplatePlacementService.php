@@ -87,14 +87,14 @@ class TemplatePlacementService
 
             // An overallocation of -1 means the administrator turned the limit check off for this node.
             $memoryCapacity = $node->memory * (1 + max(0, $node->memory_overallocate) / 100);
-            $usedMemory = (int) ($usage->get($node->id)?->memory ?? 0);
+            $usedMemory = (int) ($usage->get($node->id)->memory ?? 0);
             if ($memory > 0 && $node->memory_overallocate >= 0 && $usedMemory + $memory > $memoryCapacity) {
                 $reasons[$node->name] = 'not enough memory';
                 continue;
             }
 
             $diskCapacity = $node->disk * (1 + max(0, $node->disk_overallocate) / 100);
-            $usedDisk = (int) ($usage->get($node->id)?->disk ?? 0);
+            $usedDisk = (int) ($usage->get($node->id)->disk ?? 0);
             if ($disk > 0 && $node->disk_overallocate >= 0 && $usedDisk + $disk > $diskCapacity) {
                 $reasons[$node->name] = 'not enough disk space';
                 continue;
