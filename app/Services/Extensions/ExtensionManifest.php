@@ -14,6 +14,7 @@ class ExtensionManifest
     public const string UI_ENTRY = 'dist/client.js';
 
     public const array COMPONENT_NAMES = [
+        'dashboard.page',
         'dashboard.serverCard',
         'server.files.details',
         'server.files.editor',

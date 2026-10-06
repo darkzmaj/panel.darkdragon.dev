@@ -517,6 +517,7 @@
                     "uniqueItems": true,
                     "items": {
                         "enum": [
+                            "dashboard.page",
                             "dashboard.serverCard",
                             "server.files.details",
                             "server.files.editor",

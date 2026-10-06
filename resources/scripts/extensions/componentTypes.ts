@@ -2,6 +2,7 @@ import { isObject } from '@/lib/objects';
 import type { ComponentType } from 'react';
 
 export const COMPONENT_NAMES = [
+    'dashboard.page',
     'dashboard.serverCard',
     'server.files.details',
     'server.files.editor',
@@ -41,6 +42,10 @@ export interface ServerCardModel {
     readonly description: string | null;
     readonly address: string | null;
     readonly state: ServerCardState;
+}
+/** The whole dashboard page below the navigation bar; the replacement owns its queries, so core runs none while it is active. */
+export interface DashboardPageModel {
+    readonly rootAdmin: boolean;
 }
 export interface FileDetailsModel {
     readonly name: string;
@@ -127,12 +132,14 @@ export interface FileManagerModel {
     readonly actions: FileManagerActions;
 }
 export interface ComponentModels {
+    'dashboard.page': DashboardPageModel;
     'dashboard.serverCard': ServerCardModel;
     'server.files.details': FileDetailsModel;
     'server.files.editor': FileEditorModel;
     'server.files.manager': FileManagerModel;
 }
 export interface ComponentPartNames {
+    'dashboard.page': never;
     'dashboard.serverCard': 'identity' | 'address' | 'metrics';
     'server.files.details': 'icon' | 'name' | 'size' | 'modified';
     'server.files.editor': 'notice' | 'editor' | 'language' | 'actions';

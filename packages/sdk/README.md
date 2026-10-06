@@ -503,6 +503,7 @@ export default definePterodactylExtension({
 
 | Name | Model | Parts |
 | --- | --- | --- |
+| `dashboard.page` | `DashboardPageModel` | none (a full replacement) |
 | `dashboard.serverCard` | `ServerCardModel` | `identity`, `address`, `metrics` |
 | `server.files.details` | `FileDetailsModel` | `icon`, `name`, `size`, `modified` |
 | `server.files.editor` | `FileEditorModel` | `notice`, `editor`, `language`, `actions` |

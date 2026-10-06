@@ -1,5 +1,6 @@
 import { ComponentReplacementSession } from '@/extensions/componentSession';
-import { useEffect } from 'react';
+import ComponentView from '@/extensions/ComponentView';
+import { useEffect, useMemo } from 'react';
 import { httpErrorToHuman } from '@/api/http';
 import { Server } from 'lucide-react';
 import ServerRow from '@/components/dashboard/ServerRow';
@@ -121,9 +122,19 @@ function DashboardContainerContent() {
 }
 
 export default function DashboardContainer() {
+    const { rootAdmin } = useCurrentUser();
+    const model = useMemo(() => ({ rootAdmin }), [rootAdmin]);
+
+    // `dashboard.page` lets an extension own the whole page. The native content (and its queries) only mounts when
+    // nothing replaces it or the replacement fails.
     return (
         <ComponentReplacementSession>
-            <DashboardContainerContent />
+            <ComponentView
+                name='dashboard.page'
+                resetKey='dashboard'
+                props={{ model, Default: DashboardContainerContent, parts: {} }}
+                loading={<Spinner centered size={'large'} />}
+            />
         </ComponentReplacementSession>
     );
 }

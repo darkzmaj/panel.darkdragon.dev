@@ -250,7 +250,7 @@ test('rejects navigation missing defaults or declaring parameters outside its ro
 test('preserves declared component replacements for bootstrap', function (): void {
     writeManifest(['id' => 'views', 'name' => 'Views', 'version' => '1.0.0', 'requires' => ['sdk' => '>=2.0.0-beta.3 <3.0'], 'ui' => ['entry' => 'dist/client.js', 'components' => ExtensionManifest::COMPONENT_NAMES]]);
 
-    expect((new ExtensionManifestValidator)->fromDirectory($this->directory)->components)->toBe(['dashboard.serverCard', 'server.files.details', 'server.files.editor', 'server.files.manager']);
+    expect((new ExtensionManifestValidator)->fromDirectory($this->directory)->components)->toBe(ExtensionManifest::COMPONENT_NAMES);
 });
 
 test('rejects unsupported duplicate or malformed replacement declarations', function (array $components): void {

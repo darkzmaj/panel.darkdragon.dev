@@ -6,6 +6,7 @@ import { DefaultFileManager, FileManagerContext, fileManagerParts } from '@/comp
 import type {
     ComponentName,
     ReplacementProps,
+    DashboardPageModel,
     ServerCardModel,
     FileDetailsModel,
     FileEditorModel,
@@ -325,6 +326,7 @@ export interface ComponentTestHost<TName extends ComponentName> {
     dispose(): void;
 }
 interface ComponentTestModels {
+    'dashboard.page': DashboardPageModel;
     'dashboard.serverCard': ServerCardModel;
     'server.files.details': FileDetailsModel;
     'server.files.editor': FileEditorModel;
@@ -345,6 +347,13 @@ export function createComponentTestHost(
     function Context({ children }: { children?: ReactNode }) {
         const context = useMemo(() => ({ extensionId, context: `component "${name}" test host` }), []);
         return <ExtensionContext.Provider value={context}>{children}</ExtensionContext.Provider>;
+    }
+    if (name === 'dashboard.page') {
+        const model = options.model as DashboardPageModel;
+        function DefaultPage() {
+            return null;
+        }
+        return { Wrapper: Context, props: { model, Default: DefaultPage, parts: {} }, dispose: noDispose };
     }
     if (name === 'dashboard.serverCard') {
         const model = options.model as ServerCardModel;
