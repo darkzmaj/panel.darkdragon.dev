@@ -12,7 +12,7 @@ use Pterodactyl\Models\User;
  * Gobia data attached to a panel user. Lives in the extension's own table so the core users table is never altered.
  *
  * @property int $user_id
- * @property string|null $avatar_hash
+ * @property string|null $avatar_file
  * @property string $theme
  * @property list<string>|null $recent_icon_colors
  */
@@ -26,7 +26,7 @@ class UserProfile extends Model
 
     public $incrementing = false;
 
-    protected $fillable = ['avatar_hash', 'theme', 'recent_icon_colors'];
+    protected $fillable = ['avatar_file', 'theme', 'recent_icon_colors'];
 
     protected $attributes = ['theme' => 'system'];
 

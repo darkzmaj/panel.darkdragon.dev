@@ -15,6 +15,34 @@ export function logoRule(url: string): string {
     ].join('\n');
 }
 
+/** The navigation avatar link is the only anchor labelled "Account Settings"; its generated SVG is hidden behind the picture. */
+export function avatarRule(url: string): string {
+    if (url.length > 200 || !SAFE_PATH.test(url)) return '';
+    return [
+        `a[aria-label='Account Settings'] > span { background: url("${url}") center / cover no-repeat; border-radius: 9999px; }`,
+        "a[aria-label='Account Settings'] > span > svg { visibility: hidden; }",
+    ].join('\n');
+}
+
+function writeStyle(id: string, rule: string): void {
+    let style = document.getElementById(id);
+    if (!rule) {
+        style?.remove();
+        return;
+    }
+    if (!style) {
+        style = document.createElement('style');
+        style.id = id;
+        document.head.appendChild(style);
+    }
+    style.textContent = rule;
+}
+
+/** Shows the user's uploaded avatar in the navigation bar, or restores the generated one for an empty value. */
+export function applyAvatar(url: string | null): void {
+    writeStyle('gobia-avatar', url ? avatarRule(url) : '');
+}
+
 export function applyLogo(url: string): void {
     const rule = logoRule(url);
     let style = document.getElementById(STYLE_ID);

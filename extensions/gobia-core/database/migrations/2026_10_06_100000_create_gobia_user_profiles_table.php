@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('gobia_user_profiles', function (Blueprint $table) {
             $table->unsignedInteger('user_id')->primary();
-            $table->string('avatar_hash', 16)->nullable();
+            $table->string('avatar_file', 64)->nullable();
             $table->string('theme', 8)->default('system');
             $table->json('recent_icon_colors')->nullable();
             $table->timestamps();

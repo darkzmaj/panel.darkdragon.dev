@@ -21,3 +21,4 @@ These make Gobia CI green on clean upstream. They are the same hunks as the pull
 | `app/Http/Requests/Api/Admin/Extensions/InstallExtensionRequest.php`, `app/Services/Extensions/ExtensionPackageLocator.php` | https://github.com/pterodactyl/panel/pull/7250 | Pint formatting fails upstream |
 | `app/Extensions/Illuminate/Auth/Passwords/PasswordBroker.php`, `PasswordBrokerManager.php`, `app/Http/Controllers/Api/Client/Servers/FileController.php` | https://github.com/pterodactyl/panel/pull/7251 | Rector changes reported under PHP 8.4 |
 | `scripts/generate-extension-openapi.php` | https://github.com/pterodactyl/panel/pull/7252 | `mb_trim()` is undefined on PHP 8.3 |
+| `packages/sdk/vite.mjs`, `packages/sdk/vite.spec.ts` | https://github.com/pterodactyl/panel/pull/7253 | Extension builds preload shared lazy chunks from the site root |

@@ -19,10 +19,24 @@
         "prefix": "gb",
         "screens": [
             {
+                "id": "profile",
+                "area": "account",
+                "path": "profile",
+                "nav": {
+                    "label": "Profile",
+                    "icon": "user-round",
+                    "order": 10
+                }
+            },
+            {
                 "id": "appearance",
                 "area": "account",
                 "path": "appearance",
-                "nav": { "label": "Appearance", "icon": "palette" }
+                "nav": {
+                    "label": "Appearance",
+                    "icon": "palette",
+                    "order": 90
+                }
             }
         ]
     }
