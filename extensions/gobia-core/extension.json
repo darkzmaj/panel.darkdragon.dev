@@ -38,6 +38,9 @@
                     "order": 90
                 }
             }
+        ],
+        "components": [
+            "dashboard.page"
         ]
     }
 }

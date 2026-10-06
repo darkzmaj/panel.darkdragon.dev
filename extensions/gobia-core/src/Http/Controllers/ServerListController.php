@@ -43,11 +43,13 @@ class ServerListController
                 'address' => $server->gobia_ip === null ? null : ($server->gobia_alias ?? $server->gobia_ip).':'.$server->gobia_port,
                 'is_owner' => (int) $server->owner_id === $user->id,
                 'status' => $server->status,
+                'limits' => ['memory' => (int) $server->memory, 'disk' => (int) $server->disk, 'cpu' => (int) $server->cpu],
                 'icon_color' => $server->gobia_color,
                 'categories' => $categories[$server->id] ?? [],
             ])->all(),
             'meta' => ['pagination' => [
                 'total' => $page->total(),
+                'count' => $page->count(),
                 'per_page' => $page->perPage(),
                 'current_page' => $page->currentPage(),
                 'total_pages' => $page->lastPage(),

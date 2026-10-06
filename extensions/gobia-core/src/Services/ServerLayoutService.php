@@ -53,7 +53,7 @@ class ServerLayoutService
         $query = $this->accessible($user)
             ->leftJoin('gobia_server_preferences as gp', fn ($join) => $join->on('gp.server_id', '=', 'servers.id')->where('gp.user_id', '=', $user->id))
             ->leftJoin('allocations as ga', 'ga.id', '=', 'servers.allocation_id')
-            ->select(['servers.id', 'servers.uuid', 'servers.uuidShort', 'servers.name', 'servers.description', 'servers.owner_id', 'servers.status', 'ga.ip as gobia_ip', 'ga.ip_alias as gobia_alias', 'ga.port as gobia_port', 'gp.position as gobia_position', 'gp.icon_color as gobia_color']);
+            ->select(['servers.id', 'servers.uuid', 'servers.uuidShort', 'servers.name', 'servers.description', 'servers.owner_id', 'servers.status', 'servers.memory', 'servers.disk', 'servers.cpu', 'ga.ip as gobia_ip', 'ga.ip_alias as gobia_alias', 'ga.port as gobia_port', 'gp.position as gobia_position', 'gp.icon_color as gobia_color']);
 
         match ($view) {
             'you' => $query->where('servers.owner_id', $user->id),
