@@ -1,0 +1,18 @@
+{
+  "name": "gobia-template-sftp",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SFTP access to the working files of a single Gobia Panel server template, jailed to that template.",
+  "license": "MIT",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test test/sftp.test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "ssh2": "^1.16.0"
+  }
+}
