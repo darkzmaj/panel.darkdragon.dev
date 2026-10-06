@@ -1,0 +1,29 @@
+{
+    "id": "gobia-core",
+    "name": "Gobia Core",
+    "version": "1.0.0",
+    "description": "Gobia branding, profile, appearance, access, server organization, admin overview and updates.",
+    "author": "Gobia",
+    "requires": {
+        "panel": "^2.0.0-dev",
+        "sdk": ">=2.0.0-beta.4 <3.0",
+        "php": "^8.3"
+    },
+    "provider": "GobiaCore\\GobiaCoreProvider",
+    "autoload": {
+        "GobiaCore\\": "src"
+    },
+    "ui": {
+        "entry": "dist/client.js",
+        "mode": "native",
+        "prefix": "gb",
+        "screens": [
+            {
+                "id": "appearance",
+                "area": "account",
+                "path": "appearance",
+                "nav": { "label": "Appearance", "icon": "palette" }
+            }
+        ]
+    }
+}

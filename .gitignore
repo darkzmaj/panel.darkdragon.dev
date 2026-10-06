@@ -44,8 +44,9 @@ result
 # Extension example build output
 /examples/*/dist
 
-# Local extension development checkouts
-/extensions/
+# Local extension development checkouts (Gobia extensions under extensions/gobia-* are tracked; see docs/gobia-core-patches.md)
+/extensions/*
+!/extensions/gobia-*
 
 # Generated SDK test host bundles
 /packages/sdk/testing-runtime/
