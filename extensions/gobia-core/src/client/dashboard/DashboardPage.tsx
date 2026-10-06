@@ -12,6 +12,7 @@ import {
 } from '@pterodactyl/sdk';
 import { Search, Settings2 } from 'lucide-react';
 import { useDeferredValue, useMemo, useState } from 'react';
+import CreateInstanceDialog from '../create/CreateInstanceDialog';
 import { AddToCategoryDialog, ManageCategoriesDialog } from './CategoryDialogs';
 import IconColorDialog from './IconColorDialog';
 import InstanceRow from './InstanceRow';
@@ -62,6 +63,7 @@ export default function DashboardPage({ model }: ReplacementProps<'dashboard.pag
     const [colorFor, setColorFor] = useState<Instance | null>(null);
     const [categoriesFor, setCategoriesFor] = useState<Instance | null>(null);
     const [managing, setManaging] = useState(false);
+    const [creating, setCreating] = useState(false);
     const q = useDeferredValue(search);
 
     const params = useMemo(() => ({ view, category, q, page }), [view, category, q, page]);
@@ -113,14 +115,15 @@ export default function DashboardPage({ model }: ReplacementProps<'dashboard.pag
                         />
                     </label>
                     {model.rootAdmin && (
-                        <PanelLink
-                            destination={{ to: '/panel/servers/new' }}
+                        <button
+                            type={'button'}
+                            onClick={() => setCreating(true)}
                             className={
-                                'gb:rounded-md gb:bg-primary gb:px-3 gb:py-2 gb:text-sm gb:font-medium gb:text-primary-foreground gb:no-underline'
+                                'gb:rounded-md gb:bg-primary gb:px-3 gb:py-2 gb:text-sm gb:font-medium gb:text-primary-foreground'
                             }
                         >
                             Create instance
-                        </PanelLink>
+                        </button>
                     )}
                 </div>
             </div>
@@ -261,6 +264,7 @@ export default function DashboardPage({ model }: ReplacementProps<'dashboard.pag
                     onClose={() => setCategoriesFor(null)}
                 />
             )}
+            {creating && <CreateInstanceDialog onClose={() => setCreating(false)} />}
             {managing && (
                 <ManageCategoriesDialog categories={summary?.categories ?? []} onClose={() => setManaging(false)} />
             )}
