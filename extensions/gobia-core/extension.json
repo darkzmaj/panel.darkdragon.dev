@@ -47,6 +47,16 @@
                     "icon": "palette",
                     "order": 90
                 }
+            },
+            {
+                "id": "updates",
+                "area": "admin",
+                "path": "updates",
+                "nav": {
+                    "label": "Updates",
+                    "icon": "refresh-cw",
+                    "order": 90
+                }
             }
         ],
         "components": [

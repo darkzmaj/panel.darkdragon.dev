@@ -50,12 +50,12 @@ Legend for "Core or Extension": `Ext` extension API only, `Theme` design tokens,
 | 33 | Mobile files (drawer, tabs, bottom sheets) | `FileWorkspace` mobile CSS | gobia-files | Ext | no | yes | no | responsive | Todo | |
 | 34 | Server timing telemetry, query log, perf budgets | `ServerTiming`, `PerfTimings`, `check-bundle-budget.js` | gobia-core dev tooling + CI structural budgets | Ext | no | no | yes | yes | Todo | |
 | 35 | Wings HTTP client reuse | `DaemonRepository` | re-evaluate against 2.0 | Core? | no | no | maybe | yes | Todo | Port only if still useful |
-| 36 | Updater (1.x implementation) | `app/Services/Updater/*`, `UpdateController`, `docs/updates.md` | **Not ported**: Gobia Updates frontend + contract only; privileged updater is Majcek's | Ext | no | yes | contract | yes | Todo | See `MAJCEK_HANDOFF.md` |
+| 36 | Updater (1.x implementation) | `app/Services/Updater/*`, `UpdateController`, `docs/updates.md` | **Not ported**: Gobia Updates frontend + contract only; privileged updater is Majcek's | Ext | no | yes | contract | yes | Done (frontend and read only compatibility API; privileged updater is Majcek's) | See `MAJCEK_HANDOFF.md` |
 | 37 | Gobia footer / branding footer | `FooterService`, `GobiaFooter` | gobia-core slot | Ext | no | yes | yes | yes | Todo | |
 | 38 | Login page (split layout, interactive preview, logo in left half, mobile logo above form) | `LoginFormContainer`, `AuthPreview` | 2.0 auth screen restyle via tokens/slots | Theme / Ext / Core? | no | yes | no | yes | Todo | Auth screens may need a core patch |
 | 39 | Notification bell, toasts, shell | `NotificationBell`, `Toaster`, `AppShell` | use 2.0 `sonner` and shell | n/a | no | no | no | n/a | Dropped (2.0 provides) | Verify |
 | 40 | Existing 1.x database upgrade | custom migrations (8 files listed above) | migration tooling + fixture test | n/a | yes | no | yes | yes | Todo | Preserve avatars, usernames, branding, categories, order, colours, access, templates |
-| 41 | Gobia version metadata + compatibility API | none | gobia-core | Ext | no | yes | yes | yes | Todo | Feeds updater preflight |
-| 42 | Gobia Updates frontend | none | gobia-core admin screen | Ext | no | yes | contract | yes | Todo | Update button gate rule |
+| 41 | Gobia version metadata + compatibility API | none | gobia-core | Ext | no | yes | yes | yes | Done (frontend and read only compatibility API; privileged updater is Majcek's) | Feeds updater preflight |
+| 42 | Gobia Updates frontend | none | gobia-core admin screen | Ext | no | yes | contract | yes | Done (frontend and read only compatibility API; privileged updater is Majcek's) | Update button gate rule |
 
 Last updated at migration start. Update statuses as work lands; do not mark `Done` without tests.

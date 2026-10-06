@@ -2,7 +2,7 @@
 
 The Gobia Updates screen (admin area, part of the `gobia-core` extension) talks only to the endpoints below. Majcek implements the
 privileged backend. The frontend never executes shell commands and never decides compatibility itself; it renders what the backend
-reports. Prefix: `/api/application/extensions/gobia-core/updates` (final path to be confirmed against the 2.0 extension route helpers).
+reports. Prefix: `/api/admin/extensions/gobia-core/updates` (admin extension routes: root administrator session or admin API key). Already implemented by gobia-core and read only: `GET /api/admin/extensions/gobia-core/compatibility`.
 All endpoints require a root admin session or an application API key with the `gobia.updates` permission, and use the standard throttle.
 
 Status: DRAFT contract. Payloads may gain fields; removals need a version bump (`contract_version`).

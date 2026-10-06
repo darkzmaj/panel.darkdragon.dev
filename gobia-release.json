@@ -1,0 +1,12 @@
+{
+    "gobia_version": "2.0.0-dev",
+    "pterodactyl_base": {
+        "branch": "2.0-develop",
+        "commit": "240aaf62ea53b1d6956a643a872f44d2f5956031"
+    },
+    "min_upgrade_from": null,
+    "php": ">=8.3 <8.6",
+    "database": { "server": ["mariadb>=10.5", "mysql>=8.0"], "redis": "optional" },
+    "post_install": ["php artisan p:theme:apply gobia", "php artisan migrate --force", "php artisan p:extension:enable gobia-core"],
+    "security_update": false
+}
