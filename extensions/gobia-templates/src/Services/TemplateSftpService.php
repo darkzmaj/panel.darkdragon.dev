@@ -1,16 +1,18 @@
 <?php
 
+declare(strict_types=1);
+
 namespace GobiaTemplates\Services;
 
+use GobiaTemplates\Models\ServerTemplate;
+use GobiaTemplates\Models\TemplateSftpCredential;
 use Illuminate\Support\Arr;
-use Illuminate\Support\Str;
-use Pterodactyl\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use GobiaTemplates\Models\ServerTemplate;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
 use Pterodactyl\Exceptions\DisplayException;
-use GobiaTemplates\Models\TemplateSftpCredential;
+use Pterodactyl\Models\User;
 
 /**
  * SFTP access to a template's working files.
@@ -23,12 +25,12 @@ class TemplateSftpService
 {
     /** Failed logins allowed from one address, and for one username, before further attempts are refused. */
     public const MAX_FAILURES_PER_IP = 10;
+
     public const MAX_FAILURES_PER_USERNAME = 5;
+
     public const LOCKOUT_SECONDS = 900;
 
-    public function __construct(private TemplateService $templates)
-    {
-    }
+    public function __construct(private TemplateService $templates) {}
 
     /**
      * Creates a credential and returns it together with the plain secret, which cannot be retrieved afterwards.
@@ -39,7 +41,7 @@ class TemplateSftpService
      */
     public function create(ServerTemplate $template, ?User $by, string $permission, ?int $expiresInDays, ?string $label): array
     {
-        if (!in_array($permission, [TemplateSftpCredential::READ_WRITE, TemplateSftpCredential::READ_ONLY], true)) {
+        if (! in_array($permission, [TemplateSftpCredential::READ_WRITE, TemplateSftpCredential::READ_ONLY], true)) {
             throw new DisplayException('Unknown permission.');
         }
         $max = (int) config('gobia_templates.sftp.max_credential_days');
@@ -65,7 +67,7 @@ class TemplateSftpService
 
     public function revoke(TemplateSftpCredential $credential): void
     {
-        if (!$credential->revoked_at) {
+        if (! $credential->revoked_at) {
             $credential->forceFill(['revoked_at' => now()])->save();
         }
     }
@@ -78,8 +80,8 @@ class TemplateSftpService
      */
     public function authenticate(string $username, string $password, string $ip): ?array
     {
-        $ipKey = 'template-sftp:ip:' . $ip;
-        $userKey = 'template-sftp:user:' . strtolower($username);
+        $ipKey = 'template-sftp:ip:'.$ip;
+        $userKey = 'template-sftp:user:'.mb_strtolower($username);
 
         if (RateLimiter::tooManyAttempts($ipKey, self::MAX_FAILURES_PER_IP) || RateLimiter::tooManyAttempts($userKey, self::MAX_FAILURES_PER_USERNAME)) {
             $this->log('rate_limited', null, $username, $ip);
@@ -91,7 +93,7 @@ class TemplateSftpService
 
         // Always do the hash comparison, so a missing user costs the same time as a wrong password.
         $valid = Hash::check($password, $credential->password_hash ?? Hash::make(Str::random(16)));
-        if (!$credential || !$valid || !$credential->isActive()) {
+        if (! $credential || ! $valid || ! $credential->isActive()) {
             RateLimiter::hit($ipKey, self::LOCKOUT_SECONDS);
             RateLimiter::hit($userKey, self::LOCKOUT_SECONDS);
             $this->log('login_failed', $credential, $username, $ip, $credential && $valid ? $credential->status() : null);
@@ -117,7 +119,7 @@ class TemplateSftpService
     public function sessionEnded(int $credentialId, int $filesChanged, int $bytesWritten, string $ip): void
     {
         $credential = TemplateSftpCredential::query()->with('template')->find($credentialId);
-        if (!$credential) {
+        if (! $credential) {
             return;
         }
         if ($filesChanged > 0) {
@@ -142,7 +144,7 @@ class TemplateSftpService
     private function newUsername(): string
     {
         do {
-            $username = 'tpl_' . Str::lower(Str::random(10));
+            $username = 'tpl_'.Str::lower(Str::random(10));
         } while (TemplateSftpCredential::query()->where('username', $username)->exists());
 
         return $username;

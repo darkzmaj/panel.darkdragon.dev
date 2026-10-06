@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace GobiaTemplates\Models;
 
 use Illuminate\Database\Eloquent\Model;
+
 /**
  * @property int $id
  * @property int $template_id

@@ -1,9 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace GobiaTemplates\Services;
 
-use Pterodactyl\Models\Server;
 use GobiaTemplates\Models\TemplateInstance;
+use Pterodactyl\Models\Server;
 
 /**
  * Expands placeholders in instance names, for example "SloBlock Hub %number%".
@@ -41,14 +43,14 @@ class TemplateNameService
         $parts = explode(self::NUMBER, $pattern);
 
         // One regex for the whole name. A repeated placeholder must be the same number each time, hence "\1".
-        $regex = '/^' . preg_quote($parts[0], '/');
+        $regex = '/^'.preg_quote($parts[0], '/');
         foreach (array_slice($parts, 1, null, true) as $index => $part) {
-            $regex .= ($index === 1 ? '(\d+)' : '\1') . preg_quote($part, '/');
+            $regex .= ($index === 1 ? '(\d+)' : '\1').preg_quote($part, '/');
         }
         $regex .= '$/u';
 
         // Narrow the candidates in SQL by the fixed text before the first placeholder, then match exactly in PHP.
-        $like = addcslashes($parts[0], '%_\\') . '%';
+        $like = addcslashes($parts[0], '%_\\').'%';
 
         $names = Server::query()->where('name', 'like', $like)->pluck('name')
             ->merge(

@@ -332,7 +332,7 @@ class AdminTemplateController
             'cpu' => $template->cpu,
             'placement_mode' => $template->placement_mode,
             'temporary' => $template->temporary,
-            'instances' => (int) ($template->getAttribute('instances_count') ?? 0),
+            'instances' => (int) ($template->getAttributes()['instances_count'] ?? 0),
             'published_at' => $template->published_at?->toIso8601String(),
         ];
     }

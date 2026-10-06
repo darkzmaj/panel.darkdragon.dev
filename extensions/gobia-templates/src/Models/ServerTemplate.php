@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace GobiaTemplates\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Pterodactyl\Models\Egg;
 use Pterodactyl\Models\Location;
 use Pterodactyl\Models\Node;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 /**
  * An admin-defined blueprint for creating servers. Distinct from an egg: the egg describes the
@@ -60,7 +60,9 @@ class ServerTemplate extends Model
     public const RESOURCE_NAME = 'server_template';
 
     public const PLACEMENT_FIXED = 'fixed_node';
+
     public const PLACEMENT_ALLOWED = 'allowed_nodes';
+
     public const PLACEMENT_ANY = 'any';
 
     protected $table = 'gobia_server_templates';
@@ -104,7 +106,6 @@ class ServerTemplate extends Model
         return $this->belongsTo(Egg::class);
     }
 
-
     public function node(): BelongsTo
     {
         return $this->belongsTo(Node::class);
@@ -121,7 +122,7 @@ class ServerTemplate extends Model
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany<ServerTemplateFile, $this>
+     * @return HasMany<ServerTemplateFile, $this>
      */
     public function files(): HasMany
     {
@@ -129,7 +130,7 @@ class ServerTemplate extends Model
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany<ServerTemplateVariable, $this>
+     * @return HasMany<ServerTemplateVariable, $this>
      */
     public function variables(): HasMany
     {
@@ -137,7 +138,7 @@ class ServerTemplate extends Model
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany<ServerTemplateRevision, $this>
+     * @return HasMany<ServerTemplateRevision, $this>
      */
     public function revisions(): HasMany
     {
@@ -145,7 +146,7 @@ class ServerTemplate extends Model
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany<TemplateSftpCredential, $this>
+     * @return HasMany<TemplateSftpCredential, $this>
      */
     public function sftpCredentials(): HasMany
     {
@@ -153,11 +154,10 @@ class ServerTemplate extends Model
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany<TemplateInstance, $this>
+     * @return HasMany<TemplateInstance, $this>
      */
     public function instances(): HasMany
     {
         return $this->hasMany(TemplateInstance::class, 'template_id');
     }
-
 }

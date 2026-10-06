@@ -25,14 +25,6 @@ class TemplateBrowserController
 
     public function __construct(private readonly TemplateInstanceService $instances, private readonly TemplateNameService $names) {}
 
-    private function admin(Request $request): User
-    {
-        $user = $request->user();
-        throw_unless($user instanceof User && $user->root_admin, AccessDeniedHttpException::class, 'Only administrators can create instances from templates.');
-
-        return $user;
-    }
-
     #[Endpoint('Browse enabled templates')]
     public function index(Request $request): JsonResponse
     {
@@ -113,6 +105,14 @@ class TemplateBrowserController
         return new JsonResponse(['data' => $users->map(fn (User $user): array => ['id' => $user->id, 'username' => $user->username, 'email' => $user->email])->values()->all()]);
     }
 
+    private function admin(Request $request): User
+    {
+        $user = $request->user();
+        throw_unless($user instanceof User && $user->root_admin, AccessDeniedHttpException::class, 'Only administrators can create instances from templates.');
+
+        return $user;
+    }
+
     /** @return array<string, mixed> */
     private function summary(ServerTemplate $template): array
     {
@@ -138,7 +138,7 @@ class TemplateBrowserController
             'location' => $template->location?->short,
             'lifecycle' => ['start_automatically' => $template->start_automatically, 'temporary' => $template->temporary, 'ttl_minutes' => $template->ttl_minutes],
             'tags' => array_values(array_filter([...$eggTags, $template->temporary ? 'Temporary' : 'Persistent', $template->start_automatically ? 'Auto start' : null])),
-            'instances_count' => (int) ($template->getAttribute('instances_count') ?? 0),
+            'instances_count' => (int) ($template->getAttributes()['instances_count'] ?? 0),
             'files_count' => (int) ($template->getAttribute('files_count') ?? 0),
             'files_size' => (int) ($template->getAttribute('files_size') ?? 0),
         ];

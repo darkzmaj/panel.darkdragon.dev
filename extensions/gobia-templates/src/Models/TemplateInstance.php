@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace GobiaTemplates\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Pterodactyl\Models\Server;
 use Pterodactyl\Models\User;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * One request to create a server from a template, tracked through the provisioning pipeline.
@@ -39,12 +39,19 @@ class TemplateInstance extends Model
     public const RESOURCE_NAME = 'template_instance';
 
     public const STATE_QUEUED = 'queued';
+
     public const STATE_ALLOCATING = 'allocating';
+
     public const STATE_CREATING = 'creating';
+
     public const STATE_INSTALLING = 'installing';
+
     public const STATE_DEPLOYING_FILES = 'deploying_files';
+
     public const STATE_STARTING = 'starting';
+
     public const STATE_READY = 'ready';
+
     public const STATE_FAILED = 'failed';
 
     protected $table = 'gobia_template_instances';

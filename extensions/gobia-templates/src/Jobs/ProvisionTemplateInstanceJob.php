@@ -1,14 +1,17 @@
 <?php
 
+declare(strict_types=1);
+
 namespace GobiaTemplates\Jobs;
 
-use Illuminate\Support\Facades\Cache;
 use GobiaTemplates\Models\TemplateInstance;
-use Illuminate\Foundation\Queue\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Queue\Attributes\WithoutRelations;
-use Illuminate\Queue\Attributes\DeleteWhenMissingModels;
 use GobiaTemplates\Services\TemplateProvisioningService;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Queue\Attributes\DeleteWhenMissingModels;
+use Illuminate\Queue\Attributes\WithoutRelations;
+use Illuminate\Support\Facades\Cache;
+use Throwable;
 
 /**
  * Drives one template instance through the provisioning pipeline. Each run performs as many immediate steps as
@@ -34,8 +37,8 @@ class ProvisionTemplateInstanceJob implements ShouldQueue
     public function handle(TemplateProvisioningService $service): void
     {
         // Two workers must never advance the same instance at once (a duplicate dispatch would otherwise create two servers).
-        $lock = Cache::lock('provision-template-instance:' . $this->instance->uuid, 300);
-        if (!$lock->get()) {
+        $lock = Cache::lock('provision-template-instance:'.$this->instance->uuid, 300);
+        if (! $lock->get()) {
             self::dispatch($this->instance)->delay(5);
 
             return;
@@ -48,10 +51,18 @@ class ProvisionTemplateInstanceJob implements ShouldQueue
         }
     }
 
+    public function failed(Throwable $exception): void
+    {
+        $instance = $this->instance->refresh();
+        if (! $instance->isFinished()) {
+            app(TemplateProvisioningService::class)->fail($instance, $exception);
+        }
+    }
+
     private function run(TemplateProvisioningService $service): void
     {
         // A bounded number of immediate steps per run guards against a bug turning into an endless loop.
-        for ($i = 0; $i < 10; ++$i) {
+        for ($i = 0; $i < 10; $i++) {
             $delay = $service->advance($this->instance);
             if ($delay === null) {
                 return;
@@ -64,13 +75,5 @@ class ProvisionTemplateInstanceJob implements ShouldQueue
         }
 
         self::dispatch($this->instance)->delay(1);
-    }
-
-    public function failed(\Throwable $exception): void
-    {
-        $instance = $this->instance->refresh();
-        if (!$instance->isFinished()) {
-            app(TemplateProvisioningService::class)->fail($instance, $exception);
-        }
     }
 }

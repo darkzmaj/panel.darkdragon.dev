@@ -1,16 +1,18 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Pterodactyl\Tests\Integration\Gobia\Templates;
 
-use Pterodactyl\Models\User;
+use GobiaTemplates\Models\TemplateSftpCredential;
+use GobiaTemplates\Services\TemplateSftpService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Pterodactyl\Exceptions\DisplayException;
-use GobiaTemplates\Models\TemplateSftpCredential;
-use Pterodactyl\Tests\Integration\Http\HttpTestCase;
-use GobiaTemplates\Services\TemplateSftpService;
+use Pterodactyl\Models\User;
 use Pterodactyl\Tests\Integration\Gobia\BuildsTemplates;
+use Pterodactyl\Tests\Integration\Http\HttpTestCase;
 
 class TemplateSftpServiceTest extends HttpTestCase
 {
@@ -18,7 +20,7 @@ class TemplateSftpServiceTest extends HttpTestCase
 
     private const TOKEN = 'a-very-long-shared-secret-for-the-sftp-service-0123456789';
 
-    public function setUp(): void
+    protected function setUp(): void
     {
         parent::setUp();
 
@@ -28,7 +30,7 @@ class TemplateSftpServiceTest extends HttpTestCase
         RateLimiter::clear('template-sftp:ip:10.0.0.1');
     }
 
-    public function tearDown(): void
+    protected function tearDown(): void
     {
         DB::statement('SET FOREIGN_KEY_CHECKS=0');
         DB::table('gobia_template_sftp_events')->where('id', '>', 0)->delete();
@@ -39,18 +41,13 @@ class TemplateSftpServiceTest extends HttpTestCase
         parent::tearDown();
     }
 
-    private function sftp(): TemplateSftpService
-    {
-        return app(TemplateSftpService::class);
-    }
-
-    public function testSecretsAreRandomShownOnceAndStoredHashed(): void
+    public function test_secrets_are_random_shown_once_and_stored_hashed(): void
     {
         $template = $this->makeTemplate();
         [$a, $secretA] = $this->sftp()->create($template, null, 'rw', 30, 'deploys');
         [$b, $secretB] = $this->sftp()->create($template, null, 'ro', null, null);
 
-        $this->assertSame(32, strlen($secretA));
+        $this->assertSame(32, mb_strlen($secretA));
         $this->assertNotSame($secretA, $secretB);
         $this->assertNotSame($a->username, $b->username);
         $this->assertStringStartsWith('tpl_', $a->username);
@@ -59,7 +56,7 @@ class TemplateSftpServiceTest extends HttpTestCase
         $this->assertDatabaseMissing('gobia_template_sftp_credentials', ['password_hash' => $secretA]);
     }
 
-    public function testALoginOpensExactlyItsTemplateWithItsPermission(): void
+    public function test_a_login_opens_exactly_its_template_with_its_permission(): void
     {
         $one = $this->makeTemplate(['name' => 'One']);
         $two = $this->makeTemplate(['name' => 'Two']);
@@ -77,7 +74,7 @@ class TemplateSftpServiceTest extends HttpTestCase
         $this->assertDatabaseHas('gobia_template_sftp_events', ['credential_id' => $cred->id, 'event' => 'login']);
     }
 
-    public function testWrongRevokedAndExpiredCredentialsAreRefused(): void
+    public function test_wrong_revoked_and_expired_credentials_are_refused(): void
     {
         $template = $this->makeTemplate();
         [$cred, $secret] = $this->sftp()->create($template, null, 'rw', 5, null);
@@ -97,28 +94,28 @@ class TemplateSftpServiceTest extends HttpTestCase
         $this->assertSame('revoked', $cred->refresh()->status());
     }
 
-    public function testRepeatedFailuresLockTheUsernameAndTheAddress(): void
+    public function test_repeated_failures_lock_the_username_and_the_address(): void
     {
         $template = $this->makeTemplate();
         [$cred, $secret] = $this->sftp()->create($template, null, 'rw', 5, null);
-        RateLimiter::clear('template-sftp:user:' . $cred->username);
+        RateLimiter::clear('template-sftp:user:'.$cred->username);
 
-        for ($i = 0; $i < TemplateSftpService::MAX_FAILURES_PER_USERNAME; ++$i) {
-            $this->assertNull($this->sftp()->authenticate($cred->username, 'guess' . $i, '10.0.1.' . $i));
+        for ($i = 0; $i < TemplateSftpService::MAX_FAILURES_PER_USERNAME; $i++) {
+            $this->assertNull($this->sftp()->authenticate($cred->username, 'guess'.$i, '10.0.1.'.$i));
         }
 
         // Even the right password is refused while the username is locked, whatever the address.
         $this->assertNull($this->sftp()->authenticate($cred->username, $secret, '10.0.1.99'));
         $this->assertDatabaseHas('gobia_template_sftp_events', ['event' => 'rate_limited', 'username' => $cred->username]);
 
-        RateLimiter::clear('template-sftp:user:' . $cred->username);
-        for ($i = 0; $i < TemplateSftpService::MAX_FAILURES_PER_IP; ++$i) {
-            $this->sftp()->authenticate('tpl_nobody' . $i, 'x', '10.9.9.9');
+        RateLimiter::clear('template-sftp:user:'.$cred->username);
+        for ($i = 0; $i < TemplateSftpService::MAX_FAILURES_PER_IP; $i++) {
+            $this->sftp()->authenticate('tpl_nobody'.$i, 'x', '10.9.9.9');
         }
         $this->assertNull($this->sftp()->authenticate($cred->username, $secret, '10.9.9.9'), 'one address cannot keep guessing');
     }
 
-    public function testCredentialLimitsAreValidated(): void
+    public function test_credential_limits_are_validated(): void
     {
         $template = $this->makeTemplate();
 
@@ -133,7 +130,7 @@ class TemplateSftpServiceTest extends HttpTestCase
         $this->assertSame(0, $template->sftpCredentials()->count());
     }
 
-    public function testAFinishedSessionMarksTheWorkingTreeChanged(): void
+    public function test_a_finished_session_marks_the_working_tree_changed(): void
     {
         $template = $this->makeTemplate();
         [$cred] = $this->sftp()->create($template, null, 'rw', 5, null);
@@ -146,7 +143,7 @@ class TemplateSftpServiceTest extends HttpTestCase
         $this->assertNotNull($template->refresh()->working_changed_at);
     }
 
-    public function testTheInternalEndpointsNeedTheServiceToken(): void
+    public function test_the_internal_endpoints_need_the_service_token(): void
     {
         $template = $this->makeTemplate();
         [$cred, $secret] = $this->sftp()->create($template, null, 'rw', 5, null);
@@ -154,21 +151,21 @@ class TemplateSftpServiceTest extends HttpTestCase
 
         $this->postJson('/extensions/gobia-templates/internal/sftp/authenticate', $body)->assertForbidden();
         $this->postJson('/extensions/gobia-templates/internal/sftp/authenticate', $body, ['Authorization' => 'Bearer wrong'])->assertForbidden();
-        $this->postJson('/extensions/gobia-templates/internal/sftp/authenticate', $body, ['Authorization' => 'Bearer ' . self::TOKEN])
+        $this->postJson('/extensions/gobia-templates/internal/sftp/authenticate', $body, ['Authorization' => 'Bearer '.self::TOKEN])
             ->assertOk()->assertJsonPath('template', $template->uuid)->assertJsonPath('permission', 'rw');
-        $this->postJson('/extensions/gobia-templates/internal/sftp/authenticate', ['password' => 'x'] + $body, ['Authorization' => 'Bearer ' . self::TOKEN])
+        $this->postJson('/extensions/gobia-templates/internal/sftp/authenticate', ['password' => 'x'] + $body, ['Authorization' => 'Bearer '.self::TOKEN])
             ->assertStatus(401);
-        $this->postJson('/extensions/gobia-templates/internal/sftp/session', ['credential' => $cred->id, 'files_changed' => 2, 'bytes_written' => 10, 'ip' => '10.0.0.1'], ['Authorization' => 'Bearer ' . self::TOKEN])
+        $this->postJson('/extensions/gobia-templates/internal/sftp/session', ['credential' => $cred->id, 'files_changed' => 2, 'bytes_written' => 10, 'ip' => '10.0.0.1'], ['Authorization' => 'Bearer '.self::TOKEN])
             ->assertNoContent();
 
         // With no token configured (or a short, guessable one) the endpoints are closed completely.
         foreach (['', 'short'] as $configured) {
             config(['gobia_templates.sftp.service_token' => $configured]);
-            $this->postJson('/extensions/gobia-templates/internal/sftp/authenticate', $body, ['Authorization' => 'Bearer ' . $configured])->assertForbidden();
+            $this->postJson('/extensions/gobia-templates/internal/sftp/authenticate', $body, ['Authorization' => 'Bearer '.$configured])->assertForbidden();
         }
     }
 
-    public function testAdministratorsCreateAndRevokeCredentialsAndNeverSeeASecretAgain(): void
+    public function test_administrators_create_and_revoke_credentials_and_never_see_a_secret_again(): void
     {
         $admin = User::factory()->admin()->create();
         $template = $this->makeTemplate();
@@ -176,7 +173,7 @@ class TemplateSftpServiceTest extends HttpTestCase
 
         $created = $this->actingAs($admin)->postJson($base, ['permission' => 'ro', 'expires_in_days' => 7, 'label' => 'ci'])->assertCreated();
         $secret = $created->json('password');
-        $this->assertSame(32, strlen($secret));
+        $this->assertSame(32, mb_strlen($secret));
         $created->assertJsonPath('permission', 'ro');
 
         $listing = $this->actingAs($admin)->getJson($base)->assertOk();
@@ -196,5 +193,10 @@ class TemplateSftpServiceTest extends HttpTestCase
 
         $this->actingAs(User::factory()->create())->getJson($base)->assertForbidden();
         $this->assertInstanceOf(TemplateSftpCredential::class, $foreign);
+    }
+
+    private function sftp(): TemplateSftpService
+    {
+        return app(TemplateSftpService::class);
     }
 }

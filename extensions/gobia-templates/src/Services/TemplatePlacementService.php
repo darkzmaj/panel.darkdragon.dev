@@ -1,14 +1,16 @@
 <?php
 
+declare(strict_types=1);
+
 namespace GobiaTemplates\Services;
 
-use Pterodactyl\Models\Node;
-use Pterodactyl\Models\Server;
-use Pterodactyl\Models\Allocation;
+use GobiaCore\Services\NodeStatsService;
 use GobiaTemplates\Models\ServerTemplate;
 use GobiaTemplates\Models\TemplateInstance;
-use GobiaCore\Services\NodeStatsService;
 use GobiaTemplates\Support\PlacementException;
+use Pterodactyl\Models\Allocation;
+use Pterodactyl\Models\Node;
+use Pterodactyl\Models\Server;
 
 /**
  * Chooses the node and allocations for a new instance. See docs/server-templates.md for the full description.
@@ -23,7 +25,9 @@ use GobiaTemplates\Support\PlacementException;
 class TemplatePlacementService
 {
     public const WEIGHT_MEMORY = 0.5;
+
     public const WEIGHT_DISK = 0.3;
+
     public const WEIGHT_ALLOCATIONS = 0.2;
 
     private const ACTIVE_STATES = [
@@ -35,13 +39,10 @@ class TemplatePlacementService
         TemplateInstance::STATE_STARTING,
     ];
 
-    public function __construct(private NodeStatsService $stats)
-    {
-    }
+    public function __construct(private NodeStatsService $stats) {}
 
     /**
-     * @param array<string, mixed> $snapshot a template revision snapshot
-     *
+     * @param  array<string, mixed>  $snapshot  a template revision snapshot
      * @return array{node: Node, allocation_id: int, additional: int[], score: float}
      *
      * @throws PlacementException
@@ -78,10 +79,12 @@ class TemplatePlacementService
         foreach ($candidates as $node) {
             if ($node->maintenance_mode) {
                 $reasons[$node->name] = 'in maintenance mode';
+
                 continue;
             }
             if (($status[$node->id] ?? 'offline') !== 'online') {
                 $reasons[$node->name] = 'offline';
+
                 continue;
             }
 
@@ -90,6 +93,7 @@ class TemplatePlacementService
             $usedMemory = (int) ($usage->get($node->id)->memory ?? 0);
             if ($memory > 0 && $node->memory_overallocate >= 0 && $usedMemory + $memory > $memoryCapacity) {
                 $reasons[$node->name] = 'not enough memory';
+
                 continue;
             }
 
@@ -97,12 +101,14 @@ class TemplatePlacementService
             $usedDisk = (int) ($usage->get($node->id)->disk ?? 0);
             if ($disk > 0 && $node->disk_overallocate >= 0 && $usedDisk + $disk > $diskCapacity) {
                 $reasons[$node->name] = 'not enough disk space';
+
                 continue;
             }
 
             $free = (int) ($allocationTotals->get($node->id)?->getAttribute('free') ?? 0);
             if ($free < $needed) {
                 $reasons[$node->name] = 'not enough free allocations';
+
                 continue;
             }
 
@@ -121,7 +127,7 @@ class TemplatePlacementService
         if ($viable === []) {
             $summary = collect($reasons)->map(fn ($reason, $name) => "$name: $reason")->implode('; ');
 
-            throw new PlacementException('No node can host this template (' . $summary . ').', $reasons);
+            throw new PlacementException('No node can host this template ('.$summary.').', $reasons);
         }
 
         usort($viable, fn ($a, $b) => [$b['score'], $a['node']->id] <=> [$a['score'], $b['node']->id]);
@@ -140,8 +146,7 @@ class TemplatePlacementService
     /**
      * Free allocations on a node, preferred ports first (in the order they were listed), then by port.
      *
-     * @param int[] $preferred
-     *
+     * @param  int[]  $preferred
      * @return int[]
      */
     public function pickAllocations(Node $node, int $needed, array $preferred): array
@@ -159,8 +164,7 @@ class TemplatePlacementService
     }
 
     /**
-     * @param int[] $allowed
-     *
+     * @param  int[]  $allowed
      * @return \Illuminate\Support\Collection<int, Node>
      */
     private function candidates(array $settings, array $allowed)
@@ -178,7 +182,7 @@ class TemplatePlacementService
                 // "Any compatible node" only considers nodes the admin has made available for automatic deployment.
                 $query->where('public', true);
         }
-        if (!empty($settings['location_id'])) {
+        if (! empty($settings['location_id'])) {
             $query->where('location_id', $settings['location_id']);
         }
 
@@ -200,7 +204,7 @@ class TemplatePlacementService
             })->count();
 
         if ($count >= (int) $settings['max_instances']) {
-            throw new PlacementException('This template has reached its limit of ' . $settings['max_instances'] . ' instances.');
+            throw new PlacementException('This template has reached its limit of '.$settings['max_instances'].' instances.');
         }
     }
 }

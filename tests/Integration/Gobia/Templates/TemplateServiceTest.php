@@ -1,15 +1,17 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Pterodactyl\Tests\Integration\Gobia\Templates;
 
 use GobiaTemplates\Models\ServerTemplate;
 use GobiaTemplates\Models\TemplateInstance;
-use Pterodactyl\Exceptions\DisplayException;
-use Illuminate\Validation\ValidationException;
-use GobiaTemplates\Services\TemplateService;
 use GobiaTemplates\Services\TemplateFileStore;
-use Pterodactyl\Tests\Integration\IntegrationTestCase;
+use GobiaTemplates\Services\TemplateService;
+use Illuminate\Validation\ValidationException;
+use Pterodactyl\Exceptions\DisplayException;
 use Pterodactyl\Tests\Integration\Gobia\BuildsTemplates;
+use Pterodactyl\Tests\Integration\IntegrationTestCase;
 
 class TemplateServiceTest extends IntegrationTestCase
 {
@@ -17,21 +19,46 @@ class TemplateServiceTest extends IntegrationTestCase
 
     private TemplateService $service;
 
-    public function setUp(): void
+    protected function setUp(): void
     {
         parent::setUp();
         $this->bootTemplates();
         $this->service = app(TemplateService::class);
     }
 
-    public function tearDown(): void
+    protected function tearDown(): void
     {
         $this->shutdownTemplates();
         $this->removeTemplateFixtures();
         parent::tearDown();
     }
 
-    public function testATemplateIsCreatedWithAUniqueSlugAndFirstRevision(): void
+    public static function unsafePaths(): array
+    {
+        return [
+            'parent segment' => ['../etc/passwd'],
+            'nested parent' => ['plugins/../../x'],
+            'absolute' => ['/etc/passwd'],
+            'windows drive' => ['C:/Windows/win.ini'],
+            'backslash' => ['plugins\\..\\x'],
+            'encoded dots' => ['%2e%2e/secret'],
+            'encoded slash' => ['plugins%2f..%2fx'],
+            'encoded backslash' => ['a%5cb'],
+            'double encoded marker' => ['%252e%252e/x'],
+            'null byte' => ["a\0b"],
+            'current dir segment' => ['./x'],
+            'empty segment' => ['a//b'],
+            'trailing slash' => ['dir/'],
+            'only dots' => ['...'],
+            'reserved daemon dir' => ['.pterodactyl/config.json'],
+            'reserved env file' => ['sub/.env'],
+            'wildcard' => ['a*b'],
+            'too long' => [str_repeat('a', 256)],
+            'empty' => [''],
+        ];
+    }
+
+    public function test_a_template_is_created_with_a_unique_slug_and_first_revision(): void
     {
         $first = $this->makeTemplate();
         $second = $this->makeTemplate();
@@ -42,7 +69,7 @@ class TemplateServiceTest extends IntegrationTestCase
         $this->assertSame(1, $first->revisions()->count());
     }
 
-    public function testInvalidTemplatesAreRejected(): void
+    public function test_invalid_templates_are_rejected(): void
     {
         $cases = [
             'unknown egg' => [['egg_id' => 999999], 'egg_id'],
@@ -69,7 +96,7 @@ class TemplateServiceTest extends IntegrationTestCase
         $this->assertSame(0, ServerTemplate::query()->count());
     }
 
-    public function testEditingCreatesANewRevisionAndOldRevisionsStayIntact(): void
+    public function test_editing_creates_a_new_revision_and_old_revisions_stay_intact(): void
     {
         $template = $this->makeTemplate();
         $updated = $this->service->update($template, $this->templateInput(['memory' => 1024, 'name' => 'Lobby v2']));
@@ -79,7 +106,7 @@ class TemplateServiceTest extends IntegrationTestCase
         $this->assertSame(1024, $this->service->revision($updated, 2)->snapshot['settings']['memory']);
     }
 
-    public function testSavingWithoutChangesDoesNotCreateARevision(): void
+    public function test_saving_without_changes_does_not_create_a_revision(): void
     {
         $template = $this->makeTemplate();
         $same = $this->service->update($template, $this->templateInput());
@@ -88,7 +115,7 @@ class TemplateServiceTest extends IntegrationTestCase
         $this->assertSame(1, $same->revisions()->count());
     }
 
-    public function testVariablesAreStoredAndSnapshotted(): void
+    public function test_variables_are_stored_and_snapshotted(): void
     {
         $template = $this->makeTemplate();
         $snapshot = $this->service->snapshot($template);
@@ -99,7 +126,7 @@ class TemplateServiceTest extends IntegrationTestCase
         $this->assertTrue($byEnv['SERVER_JARFILE']['overridable']);
     }
 
-    public function testEditsGoToTheWorkingTreeAndPublishingCreatesRevisions(): void
+    public function test_edits_go_to_the_working_tree_and_publishing_creates_revisions(): void
     {
         $template = $this->makeTemplate();
         $store = app(TemplateFileStore::class);
@@ -142,16 +169,16 @@ class TemplateServiceTest extends IntegrationTestCase
         $this->assertSame(4, $template->refresh()->revision);
     }
 
-    public function testBinaryFilesAndFoldersAreSupported(): void
+    public function test_binary_files_and_folders_are_supported(): void
     {
         $template = $this->makeTemplate();
         $store = app(TemplateFileStore::class);
 
-        $binary = random_bytes(300000) . "\0\1\2";
+        $binary = random_bytes(300000)."\0\1\2";
         $stream = fopen('php://temp', 'r+');
         fwrite($stream, $binary);
         rewind($stream);
-        $this->assertSame(strlen($binary), $this->service->uploadFile($template, 'plugins/Essentials.jar', $stream, strlen($binary)));
+        $this->assertSame(mb_strlen($binary), $this->service->uploadFile($template, 'plugins/Essentials.jar', $stream, mb_strlen($binary)));
         $this->service->makeFolder($template, 'world/region');
         $this->service->putFile($template, 'server.properties', "motd=hi\n");
 
@@ -161,10 +188,10 @@ class TemplateServiceTest extends IntegrationTestCase
         $jar = $template->files()->where('path', 'plugins/Essentials.jar')->first();
         $this->assertSame($binary, $store->read($template, $jar->sha256));
         // The empty folder exists in the working tree but a folder alone is not published.
-        $this->assertTrue(is_dir($store->workDirectory($template) . '/world/region'));
+        $this->assertTrue(is_dir($store->workDirectory($template).'/world/region'));
     }
 
-    public function testFilesCanBeMovedAndRenamed(): void
+    public function test_files_can_be_moved_and_renamed(): void
     {
         $template = $this->makeTemplate();
         $this->service->putFile($template, 'config.yml', 'a');
@@ -178,7 +205,7 @@ class TemplateServiceTest extends IntegrationTestCase
         $this->service->moveFile($template, 'plugins', 'plugins/MyPlugin/inside');
     }
 
-    public function testMovingOntoAnExistingFileIsRefused(): void
+    public function test_moving_onto_an_existing_file_is_refused(): void
     {
         $template = $this->makeTemplate();
         $this->service->putFile($template, 'a.txt', 'a');
@@ -189,7 +216,7 @@ class TemplateServiceTest extends IntegrationTestCase
     }
 
     #[\PHPUnit\Framework\Attributes\DataProvider('unsafePaths')]
-    public function testUnsafeFilePathsAreRefused(string $path): void
+    public function test_unsafe_file_paths_are_refused(string $path): void
     {
         $template = $this->makeTemplate();
 
@@ -201,32 +228,7 @@ class TemplateServiceTest extends IntegrationTestCase
         }
     }
 
-    public static function unsafePaths(): array
-    {
-        return [
-            'parent segment' => ['../etc/passwd'],
-            'nested parent' => ['plugins/../../x'],
-            'absolute' => ['/etc/passwd'],
-            'windows drive' => ['C:/Windows/win.ini'],
-            'backslash' => ['plugins\\..\\x'],
-            'encoded dots' => ['%2e%2e/secret'],
-            'encoded slash' => ['plugins%2f..%2fx'],
-            'encoded backslash' => ['a%5cb'],
-            'double encoded marker' => ['%252e%252e/x'],
-            'null byte' => ["a\0b"],
-            'current dir segment' => ['./x'],
-            'empty segment' => ['a//b'],
-            'trailing slash' => ['dir/'],
-            'only dots' => ['...'],
-            'reserved daemon dir' => ['.pterodactyl/config.json'],
-            'reserved env file' => ['sub/.env'],
-            'wildcard' => ['a*b'],
-            'too long' => [str_repeat('a', 256)],
-            'empty' => [''],
-        ];
-    }
-
-    public function testFileAndFolderCannotShareAPath(): void
+    public function test_file_and_folder_cannot_share_a_path(): void
     {
         $template = $this->makeTemplate();
         $this->service->putFile($template, 'plugins/a.yml', 'x');
@@ -235,7 +237,7 @@ class TemplateServiceTest extends IntegrationTestCase
         $this->service->putFile($template, 'plugins', 'x');
     }
 
-    public function testAFileCannotBecomeAFolder(): void
+    public function test_a_file_cannot_become_a_folder(): void
     {
         $template = $this->makeTemplate();
         $this->service->putFile($template, 'plugins', 'x');
@@ -244,7 +246,7 @@ class TemplateServiceTest extends IntegrationTestCase
         $this->service->putFile($template, 'plugins/a.yml', 'x');
     }
 
-    public function testEditorContentRules(): void
+    public function test_editor_content_rules(): void
     {
         $template = $this->makeTemplate();
 
@@ -253,12 +255,12 @@ class TemplateServiceTest extends IntegrationTestCase
                 $this->service->putFile($template, 'f.txt', $content);
                 $this->fail('Expected content to be refused.');
             } catch (DisplayException) {
-                $this->assertFalse(is_file(app(TemplateFileStore::class)->workDirectory($template) . '/f.txt'));
+                $this->assertFalse(is_file(app(TemplateFileStore::class)->workDirectory($template).'/f.txt'));
             }
         }
     }
 
-    public function testUploadsAreLimitedWhileReading(): void
+    public function test_uploads_are_limited_while_reading(): void
     {
         config(['gobia_templates.limits.max_file_bytes' => 1000]);
         $template = $this->makeTemplate();
@@ -271,12 +273,12 @@ class TemplateServiceTest extends IntegrationTestCase
             $this->fail('Expected the upload to be refused.');
         } catch (DisplayException) {
             $store = app(TemplateFileStore::class);
-            $this->assertFalse(is_file($store->workDirectory($template) . '/big.bin'));
-            $this->assertSame([], glob($store->workDirectory($template) . '/*.upload-*') ?: []);
+            $this->assertFalse(is_file($store->workDirectory($template).'/big.bin'));
+            $this->assertSame([], glob($store->workDirectory($template).'/*.upload-*') ?: []);
         }
     }
 
-    public function testTheTotalSizeAndFileCountAreLimited(): void
+    public function test_the_total_size_and_file_count_are_limited(): void
     {
         config(['gobia_templates.limits.max_total_bytes' => 100, 'gobia_templates.limits.max_files' => 2]);
         $template = $this->makeTemplate();
@@ -294,7 +296,7 @@ class TemplateServiceTest extends IntegrationTestCase
         $this->service->putFile($template, 'c.txt', 'c');
     }
 
-    public function testAPlantedSymlinkInTheWorkingTreeIsNeitherListedNorFollowed(): void
+    public function test_a_planted_symlink_in_the_working_tree_is_neither_listed_nor_followed(): void
     {
         if (DIRECTORY_SEPARATOR === '\\') {
             $this->markTestSkipped('Creating symlinks needs elevated rights on Windows.');
@@ -306,15 +308,15 @@ class TemplateServiceTest extends IntegrationTestCase
 
         $secret = tempnam(sys_get_temp_dir(), 'secret');
         file_put_contents($secret, 'outside');
-        symlink($secret, $store->workDirectory($template) . '/link.txt');
-        symlink(sys_get_temp_dir(), $store->workDirectory($template) . '/dirlink');
+        symlink($secret, $store->workDirectory($template).'/link.txt');
+        symlink(sys_get_temp_dir(), $store->workDirectory($template).'/dirlink');
 
         try {
             $this->assertSame(['real.txt'], collect($store->scan($template))->pluck('path')->all());
             foreach (['link.txt', 'dirlink/anything'] as $path) {
                 try {
                     $store->resolve($template, $path);
-                    $this->fail('A symlink must not be resolvable: ' . $path);
+                    $this->fail('A symlink must not be resolvable: '.$path);
                 } catch (DisplayException) {
                     $this->addToAssertionCount(1);
                 }
@@ -326,7 +328,7 @@ class TemplateServiceTest extends IntegrationTestCase
         }
     }
 
-    public function testAPlantedSymlinkInTheBlobStoreIsNotFollowed(): void
+    public function test_a_planted_symlink_in_the_blob_store_is_not_followed(): void
     {
         if (DIRECTORY_SEPARATOR === '\\') {
             $this->markTestSkipped('Creating symlinks needs elevated rights on Windows.');
@@ -339,7 +341,7 @@ class TemplateServiceTest extends IntegrationTestCase
 
         $secret = tempnam(sys_get_temp_dir(), 'secret');
         file_put_contents($secret, 'outside');
-        $link = $store->blobDirectory($template) . '/' . hash('sha256', 'outside');
+        $link = $store->blobDirectory($template).'/'.hash('sha256', 'outside');
         symlink($secret, $link);
 
         try {
@@ -353,7 +355,7 @@ class TemplateServiceTest extends IntegrationTestCase
         }
     }
 
-    public function testDuplicateCopiesEverythingButStartsDisabled(): void
+    public function test_duplicate_copies_everything_but_starts_disabled(): void
     {
         $node = $this->makeNode();
         $template = $this->makeTemplate(['placement_mode' => 'allowed_nodes', 'allowed_nodes' => [$node->id]]);
@@ -368,11 +370,11 @@ class TemplateServiceTest extends IntegrationTestCase
         $this->assertSame(1, $copy->revision);
         $this->assertSame([$node->id], $copy->allowedNodes()->pluck('nodes.id')->all());
         $this->assertSame('hello', app(TemplateFileStore::class)->read($copy, $copy->files()->first()->sha256));
-        $this->assertSame('hello', file_get_contents(app(TemplateFileStore::class)->workDirectory($copy) . '/motd.txt'));
+        $this->assertSame('hello', file_get_contents(app(TemplateFileStore::class)->workDirectory($copy).'/motd.txt'));
         $this->assertCount(2, $this->service->snapshot($copy)['variables']);
     }
 
-    public function testDisablingAndDeletingUnusedTemplates(): void
+    public function test_disabling_and_deleting_unused_templates(): void
     {
         $template = $this->makeTemplate();
         $this->service->setEnabled($template, false);
@@ -382,7 +384,7 @@ class TemplateServiceTest extends IntegrationTestCase
         $this->assertDatabaseMissing('gobia_server_templates', ['id' => $template->id]);
     }
 
-    public function testATemplateWithInstanceHistoryCannotBeDeleted(): void
+    public function test_a_template_with_instance_history_cannot_be_deleted(): void
     {
         $template = $this->makeTemplate();
         TemplateInstance::query()->create([
@@ -402,7 +404,7 @@ class TemplateServiceTest extends IntegrationTestCase
         }
     }
 
-    public function testMassAssignmentCannotTouchSystemColumns(): void
+    public function test_mass_assignment_cannot_touch_system_columns(): void
     {
         $template = $this->service->create($this->templateInput(['uuid' => 'attacker-uuid', 'revision' => 99, 'id' => 12345]));
 

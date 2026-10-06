@@ -1,9 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace GobiaTemplates\Services;
 
+use FilesystemIterator;
 use GobiaTemplates\Models\ServerTemplate;
 use Pterodactyl\Exceptions\DisplayException;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
 
 /**
  * Private file storage for server templates.
@@ -32,17 +37,17 @@ class TemplateFileStore
 
     public function templateDirectory(ServerTemplate $template): string
     {
-        return $this->root() . DIRECTORY_SEPARATOR . $template->uuid;
+        return $this->root().DIRECTORY_SEPARATOR.$template->uuid;
     }
 
     public function workDirectory(ServerTemplate $template): string
     {
-        return $this->templateDirectory($template) . DIRECTORY_SEPARATOR . 'work';
+        return $this->templateDirectory($template).DIRECTORY_SEPARATOR.'work';
     }
 
     public function blobDirectory(ServerTemplate $template): string
     {
-        return $this->templateDirectory($template) . DIRECTORY_SEPARATOR . 'blobs';
+        return $this->templateDirectory($template).DIRECTORY_SEPARATOR.'blobs';
     }
 
     /** @return array{max_file_bytes: int, max_total_bytes: int, max_files: int, max_edit_bytes: int} */
@@ -62,12 +67,12 @@ class TemplateFileStore
     {
         $path = trim($path);
 
-        $fail = fn (string $reason) => throw new DisplayException('Invalid template file path: ' . $reason . '.');
+        $fail = fn (string $reason) => throw new DisplayException('Invalid template file path: '.$reason.'.');
 
-        if ($path === '' || strlen($path) > 255) {
+        if ($path === '' || mb_strlen($path) > 255) {
             $fail('the path must be 1 to 255 characters');
         }
-        if (!mb_check_encoding($path, 'UTF-8') || preg_match('/[\x00-\x1F\x7F]/', $path)) {
+        if (! mb_check_encoding($path, 'UTF-8') || preg_match('/[\x00-\x1F\x7F]/', $path)) {
             $fail('control characters are not allowed');
         }
         if (str_contains($path, '\\')) {
@@ -87,11 +92,11 @@ class TemplateFileStore
             if ($segment === '' || $segment === '.' || $segment === '..') {
                 $fail('empty, "." and ".." segments are not allowed');
             }
-            if (in_array(strtolower($segment), self::RESERVED_SEGMENTS, true)) {
-                $fail('"' . $segment . '" is a reserved name');
+            if (in_array(mb_strtolower($segment), self::RESERVED_SEGMENTS, true)) {
+                $fail('"'.$segment.'" is a reserved name');
             }
             if (preg_match('/^\.+$/', $segment) || preg_match('/[<>:"|?*]/', $segment)) {
-                $fail('the name "' . $segment . '" is not allowed');
+                $fail('the name "'.$segment.'" is not allowed');
             }
         }
 
@@ -114,7 +119,7 @@ class TemplateFileStore
             $target = $this->resolve($template, $file->path);
             $this->makeDirectory(dirname($target));
             $blob = $this->blobPath($template, $file->sha256);
-            if (!@copy($blob, $target)) {
+            if (! @copy($blob, $target)) {
                 throw new DisplayException('The working files could not be prepared.');
             }
         }
@@ -136,7 +141,7 @@ class TemplateFileStore
 
         $current = $work;
         foreach (explode('/', $relative) as $segment) {
-            $current .= DIRECTORY_SEPARATOR . $segment;
+            $current .= DIRECTORY_SEPARATOR.$segment;
             if (is_link($current)) {
                 throw new DisplayException('Symbolic links are not allowed in template files.');
             }
@@ -144,7 +149,7 @@ class TemplateFileStore
 
         $real = realpath(dirname($current));
         $workReal = realpath($work);
-        if ($real !== false && $workReal !== false && $real !== $workReal && !str_starts_with($real, $workReal . DIRECTORY_SEPARATOR)) {
+        if ($real !== false && $workReal !== false && $real !== $workReal && ! str_starts_with($real, $workReal.DIRECTORY_SEPARATOR)) {
             throw new DisplayException('That path is outside the template.');
         }
 
@@ -159,14 +164,14 @@ class TemplateFileStore
     public function scan(ServerTemplate $template): array
     {
         $work = $this->ensureWorkingTree($template);
-        $prefix = strlen(str_replace('\\', '/', $work)) + 1;
+        $prefix = mb_strlen(str_replace('\\', '/', $work)) + 1;
         $entries = [];
         $count = 0;
         $max = $this->limits()['max_files'] * 2;
 
-        $iterator = new \RecursiveIteratorIterator(
-            new \RecursiveDirectoryIterator($work, \FilesystemIterator::SKIP_DOTS | \FilesystemIterator::UNIX_PATHS),
-            \RecursiveIteratorIterator::SELF_FIRST
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($work, FilesystemIterator::SKIP_DOTS | FilesystemIterator::UNIX_PATHS),
+            RecursiveIteratorIterator::SELF_FIRST
         );
         foreach ($iterator as $item) {
             if ($item->isLink()) {
@@ -176,7 +181,7 @@ class TemplateFileStore
                 break;
             }
             $entries[] = [
-                'path' => substr(str_replace('\\', '/', $item->getPathname()), $prefix),
+                'path' => mb_substr(str_replace('\\', '/', $item->getPathname()), $prefix),
                 'size' => $item->isFile() ? $item->getSize() : 0,
                 'type' => $item->isDir() ? 'directory' : 'file',
                 'modified' => $item->getMTime(),
@@ -194,7 +199,7 @@ class TemplateFileStore
         $bytes = 0;
         foreach ($this->scan($template) as $entry) {
             if ($entry['type'] === 'file') {
-                ++$files;
+                $files++;
                 $bytes += $entry['size'];
             }
         }
@@ -209,7 +214,7 @@ class TemplateFileStore
     {
         $limits = $this->limits();
         if ($newSize > $limits['max_file_bytes']) {
-            throw new DisplayException('A template file can be at most ' . $this->human($limits['max_file_bytes']) . '.');
+            throw new DisplayException('A template file can be at most '.$this->human($limits['max_file_bytes']).'.');
         }
 
         $existing = 0;
@@ -221,10 +226,10 @@ class TemplateFileStore
         }
         $usage = $this->usage($template);
         if ($isNew && $limits['max_files'] < $usage['files'] + 1) {
-            throw new DisplayException('A template can hold at most ' . $limits['max_files'] . ' files.');
+            throw new DisplayException('A template can hold at most '.$limits['max_files'].' files.');
         }
         if ($limits['max_total_bytes'] < $usage['bytes'] - $existing + $newSize) {
-            throw new DisplayException('A template can hold at most ' . $this->human($limits['max_total_bytes']) . ' of files.');
+            throw new DisplayException('A template can hold at most '.$this->human($limits['max_total_bytes']).' of files.');
         }
     }
 
@@ -235,15 +240,15 @@ class TemplateFileStore
      */
     public function writeText(ServerTemplate $template, string $path, string $content): void
     {
-        if (str_contains($content, "\0") || !mb_check_encoding($content, 'UTF-8')) {
+        if (str_contains($content, "\0") || ! mb_check_encoding($content, 'UTF-8')) {
             throw new DisplayException('Only UTF-8 text can be saved in the editor. Upload other files instead.');
         }
-        if (strlen($content) > $this->limits()['max_edit_bytes']) {
-            throw new DisplayException('Files above ' . $this->human($this->limits()['max_edit_bytes']) . ' cannot be edited in the browser. Upload them instead.');
+        if (mb_strlen($content) > $this->limits()['max_edit_bytes']) {
+            throw new DisplayException('Files above '.$this->human($this->limits()['max_edit_bytes']).' cannot be edited in the browser. Upload them instead.');
         }
 
         $this->ensureWorkingTree($template);
-        $this->assertCanStore($template, $path, strlen($content));
+        $this->assertCanStore($template, $path, mb_strlen($content));
         $target = $this->resolve($template, $path);
         $this->assertNoFolderConflict($template, $path);
         $this->makeDirectory(dirname($target));
@@ -255,7 +260,7 @@ class TemplateFileStore
     /**
      * Streams an upload into the working tree without holding it in memory, enforcing the size limit while reading.
      *
-     * @param resource $stream
+     * @param  resource  $stream
      *
      * @throws DisplayException
      */
@@ -268,30 +273,30 @@ class TemplateFileStore
 
         $target = $this->resolve($template, $path);
         $this->makeDirectory(dirname($target));
-        $temporary = $target . '.upload-' . bin2hex(random_bytes(4));
+        $temporary = $target.'.upload-'.bin2hex(random_bytes(4));
         $handle = @fopen($temporary, 'wb');
-        if (!$handle) {
+        if (! $handle) {
             throw new DisplayException('The file could not be written.');
         }
 
         $written = 0;
         try {
-            while (!feof($stream)) {
+            while (! feof($stream)) {
                 $chunk = fread($stream, 1048576);
                 if ($chunk === false) {
                     throw new DisplayException('The upload was interrupted.');
                 }
-                $written += strlen($chunk);
+                $written += mb_strlen($chunk);
                 if ($written > $limit) {
-                    throw new DisplayException('A template file can be at most ' . $this->human($limit) . '.');
+                    throw new DisplayException('A template file can be at most '.$this->human($limit).'.');
                 }
                 fwrite($handle, $chunk);
             }
             fclose($handle);
             $handle = null;
             $this->assertCanStore($template, $path, $written);
-            if (!@rename($temporary, $target)) {
-                if (!@copy($temporary, $target)) {
+            if (! @rename($temporary, $target)) {
+                if (! @copy($temporary, $target)) {
                     throw new DisplayException('The file could not be written.');
                 }
             }
@@ -327,7 +332,7 @@ class TemplateFileStore
     {
         $this->ensureWorkingTree($template);
         $target = $this->resolve($template, $path);
-        if (!file_exists($target)) {
+        if (! file_exists($target)) {
             throw new DisplayException('That file or folder does not exist.');
         }
         $this->deleteRecursively($target);
@@ -346,10 +351,10 @@ class TemplateFileStore
         $from = $this->normalizePath($from);
         $to = $this->normalizePath($to);
 
-        if (!file_exists($source)) {
+        if (! file_exists($source)) {
             throw new DisplayException('That file or folder does not exist.');
         }
-        if ($to === $from || str_starts_with($to . '/', $from . '/')) {
+        if ($to === $from || str_starts_with($to.'/', $from.'/')) {
             throw new DisplayException('A folder cannot be moved into itself.');
         }
         if (file_exists($destination)) {
@@ -357,7 +362,7 @@ class TemplateFileStore
         }
         $this->assertNoFolderConflict($template, $to);
         $this->makeDirectory(dirname($destination));
-        if (!@rename($source, $destination)) {
+        if (! @rename($source, $destination)) {
             throw new DisplayException('It could not be moved.');
         }
     }
@@ -383,10 +388,10 @@ class TemplateFileStore
             if ($hash === false) {
                 throw new DisplayException('A template file could not be read.');
             }
-            $blob = $this->blobDirectory($template) . DIRECTORY_SEPARATOR . $hash;
-            if (!is_file($blob)) {
-                $temporary = $blob . '.' . bin2hex(random_bytes(4)) . '.tmp';
-                if (!@copy($source, $temporary) || !@rename($temporary, $blob)) {
+            $blob = $this->blobDirectory($template).DIRECTORY_SEPARATOR.$hash;
+            if (! is_file($blob)) {
+                $temporary = $blob.'.'.bin2hex(random_bytes(4)).'.tmp';
+                if (! @copy($source, $temporary) || ! @rename($temporary, $blob)) {
                     @unlink($temporary);
 
                     throw new DisplayException('A template file could not be stored.');
@@ -405,18 +410,18 @@ class TemplateFileStore
      */
     public function blobPath(ServerTemplate $template, string $sha256): string
     {
-        if (!preg_match('/^[a-f0-9]{64}$/', $sha256)) {
+        if (! preg_match('/^[a-f0-9]{64}$/', $sha256)) {
             throw new DisplayException('Invalid file reference.');
         }
 
         $directory = realpath($this->blobDirectory($template));
-        $file = $directory ? $directory . DIRECTORY_SEPARATOR . $sha256 : false;
-        if (!$directory || !is_file($file) || is_link($file)) {
+        $file = $directory ? $directory.DIRECTORY_SEPARATOR.$sha256 : false;
+        if (! $directory || ! is_file($file) || is_link($file)) {
             throw new DisplayException('A template file is missing from storage.');
         }
 
         $resolved = realpath($file);
-        if ($resolved === false || !str_starts_with($resolved, $directory . DIRECTORY_SEPARATOR)) {
+        if ($resolved === false || ! str_starts_with($resolved, $directory.DIRECTORY_SEPARATOR)) {
             throw new DisplayException('A template file is missing from storage.');
         }
 
@@ -453,8 +458,8 @@ class TemplateFileStore
     public function copyTemplate(ServerTemplate $source, ServerTemplate $target): void
     {
         foreach (['work', 'blobs'] as $part) {
-            $from = $this->templateDirectory($source) . DIRECTORY_SEPARATOR . $part;
-            $to = $this->templateDirectory($target) . DIRECTORY_SEPARATOR . $part;
+            $from = $this->templateDirectory($source).DIRECTORY_SEPARATOR.$part;
+            $to = $this->templateDirectory($target).DIRECTORY_SEPARATOR.$part;
             $this->makeDirectory($to);
             if (is_dir($from)) {
                 $this->copyRecursively($from, $to);
@@ -462,14 +467,25 @@ class TemplateFileStore
         }
     }
 
+    public function human(int $bytes): string
+    {
+        foreach (['bytes', 'KiB', 'MiB', 'GiB', 'TiB'] as $i => $unit) {
+            if ($bytes < 1024 ** ($i + 1) || $unit === 'TiB') {
+                return ($i === 0 ? $bytes : round($bytes / 1024 ** $i, 1)).' '.$unit;
+            }
+        }
+
+        return $bytes.' bytes';
+    }
+
     private function copyRecursively(string $from, string $to): void
     {
         foreach (scandir($from) ?: [] as $name) {
-            if ($name === '.' || $name === '..' || is_link($from . DIRECTORY_SEPARATOR . $name)) {
+            if ($name === '.' || $name === '..' || is_link($from.DIRECTORY_SEPARATOR.$name)) {
                 continue;
             }
-            $source = $from . DIRECTORY_SEPARATOR . $name;
-            $destination = $to . DIRECTORY_SEPARATOR . $name;
+            $source = $from.DIRECTORY_SEPARATOR.$name;
+            $destination = $to.DIRECTORY_SEPARATOR.$name;
             if (is_dir($source)) {
                 $this->makeDirectory($destination);
                 $this->copyRecursively($source, $destination);
@@ -479,20 +495,9 @@ class TemplateFileStore
         }
     }
 
-    public function human(int $bytes): string
-    {
-        foreach (['bytes', 'KiB', 'MiB', 'GiB', 'TiB'] as $i => $unit) {
-            if ($bytes < 1024 ** ($i + 1) || $unit === 'TiB') {
-                return ($i === 0 ? $bytes : round($bytes / 1024 ** $i, 1)) . ' ' . $unit;
-            }
-        }
-
-        return $bytes . ' bytes';
-    }
-
     private function makeDirectory(string $directory): void
     {
-        if (!is_dir($directory) && !@mkdir($directory, 0750, true) && !is_dir($directory)) {
+        if (! is_dir($directory) && ! @mkdir($directory, 0750, true) && ! is_dir($directory)) {
             throw new DisplayException('The template file storage is not writable.');
         }
     }
@@ -509,9 +514,9 @@ class TemplateFileStore
         array_pop($segments);
         $current = $this->workDirectory($template);
         foreach ($segments as $segment) {
-            $current .= DIRECTORY_SEPARATOR . $segment;
+            $current .= DIRECTORY_SEPARATOR.$segment;
             if (is_file($current)) {
-                throw new DisplayException('"' . $segment . '" is a file, so it cannot contain other files.');
+                throw new DisplayException('"'.$segment.'" is a file, so it cannot contain other files.');
             }
         }
         if (is_dir($this->resolve($template, $relative))) {
@@ -528,7 +533,7 @@ class TemplateFileStore
         }
         foreach (scandir($path) ?: [] as $name) {
             if ($name !== '.' && $name !== '..') {
-                $this->deleteRecursively($path . DIRECTORY_SEPARATOR . $name);
+                $this->deleteRecursively($path.DIRECTORY_SEPARATOR.$name);
             }
         }
         @rmdir($path);

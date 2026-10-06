@@ -18,6 +18,7 @@ use Pterodactyl\Models\User;
 use Pterodactyl\Tests\Integration\Gobia\BuildsTemplates;
 use Pterodactyl\Tests\Integration\IntegrationTestCase;
 use Ramsey\Uuid\Uuid;
+use RuntimeException;
 
 /**
  * The provisioning pipeline against a faked Wings: every call the panel makes to the node is recorded and answered
@@ -32,7 +33,7 @@ class TemplateProvisioningServiceTest extends IntegrationTestCase
 
     private bool $createFails = false;
 
-    public function setUp(): void
+    protected function setUp(): void
     {
         parent::setUp();
         $this->bootTemplates();
@@ -53,50 +54,13 @@ class TemplateProvisioningServiceTest extends IntegrationTestCase
         });
     }
 
-    public function tearDown(): void
+    protected function tearDown(): void
     {
         $this->shutdownTemplates();
         parent::tearDown();
     }
 
-    private function provisioning(): TemplateProvisioningService
-    {
-        return app(TemplateProvisioningService::class);
-    }
-
-    private function queue(\GobiaTemplates\Models\ServerTemplate $template, array $input = []): TemplateInstance
-    {
-        [$instance] = app(TemplateInstanceService::class)->request($template, $input + ['name' => 'Lobby 1', 'owner_id' => User::factory()->create()->id]);
-
-        return $instance;
-    }
-
-    /** Runs the pipeline to the end, pretending Wings reports the installation as finished once the server exists. */
-    private function drive(TemplateInstance $instance, bool $installSucceeds = true, ?array &$seen = null): TemplateInstance
-    {
-        $seen = [$instance->state];
-        for ($i = 0; $i < 20; ++$i) {
-            $instance->refresh();
-            if ($instance->server_id && $instance->state === TemplateInstance::STATE_INSTALLING) {
-                Server::query()->whereKey($instance->server_id)->update(['status' => $installSucceeds ? null : Server::STATUS_INSTALL_FAILED]);
-            }
-            $delay = $this->provisioning()->advance($instance);
-            $seen[] = $instance->refresh()->state;
-            if ($delay === null) {
-                break;
-            }
-        }
-
-        return $instance->refresh();
-    }
-
-    /** @return list<array{method: string, path: string, body: string}> */
-    private function callsTo(string $method, string $pattern): array
-    {
-        return array_values(array_filter($this->calls, fn (array $call): bool => $call['method'] === $method && preg_match($pattern, $call['path']) === 1));
-    }
-
-    public function testAnInstanceIsProvisionedThroughEveryState(): void
+    public function test_an_instance_is_provisioned_through_every_state(): void
     {
         $node = $this->makeNode();
         $service = app(TemplateService::class);
@@ -140,7 +104,7 @@ class TemplateProvisioningServiceTest extends IntegrationTestCase
         $this->assertArrayHasKey('installing', $instance->stage_ms ?? []);
     }
 
-    public function testTheServerIsNotStartedWhenTheTemplateSaysNot(): void
+    public function test_the_server_is_not_started_when_the_template_says_not(): void
     {
         $this->makeNode();
         $template = $this->makeTemplate(['start_automatically' => false]);
@@ -149,7 +113,7 @@ class TemplateProvisioningServiceTest extends IntegrationTestCase
         $this->assertCount(0, $this->callsTo('POST', '#/power$#'));
     }
 
-    public function testTemporaryTemplatesGetAnExpiry(): void
+    public function test_temporary_templates_get_an_expiry(): void
     {
         $this->makeNode();
         $template = $this->makeTemplate(['start_automatically' => false, 'temporary' => true, 'ttl_minutes' => 30]);
@@ -158,7 +122,7 @@ class TemplateProvisioningServiceTest extends IntegrationTestCase
         $this->assertEqualsWithDelta(now()->addMinutes(30)->timestamp, $instance->expires_at->timestamp, 5);
     }
 
-    public function testNotEnoughMemoryFailsEarlyWithAReadableReasonAndCreatesNothing(): void
+    public function test_not_enough_memory_fails_early_with_a_readable_reason_and_creates_nothing(): void
     {
         $this->makeNode(['memory' => 1024]);
         $template = $this->makeTemplate(['memory' => 4096]);
@@ -172,7 +136,7 @@ class TemplateProvisioningServiceTest extends IntegrationTestCase
         $this->assertCount(0, $this->callsTo('POST', '#^/api/servers$#'));
     }
 
-    public function testAFailedInstallationIsCleanedUpAndAllocationsAreFreed(): void
+    public function test_a_failed_installation_is_cleaned_up_and_allocations_are_freed(): void
     {
         $node = $this->makeNode([], 2);
         $template = $this->makeTemplate();
@@ -186,7 +150,7 @@ class TemplateProvisioningServiceTest extends IntegrationTestCase
         $this->assertCount(1, $this->callsTo('DELETE', '#^/api/servers/[0-9a-f-]{36}$#'));
     }
 
-    public function testAnUnreachableNodeDuringCreationLeavesNoOrphans(): void
+    public function test_an_unreachable_node_during_creation_leaves_no_orphans(): void
     {
         $node = $this->makeNode([], 2);
         $template = $this->makeTemplate();
@@ -201,11 +165,11 @@ class TemplateProvisioningServiceTest extends IntegrationTestCase
         $this->assertSame(0, Allocation::query()->where('node_id', $node->id)->whereNotNull('server_id')->count());
     }
 
-    public function testErrorsNeverLeakInternalDetails(): void
+    public function test_errors_never_leak_internal_details(): void
     {
         $this->makeNode();
         $template = $this->makeTemplate();
-        Http::fake(fn () => throw new \RuntimeException('SQLSTATE secret connection string /var/www/.env'));
+        Http::fake(fn () => throw new RuntimeException('SQLSTATE secret connection string /var/www/.env'));
 
         $instance = $this->drive($this->queue($template));
 
@@ -214,7 +178,7 @@ class TemplateProvisioningServiceTest extends IntegrationTestCase
         $this->assertStringNotContainsString('.env', $instance->error);
     }
 
-    public function testAFailedInstanceCanBeRetriedAndThenSucceeds(): void
+    public function test_a_failed_instance_can_be_retried_and_then_succeeds(): void
     {
         $node = $this->makeNode(['memory' => 1024]);
         $template = $this->makeTemplate(['memory' => 2048]);
@@ -230,7 +194,7 @@ class TemplateProvisioningServiceTest extends IntegrationTestCase
         $this->assertSame(TemplateInstance::STATE_READY, $this->drive($instance)->state);
     }
 
-    public function testOnlyFailedInstancesCanBeRetried(): void
+    public function test_only_failed_instances_can_be_retried(): void
     {
         $this->makeNode();
         $instance = $this->queue($this->makeTemplate());
@@ -239,7 +203,7 @@ class TemplateProvisioningServiceTest extends IntegrationTestCase
         app(TemplateInstanceService::class)->retry($instance);
     }
 
-    public function testInstancesAreBuiltFromTheRevisionTheyWereRequestedWith(): void
+    public function test_instances_are_built_from_the_revision_they_were_requested_with(): void
     {
         $this->makeNode(['memory' => 8192]);
         $service = app(TemplateService::class);
@@ -256,7 +220,7 @@ class TemplateProvisioningServiceTest extends IntegrationTestCase
         $this->assertSame(1, $instance->template_revision);
     }
 
-    public function testADisabledTemplateIsNotProvisioned(): void
+    public function test_a_disabled_template_is_not_provisioned(): void
     {
         $this->makeNode();
         $template = $this->makeTemplate();
@@ -269,7 +233,7 @@ class TemplateProvisioningServiceTest extends IntegrationTestCase
         $this->assertCount(0, $this->callsTo('POST', '#^/api/servers$#'));
     }
 
-    public function testTwoInstancesNeverReceiveTheSameAllocation(): void
+    public function test_two_instances_never_receive_the_same_allocation(): void
     {
         $node = $this->makeNode([], 2);
         $template = $this->makeTemplate(['start_automatically' => false]);
@@ -287,7 +251,7 @@ class TemplateProvisioningServiceTest extends IntegrationTestCase
         $this->assertSame(2, Allocation::query()->where('node_id', $node->id)->whereNotNull('server_id')->count());
     }
 
-    public function testExpiredTemporaryInstancesAreRemovedByTheMaintenanceCommand(): void
+    public function test_expired_temporary_instances_are_removed_by_the_maintenance_command(): void
     {
         $this->makeNode();
         $template = $this->makeTemplate(['temporary' => true, 'ttl_minutes' => 10, 'allow_instance_delete' => false]);
@@ -307,7 +271,7 @@ class TemplateProvisioningServiceTest extends IntegrationTestCase
         $this->assertNull($expired->refresh()->server_id);
     }
 
-    public function testInstanceUuidsAreUniqueAndNotGuessableIds(): void
+    public function test_instance_uuids_are_unique_and_not_guessable_ids(): void
     {
         $this->makeNode();
         $template = $this->makeTemplate();
@@ -316,5 +280,42 @@ class TemplateProvisioningServiceTest extends IntegrationTestCase
 
         $this->assertTrue(Uuid::isValid($a->uuid));
         $this->assertNotSame($a->uuid, $b->uuid);
+    }
+
+    private function provisioning(): TemplateProvisioningService
+    {
+        return app(TemplateProvisioningService::class);
+    }
+
+    private function queue(\GobiaTemplates\Models\ServerTemplate $template, array $input = []): TemplateInstance
+    {
+        [$instance] = app(TemplateInstanceService::class)->request($template, $input + ['name' => 'Lobby 1', 'owner_id' => User::factory()->create()->id]);
+
+        return $instance;
+    }
+
+    /** Runs the pipeline to the end, pretending Wings reports the installation as finished once the server exists. */
+    private function drive(TemplateInstance $instance, bool $installSucceeds = true, ?array &$seen = null): TemplateInstance
+    {
+        $seen = [$instance->state];
+        for ($i = 0; $i < 20; $i++) {
+            $instance->refresh();
+            if ($instance->server_id && $instance->state === TemplateInstance::STATE_INSTALLING) {
+                Server::query()->whereKey($instance->server_id)->update(['status' => $installSucceeds ? null : Server::STATUS_INSTALL_FAILED]);
+            }
+            $delay = $this->provisioning()->advance($instance);
+            $seen[] = $instance->refresh()->state;
+            if ($delay === null) {
+                break;
+            }
+        }
+
+        return $instance->refresh();
+    }
+
+    /** @return list<array{method: string, path: string, body: string}> */
+    private function callsTo(string $method, string $pattern): array
+    {
+        return array_values(array_filter($this->calls, fn (array $call): bool => $call['method'] === $method && preg_match($pattern, $call['path']) === 1));
     }
 }

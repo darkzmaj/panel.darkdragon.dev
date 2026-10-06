@@ -18,6 +18,7 @@ Route::post('/templates/{template}/publish', [T::class, 'publish'])->whereNumber
 
 Route::get('/templates/{template}/files', [T::class, 'files'])->whereNumber('template')->name('files');
 Route::get('/templates/{template}/files/content', [T::class, 'readFile'])->whereNumber('template')->name('files.read');
+// File content is exact; the provider exempts this request from TrimStrings.
 Route::put('/templates/{template}/files', [T::class, 'writeFile'])->whereNumber('template')->name('files.write');
 Route::delete('/templates/{template}/files', [T::class, 'deleteFile'])->whereNumber('template')->name('files.delete');
 Route::put('/templates/{template}/files/upload', [T::class, 'uploadFile'])->whereNumber('template')->name('files.upload');

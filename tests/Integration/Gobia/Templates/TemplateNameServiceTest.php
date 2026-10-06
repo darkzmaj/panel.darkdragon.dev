@@ -1,43 +1,35 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Pterodactyl\Tests\Integration\Gobia\Templates;
 
-use Illuminate\Support\Facades\Queue;
 use GobiaTemplates\Models\TemplateInstance;
-use Pterodactyl\Tests\Integration\IntegrationTestCase;
-use GobiaTemplates\Services\TemplateNameService;
-use Pterodactyl\Tests\Integration\Gobia\BuildsTemplates;
 use GobiaTemplates\Services\TemplateInstanceService;
+use GobiaTemplates\Services\TemplateNameService;
+use Illuminate\Support\Facades\Queue;
+use Pterodactyl\Tests\Integration\Gobia\BuildsTemplates;
+use Pterodactyl\Tests\Integration\IntegrationTestCase;
 
 class TemplateNameServiceTest extends IntegrationTestCase
 {
     use BuildsTemplates;
 
-    public function setUp(): void
+    protected function setUp(): void
     {
         parent::setUp();
         $this->bootTemplates();
         Queue::fake();
     }
 
-    public function tearDown(): void
+    protected function tearDown(): void
     {
         $this->shutdownTemplates();
         $this->removeTemplateFixtures();
         parent::tearDown();
     }
 
-    private function names(): TemplateNameService
-    {
-        return app(TemplateNameService::class);
-    }
-
-    private function serverNamed(string $name): void
-    {
-        $this->createServerModel(['name' => $name]);
-    }
-
-    public function testTheFirstNumberIsOneAndNamesWithoutPlaceholdersAreUntouched(): void
+    public function test_the_first_number_is_one_and_names_without_placeholders_are_untouched(): void
     {
         $this->assertSame('SloBlock Hub 1', $this->names()->expand('SloBlock Hub %number%'));
         $this->assertSame('Plain name', $this->names()->expand('Plain name'));
@@ -45,7 +37,7 @@ class TemplateNameServiceTest extends IntegrationTestCase
         $this->assertTrue($this->names()->hasPlaceholders('Hub %number%'));
     }
 
-    public function testTheNextNumberFollowsTheHighestInUseNotTheDatabaseId(): void
+    public function test_the_next_number_follows_the_highest_in_use_not_the_database_id(): void
     {
         foreach (['SloBlock Hub 1', 'SloBlock Hub 2', 'SloBlock Hub 3'] as $name) {
             $this->serverNamed($name);
@@ -57,7 +49,7 @@ class TemplateNameServiceTest extends IntegrationTestCase
         $this->assertSame('SloBlock Hub 8', $this->names()->expand('SloBlock Hub %number%'));
     }
 
-    public function testOnlyNamesMatchingTheWholePatternCount(): void
+    public function test_only_names_matching_the_whole_pattern_count(): void
     {
         $this->serverNamed('Lobby 40 extra');
         $this->serverNamed('My Lobby 90');
@@ -68,7 +60,7 @@ class TemplateNameServiceTest extends IntegrationTestCase
         $this->assertSame('Lobby 41 extra', $this->names()->expand('Lobby %number% extra'));
     }
 
-    public function testRegexAndLikeCharactersInThePatternAreTreatedLiterally(): void
+    public function test_regex_and_like_characters_in_the_pattern_are_treated_literally(): void
     {
         $this->serverNamed('Hub (v1.0) [EU] 9');
         $this->serverNamed('Hub (v1x0) [EU] 50');
@@ -79,7 +71,7 @@ class TemplateNameServiceTest extends IntegrationTestCase
         $this->assertSame('100%_hub 4', $this->names()->expand('100%_hub %number%'));
     }
 
-    public function testARepeatedPlaceholderUsesTheSameNumber(): void
+    public function test_a_repeated_placeholder_uses_the_same_number(): void
     {
         $this->serverNamed('Hub 3-3');
         $this->serverNamed('Hub 9-4');
@@ -87,7 +79,7 @@ class TemplateNameServiceTest extends IntegrationTestCase
         $this->assertSame('Hub 4-4', $this->names()->expand('Hub %number%-%number%'));
     }
 
-    public function testInstancesStillBeingProvisionedCountButFailedOnesDoNot(): void
+    public function test_instances_still_being_provisioned_count_but_failed_ones_do_not(): void
     {
         $this->makeNode();
         $template = $this->makeTemplate();
@@ -102,7 +94,7 @@ class TemplateNameServiceTest extends IntegrationTestCase
         $this->assertSame('Queue 3', $this->names()->expand('Queue %number%'));
     }
 
-    public function testRequestsWithAPlaceholderGetDistinctSequentialNames(): void
+    public function test_requests_with_a_placeholder_get_distinct_sequential_names(): void
     {
         $this->makeNode();
         $template = $this->makeTemplate();
@@ -110,7 +102,7 @@ class TemplateNameServiceTest extends IntegrationTestCase
         $service = app(TemplateInstanceService::class);
 
         $names = [];
-        for ($i = 0; $i < 3; ++$i) {
+        for ($i = 0; $i < 3; $i++) {
             [$instance] = $service->request($template, ['name' => 'Hub %number%', 'owner_id' => $owner->id]);
             $names[] = $instance->name;
         }
@@ -118,7 +110,7 @@ class TemplateNameServiceTest extends IntegrationTestCase
         $this->assertSame(['Hub 1', 'Hub 2', 'Hub 3'], $names);
     }
 
-    public function testRetryingAnIdempotentRequestDoesNotConsumeANewNumber(): void
+    public function test_retrying_an_idempotent_request_does_not_consume_a_new_number(): void
     {
         $this->makeNode();
         $template = $this->makeTemplate();
@@ -132,5 +124,15 @@ class TemplateNameServiceTest extends IntegrationTestCase
         $this->assertSame($first->id, $again->id);
         $this->assertSame('Hub 1', $again->name);
         $this->assertSame('Hub 2', $this->names()->expand('Hub %number%'));
+    }
+
+    private function names(): TemplateNameService
+    {
+        return app(TemplateNameService::class);
+    }
+
+    private function serverNamed(string $name): void
+    {
+        $this->createServerModel(['name' => $name]);
     }
 }

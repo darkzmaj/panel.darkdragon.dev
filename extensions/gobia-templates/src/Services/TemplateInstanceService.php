@@ -1,20 +1,22 @@
 <?php
 
+declare(strict_types=1);
+
 namespace GobiaTemplates\Services;
 
-use Ramsey\Uuid\Uuid;
-use Illuminate\Support\Arr;
-use Pterodactyl\Models\ApiKey;
-use Pterodactyl\Models\EggVariable;
-use Illuminate\Support\Facades\Cache;
+use GobiaTemplates\Jobs\ProvisionTemplateInstanceJob;
 use GobiaTemplates\Models\ServerTemplate;
 use GobiaTemplates\Models\TemplateInstance;
-use Pterodactyl\Exceptions\DisplayException;
-use Illuminate\Validation\ValidationException;
-use GobiaTemplates\Jobs\ProvisionTemplateInstanceJob;
-use Pterodactyl\Contracts\Servers\DeletesServers;
-use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Contracts\Validation\Factory as ValidationFactory;
+use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Validation\ValidationException;
+use Pterodactyl\Contracts\Servers\DeletesServers;
+use Pterodactyl\Exceptions\DisplayException;
+use Pterodactyl\Models\ApiKey;
+use Pterodactyl\Models\EggVariable;
+use Ramsey\Uuid\Uuid;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 /**
@@ -28,8 +30,7 @@ class TemplateInstanceService
         private ValidationFactory $validator,
         private DeletesServers $deletion,
         private TemplateNameService $names,
-    ) {
-    }
+    ) {}
 
     /**
      * Validates a request, stores it as a queued instance and dispatches provisioning. Returns the instance and
@@ -42,10 +43,10 @@ class TemplateInstanceService
      */
     public function request(ServerTemplate $template, array $input, ?ApiKey $key = null, ?string $idempotencyKey = null): array
     {
-        if (!$template->enabled) {
+        if (! $template->enabled) {
             throw new DisplayException('This template is disabled.');
         }
-        if ($idempotencyKey !== null && !preg_match('/^[A-Za-z0-9_\-:.]{1,80}$/', $idempotencyKey)) {
+        if ($idempotencyKey !== null && ! preg_match('/^[A-Za-z0-9_\-:.]{1,80}$/', $idempotencyKey)) {
             throw ValidationException::withMessages(['idempotency_key' => 'The idempotency key may only contain letters, numbers and _ - : . (maximum 80 characters).']);
         }
 
@@ -129,10 +130,10 @@ class TemplateInstanceService
      */
     public function destroy(TemplateInstance $instance, bool $ignoreTemplateRule = false): void
     {
-        if (!$ignoreTemplateRule && !$instance->template->allow_instance_delete) {
+        if (! $ignoreTemplateRule && ! $instance->template->allow_instance_delete) {
             throw new DisplayException('Instances of this template cannot be deleted through the API.');
         }
-        if (!$instance->isFinished()) {
+        if (! $instance->isFinished()) {
             throw new DisplayException('This instance is still being provisioned and cannot be deleted yet.');
         }
 
@@ -164,8 +165,9 @@ class TemplateInstanceService
         $errors = [];
         foreach (Arr::get($data, 'environment', []) ?? [] as $env => $value) {
             $variable = $allowed->get($env);
-            if (!$variable) {
+            if (! $variable) {
                 $errors["environment.$env"] = "$env cannot be changed for instances of this template.";
+
                 continue;
             }
             $check = $this->validator->make(['value' => $value], ['value' => $variable->rules]);
@@ -187,7 +189,7 @@ class TemplateInstanceService
 
     private function assertSameRequest(?TemplateInstance $existing, string $hash): TemplateInstance
     {
-        if (!$existing || $existing->request_hash !== $hash) {
+        if (! $existing || $existing->request_hash !== $hash) {
             throw new ConflictHttpException('This idempotency key was already used with a different request.');
         }
 
@@ -195,8 +197,7 @@ class TemplateInstanceService
     }
 
     /**
-     * @param array<string, mixed> $values
-     *
+     * @param  array<string, mixed>  $values
      * @return array<string, mixed>
      */
     private function sorted(array $values): array

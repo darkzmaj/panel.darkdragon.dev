@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace GobiaTemplates\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Pterodactyl\Models\User;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
@@ -27,6 +26,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class TemplateSftpCredential extends Model
 {
     public const READ_WRITE = 'rw';
+
     public const READ_ONLY = 'ro';
 
     protected $table = 'gobia_template_sftp_credentials';

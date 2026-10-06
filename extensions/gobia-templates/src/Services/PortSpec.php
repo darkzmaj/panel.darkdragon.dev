@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace GobiaTemplates\Services;
 
 /**
@@ -34,7 +36,7 @@ class PortSpec
             if ($from < 1 || $to > 65535 || $from > $to || count($ports) + ($to - $from + 1) > self::MAX_PORTS) {
                 return null;
             }
-            for ($port = $from; $port <= $to; ++$port) {
+            for ($port = $from; $port <= $to; $port++) {
                 $ports[$port] = $port;
             }
         }

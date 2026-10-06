@@ -21,9 +21,9 @@ trait BuildsTemplates
     /** @var array<int, string> */
     protected array $nodeStatus = [];
 
-    private bool $nodesIsolated = false;
-
     protected ?string $templateStorage = null;
+
+    private bool $nodesIsolated = false;
 
     protected function bootTemplates(): void
     {
@@ -50,22 +50,13 @@ trait BuildsTemplates
         $attributes += ['location_id' => Location::factory()->create()->id];
         /** @var Node $node */
         $node = Node::factory()->create($attributes);
-        for ($i = 0; $i < $allocations; ++$i) {
+        for ($i = 0; $i < $allocations; $i++) {
             Allocation::factory()->create(['node_id' => $node->id, 'ip' => long2ip(0x0A000000 + $node->id), 'port' => $firstPort + $i]);
         }
         $this->nodeStatus[$node->id] = $status;
         $this->applyNodeStatus();
 
         return $node;
-    }
-
-    /** Other tests leave public nodes behind; they would take part in "any compatible node" placement. */
-    private function isolateExistingNodes(): void
-    {
-        if (! $this->nodesIsolated) {
-            $this->nodesIsolated = true;
-            Node::query()->where('public', true)->update(['public' => false]);
-        }
     }
 
     protected function setNodeStatus(Node $node, string $status): void
@@ -152,4 +143,13 @@ trait BuildsTemplates
 
     /** Nothing to remove: tests use the seeded egg and the templates tables are dropped with the extensions. */
     protected function removeTemplateFixtures(): void {}
+
+    /** Other tests leave public nodes behind; they would take part in "any compatible node" placement. */
+    private function isolateExistingNodes(): void
+    {
+        if (! $this->nodesIsolated) {
+            $this->nodesIsolated = true;
+            Node::query()->where('public', true)->update(['public' => false]);
+        }
+    }
 }

@@ -1,48 +1,37 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Pterodactyl\Tests\Integration\Gobia\Templates;
 
+use GobiaTemplates\Models\TemplateInstance;
+use GobiaTemplates\Services\TemplatePlacementService;
+use GobiaTemplates\Services\TemplateService;
+use GobiaTemplates\Support\PlacementException;
+use Pterodactyl\Models\Allocation;
 use Pterodactyl\Models\Node;
 use Pterodactyl\Models\Server;
-use Pterodactyl\Models\Allocation;
-use GobiaTemplates\Models\TemplateInstance;
-use GobiaTemplates\Services\TemplateService;
-use Pterodactyl\Tests\Integration\IntegrationTestCase;
 use Pterodactyl\Tests\Integration\Gobia\BuildsTemplates;
-use GobiaTemplates\Services\TemplatePlacementService;
-use GobiaTemplates\Support\PlacementException;
+use Pterodactyl\Tests\Integration\IntegrationTestCase;
 
 class TemplatePlacementServiceTest extends IntegrationTestCase
 {
     use BuildsTemplates;
 
-    // Resolved on every use: the node health fake is swapped into the container as nodes are created.
-    private function placement(): TemplatePlacementService
-    {
-        return app(TemplatePlacementService::class);
-    }
-
-    public function setUp(): void
+    protected function setUp(): void
     {
         parent::setUp();
         $this->bootTemplates();
     }
 
-    public function tearDown(): void
+    protected function tearDown(): void
     {
         $this->shutdownTemplates();
         $this->removeTemplateFixtures();
         parent::tearDown();
     }
 
-    private function place(array $templateOverride = [])
-    {
-        $template = $this->makeTemplate($templateOverride);
-
-        return $this->placement()->place($template->id, app(TemplateService::class)->snapshot($template));
-    }
-
-    public function testTheNodeWithTheMostFreeCapacityWins(): void
+    public function test_the_node_with_the_most_free_capacity_wins(): void
     {
         $small = $this->makeNode(['memory' => 1024, 'disk' => 10240]);
         $large = $this->makeNode(['memory' => 8192, 'disk' => 102400]);
@@ -52,7 +41,7 @@ class TemplatePlacementServiceTest extends IntegrationTestCase
         $this->assertNotSame($small->id, $this->place()['node']->id);
     }
 
-    public function testUsedCapacityLowersTheScore(): void
+    public function test_used_capacity_lowers_the_score(): void
     {
         $busy = $this->makeNode(['memory' => 4096, 'disk' => 40960]);
         $idle = $this->makeNode(['memory' => 4096, 'disk' => 40960]);
@@ -61,18 +50,18 @@ class TemplatePlacementServiceTest extends IntegrationTestCase
         $this->assertSame($idle->id, $this->place()['node']->id);
     }
 
-    public function testTiesAreBrokenByTheLowestNodeIdSoTheResultIsDeterministic(): void
+    public function test_ties_are_broken_by_the_lowest_node_id_so_the_result_is_deterministic(): void
     {
         $first = $this->makeNode();
         $second = $this->makeNode();
 
-        for ($i = 0; $i < 3; ++$i) {
+        for ($i = 0; $i < 3; $i++) {
             $this->assertSame($first->id, $this->place()['node']->id);
         }
         $this->assertLessThan($second->id, $first->id);
     }
 
-    public function testFixedPlacementOnlyUsesThatNodeEvenWhenAnotherIsBetter(): void
+    public function test_fixed_placement_only_uses_that_node_even_when_another_is_better(): void
     {
         $fixed = $this->makeNode(['memory' => 1024]);
         $this->makeNode(['memory' => 16384, 'disk' => 204800]);
@@ -80,7 +69,7 @@ class TemplatePlacementServiceTest extends IntegrationTestCase
         $this->assertSame($fixed->id, $this->place(['placement_mode' => 'fixed_node', 'node_id' => $fixed->id])['node']->id);
     }
 
-    public function testFixedPlacementFailsClearlyWhenTheNodeIsOffline(): void
+    public function test_fixed_placement_fails_clearly_when_the_node_is_offline(): void
     {
         $fixed = $this->makeNode(['name' => 'Fixed One'], 4, 25565, 'offline');
         $this->makeNode();
@@ -93,7 +82,7 @@ class TemplatePlacementServiceTest extends IntegrationTestCase
         }
     }
 
-    public function testAllowedNodesAreTheOnlyCandidates(): void
+    public function test_allowed_nodes_are_the_only_candidates(): void
     {
         $allowed = $this->makeNode(['memory' => 1024]);
         $this->makeNode(['memory' => 16384]);
@@ -102,7 +91,7 @@ class TemplatePlacementServiceTest extends IntegrationTestCase
         $this->assertSame($allowed->id, $placed['node']->id);
     }
 
-    public function testLocationLimitsTheCandidates(): void
+    public function test_location_limits_the_candidates(): void
     {
         $inLocation = $this->makeNode(['memory' => 1024]);
         $this->makeNode(['memory' => 16384]);
@@ -111,7 +100,7 @@ class TemplatePlacementServiceTest extends IntegrationTestCase
         $this->assertSame($inLocation->id, $placed['node']->id);
     }
 
-    public function testNodesThatAreOfflineOrInMaintenanceAreNeverUsed(): void
+    public function test_nodes_that_are_offline_or_in_maintenance_are_never_used(): void
     {
         $offline = $this->makeNode(['memory' => 16384], 4, 25565, 'offline');
         $maintenance = $this->makeNode(['memory' => 16384, 'maintenance_mode' => true]);
@@ -129,7 +118,7 @@ class TemplatePlacementServiceTest extends IntegrationTestCase
         }
     }
 
-    public function testNonPublicNodesAreSkippedForAnyNodePlacementButAllowedWhenChosenExplicitly(): void
+    public function test_non_public_nodes_are_skipped_for_any_node_placement_but_allowed_when_chosen_explicitly(): void
     {
         $private = $this->makeNode(['public' => false]);
 
@@ -141,7 +130,7 @@ class TemplatePlacementServiceTest extends IntegrationTestCase
         }
     }
 
-    public function testInsufficientMemoryIsReportedPerNode(): void
+    public function test_insufficient_memory_is_reported_per_node(): void
     {
         $node = $this->makeNode(['memory' => 1024]);
 
@@ -153,7 +142,7 @@ class TemplatePlacementServiceTest extends IntegrationTestCase
         }
     }
 
-    public function testInsufficientDiskIsReportedPerNode(): void
+    public function test_insufficient_disk_is_reported_per_node(): void
     {
         $node = $this->makeNode(['disk' => 1024]);
 
@@ -165,7 +154,7 @@ class TemplatePlacementServiceTest extends IntegrationTestCase
         }
     }
 
-    public function testExistingServersCountAgainstCapacity(): void
+    public function test_existing_servers_count_against_capacity(): void
     {
         $node = $this->makeNode(['memory' => 1024]);
         $this->createServerModel(['node_id' => $node->id, 'memory' => 900]);
@@ -174,7 +163,7 @@ class TemplatePlacementServiceTest extends IntegrationTestCase
         $this->place(['memory' => 256]);
     }
 
-    public function testOverallocationExtendsCapacityAndMinusOneDisablesTheCheck(): void
+    public function test_overallocation_extends_capacity_and_minus_one_disables_the_check(): void
     {
         $this->makeNode(['memory' => 1024, 'memory_overallocate' => 100]);
         $this->assertNotNull($this->place(['memory' => 1500]));
@@ -183,7 +172,7 @@ class TemplatePlacementServiceTest extends IntegrationTestCase
         $this->assertNotNull($this->place(['memory' => 100000, 'placement_mode' => 'any']));
     }
 
-    public function testNoFreeAllocationsMeansNoPlacement(): void
+    public function test_no_free_allocations_means_no_placement(): void
     {
         $node = $this->makeNode([], 0);
 
@@ -195,7 +184,7 @@ class TemplatePlacementServiceTest extends IntegrationTestCase
         }
     }
 
-    public function testAdditionalAllocationsMustAllBeAvailable(): void
+    public function test_additional_allocations_must_all_be_available(): void
     {
         $this->makeNode([], 2);
 
@@ -205,7 +194,7 @@ class TemplatePlacementServiceTest extends IntegrationTestCase
         $this->place(['additional_allocations' => 2]);
     }
 
-    public function testAllocationsAlreadyInUseAreNeverHandedOut(): void
+    public function test_allocations_already_in_use_are_never_handed_out(): void
     {
         $node = $this->makeNode([], 2, 25565);
         $this->createServerModel(['node_id' => $node->id, 'allocation_id' => Allocation::query()->where('node_id', $node->id)->orderBy('port')->first()->id]);
@@ -214,7 +203,7 @@ class TemplatePlacementServiceTest extends IntegrationTestCase
         $this->assertSame(25566, Allocation::query()->find($placed['allocation_id'])->port);
     }
 
-    public function testPreferredPortsAreUsedFirstThenTheLowestFreePort(): void
+    public function test_preferred_ports_are_used_first_then_the_lowest_free_port(): void
     {
         $this->makeNode([], 6, 25565);
 
@@ -225,7 +214,7 @@ class TemplatePlacementServiceTest extends IntegrationTestCase
         $this->assertSame([25567, 25565], collect($placed['additional'])->map(fn ($id) => $ports[$id]->port)->all());
     }
 
-    public function testTheInstanceLimitIsEnforcedForActiveAndReadyInstancesOnly(): void
+    public function test_the_instance_limit_is_enforced_for_active_and_ready_instances_only(): void
     {
         $this->makeNode();
         $template = $this->makeTemplate(['max_instances' => 1]);
@@ -257,5 +246,18 @@ class TemplatePlacementServiceTest extends IntegrationTestCase
 
         // The instance being placed never counts against itself.
         $this->assertNotNull($this->placement()->place($template->id, $snapshot, $queued->id));
+    }
+
+    // Resolved on every use: the node health fake is swapped into the container as nodes are created.
+    private function placement(): TemplatePlacementService
+    {
+        return app(TemplatePlacementService::class);
+    }
+
+    private function place(array $templateOverride = [])
+    {
+        $template = $this->makeTemplate($templateOverride);
+
+        return $this->placement()->place($template->id, app(TemplateService::class)->snapshot($template));
     }
 }

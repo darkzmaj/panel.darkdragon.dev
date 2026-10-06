@@ -1,20 +1,23 @@
 <?php
 
+declare(strict_types=1);
+
 namespace GobiaTemplates\Services;
 
 use Carbon\CarbonImmutable;
-use Illuminate\Support\Arr;
-use Pterodactyl\Models\Egg;
-use Pterodactyl\Models\Server;
-use Pterodactyl\Models\EggVariable;
-use Illuminate\Support\Facades\Cache;
 use GobiaTemplates\Models\TemplateInstance;
-use Pterodactyl\Exceptions\DisplayException;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\ValidationException;
 use Pterodactyl\Contracts\Servers\CreatesServers;
 use Pterodactyl\Contracts\Servers\DeletesServers;
-use Pterodactyl\Facades\Daemon;
+use Pterodactyl\Exceptions\DisplayException;
 use Pterodactyl\Exceptions\Http\Connection\DaemonConnectionException;
+use Pterodactyl\Facades\Daemon;
+use Pterodactyl\Models\Egg;
+use Pterodactyl\Models\EggVariable;
+use Pterodactyl\Models\Server;
+use Throwable;
 
 /**
  * The provisioning pipeline for template instances. Each call to advance() performs exactly one step and
@@ -29,6 +32,7 @@ class TemplateProvisioningService
 {
     /** How long a server may stay in the "installing" state before the instance is failed. */
     public const INSTALL_TIMEOUT_SECONDS = 900;
+
     public const POLL_SECONDS = 5;
 
     /** Files up to this size are sent from memory; larger ones are streamed. */
@@ -41,8 +45,7 @@ class TemplateProvisioningService
         private CreatesServers $creation,
         private DeletesServers $deletion,
         private DaemonUploader $uploader,
-    ) {
-    }
+    ) {}
 
     /**
      * Performs the next step. Returns the number of seconds to wait before calling again, or null when the
@@ -64,7 +67,7 @@ class TemplateProvisioningService
                 TemplateInstance::STATE_STARTING => $this->start($instance),
                 default => null,
             };
-        } catch (\Throwable $exception) {
+        } catch (Throwable $exception) {
             $this->fail($instance, $exception);
 
             return null;
@@ -75,10 +78,10 @@ class TemplateProvisioningService
      * Marks an instance failed, records where and why (without leaking internals), and removes anything the
      * attempt left behind so a retry starts from a clean slate.
      */
-    public function fail(TemplateInstance $instance, \Throwable $exception): void
+    public function fail(TemplateInstance $instance, Throwable $exception): void
     {
         $stage = $instance->state;
-        if (!$exception instanceof DisplayException && !$exception instanceof ValidationException) {
+        if (! $exception instanceof DisplayException && ! $exception instanceof ValidationException) {
             report($exception);
         }
 
@@ -92,7 +95,7 @@ class TemplateProvisioningService
         ])->save();
     }
 
-    public function sanitize(\Throwable $exception): string
+    public function sanitize(Throwable $exception): string
     {
         if ($exception instanceof ValidationException) {
             return mb_substr(collect($exception->errors())->flatten()->first() ?? 'The template values are invalid.', 0, 480);
@@ -113,7 +116,7 @@ class TemplateProvisioningService
      */
     private function cleanup(TemplateInstance $instance): void
     {
-        if (!$instance->server_id) {
+        if (! $instance->server_id) {
             return;
         }
 
@@ -121,7 +124,7 @@ class TemplateProvisioningService
         if ($server) {
             try {
                 $this->deletion->withForce()->delete($server);
-            } catch (\Throwable $exception) {
+            } catch (Throwable $exception) {
                 report($exception);
             }
         }
@@ -151,7 +154,7 @@ class TemplateProvisioningService
 
     private function begin(TemplateInstance $instance): int
     {
-        if (!$this->templates->revision($instance->template, $instance->template_revision)) {
+        if (! $this->templates->revision($instance->template, $instance->template_revision)) {
             throw new DisplayException('The template revision for this instance no longer exists.');
         }
         $this->transition($instance, TemplateInstance::STATE_ALLOCATING);
@@ -162,7 +165,7 @@ class TemplateProvisioningService
     private function snapshot(TemplateInstance $instance): array
     {
         $revision = $this->templates->revision($instance->template, $instance->template_revision);
-        if (!$revision) {
+        if (! $revision) {
             throw new DisplayException('The template revision for this instance no longer exists.');
         }
 
@@ -174,7 +177,7 @@ class TemplateProvisioningService
         $snapshot = $this->snapshot($instance);
         $settings = $snapshot['settings'];
 
-        if (!$instance->template->enabled) {
+        if (! $instance->template->enabled) {
             throw new DisplayException('This template has been disabled.');
         }
 
@@ -203,8 +206,7 @@ class TemplateProvisioningService
      * Everything the new server is created from. Note the absence of anything request supplied other than the
      * validated name, owner, description and the overrides the template explicitly allows.
      *
-     * @param array{node: \Pterodactyl\Models\Node, allocation_id: int, additional: int[]} $placed
-     *
+     * @param  array{node: \Pterodactyl\Models\Node, allocation_id: int, additional: int[]}  $placed
      * @return array<string, mixed>
      */
     private function creationData(TemplateInstance $instance, array $snapshot, Egg $egg, array $placed): array
@@ -259,7 +261,7 @@ class TemplateProvisioningService
     private function awaitInstall(TemplateInstance $instance): int
     {
         $server = Server::query()->find($instance->server_id);
-        if (!$server) {
+        if (! $server) {
             throw new DisplayException('The server disappeared while it was being installed.');
         }
 
@@ -306,8 +308,8 @@ class TemplateProvisioningService
             $segments = explode('/', $path);
             $name = array_pop($segments);
             foreach ($segments as $segment) {
-                $directory = rtrim($parent, '/') . '/' . $segment;
-                if (!isset($created[$directory])) {
+                $directory = rtrim($parent, '/').'/'.$segment;
+                if (! isset($created[$directory])) {
                     $daemon->files()->createDirectory($segment, $parent);
                     $created[$directory] = true;
                 }
@@ -315,7 +317,7 @@ class TemplateProvisioningService
             }
 
             try {
-                $target = rtrim($parent, '/') . '/' . $name;
+                $target = rtrim($parent, '/').'/'.$name;
                 if (is_resource($content)) {
                     $this->uploader->stream($server, $target, $content);
                 } else {

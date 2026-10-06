@@ -30,19 +30,6 @@ class ApplicationTemplateController
 
     public function __construct(private readonly TemplateInstanceService $instances) {}
 
-    private function authorise(Request $request, int $level): void
-    {
-        $token = $request->user()?->currentAccessToken();
-        throw_unless($token instanceof ApiKey && $token->key_type === ApiKey::TYPE_APPLICATION && AdminAcl::check($token, AdminAcl::RESOURCE_SERVERS, $level), AccessDeniedHttpException::class, 'This endpoint needs an application API key with servers permission.');
-    }
-
-    private function template(ServerTemplate $template): ServerTemplate
-    {
-        throw_unless($template->enabled && $template->api_enabled, NotFoundHttpException::class);
-
-        return $template;
-    }
-
     #[Endpoint('List API templates')]
     public function index(Request $request): JsonResponse
     {
@@ -98,6 +85,19 @@ class ApplicationTemplateController
         $this->instances->destroy($this->find($template, $instance));
 
         return new JsonResponse(null, 204);
+    }
+
+    private function authorise(Request $request, int $level): void
+    {
+        $token = $request->user()?->currentAccessToken();
+        throw_unless($token instanceof ApiKey && $token->key_type === ApiKey::TYPE_APPLICATION && AdminAcl::check($token, AdminAcl::RESOURCE_SERVERS, $level), AccessDeniedHttpException::class, 'This endpoint needs an application API key with servers permission.');
+    }
+
+    private function template(ServerTemplate $template): ServerTemplate
+    {
+        throw_unless($template->enabled && $template->api_enabled, NotFoundHttpException::class);
+
+        return $template;
     }
 
     private function find(ServerTemplate $template, string $uuid): TemplateInstance

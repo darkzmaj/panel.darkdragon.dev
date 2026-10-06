@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Http;
 use Pterodactyl\Exceptions\Http\Connection\DaemonConnectionException;
 use Pterodactyl\Models\Node;
 use Pterodactyl\Models\Server;
+use RuntimeException;
 use Throwable;
 
 /**
@@ -37,7 +38,7 @@ class DaemonUploader
         }
 
         if ($response->failed()) {
-            throw new DaemonConnectionException(new \RuntimeException('Wings rejected the file upload with status '.$response->status().'.'));
+            throw new DaemonConnectionException(new RuntimeException('Wings rejected the file upload with status '.$response->status().'.'));
         }
     }
 }

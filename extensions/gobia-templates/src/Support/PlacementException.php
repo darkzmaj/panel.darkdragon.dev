@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace GobiaTemplates\Support;
 
 use Pterodactyl\Exceptions\DisplayException;
@@ -7,7 +9,7 @@ use Pterodactyl\Exceptions\DisplayException;
 class PlacementException extends DisplayException
 {
     /**
-     * @param array<int, string> $reasons per node explanation, keyed by node name
+     * @param  array<int, string>  $reasons  per node explanation, keyed by node name
      */
     public function __construct(string $message, private array $reasons = [])
     {

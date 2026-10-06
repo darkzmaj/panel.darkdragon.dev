@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace GobiaTemplates\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Pterodactyl\Models\EggVariable;
+
 /**
  * @property int $template_id
  * @property int $egg_variable_id
@@ -15,6 +15,7 @@ use Pterodactyl\Models\EggVariable;
 class ServerTemplateVariable extends Model
 {
     public $timestamps = false;
+
     public $incrementing = false;
 
     protected $table = 'gobia_template_variables';

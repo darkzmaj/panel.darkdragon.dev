@@ -1,21 +1,24 @@
 <?php
 
+declare(strict_types=1);
+
 namespace GobiaTemplates\Services;
 
-use Ramsey\Uuid\Uuid;
-use Illuminate\Support\Str;
-use Pterodactyl\Models\Egg;
-use Pterodactyl\Models\Node;
-use Pterodactyl\Models\EggVariable;
 use GobiaTemplates\Models\ServerTemplate;
-use GobiaTemplates\Models\TemplateInstance;
 use GobiaTemplates\Models\ServerTemplateFile;
-use Illuminate\Database\ConnectionInterface;
-use Pterodactyl\Exceptions\DisplayException;
-use Illuminate\Validation\ValidationException;
 use GobiaTemplates\Models\ServerTemplateRevision;
 use GobiaTemplates\Models\ServerTemplateVariable;
+use GobiaTemplates\Models\TemplateInstance;
 use Illuminate\Contracts\Validation\Factory as ValidationFactory;
+use Illuminate\Database\ConnectionInterface;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
+use Pterodactyl\Exceptions\DisplayException;
+use Pterodactyl\Models\Egg;
+use Pterodactyl\Models\EggVariable;
+use Pterodactyl\Models\Node;
+use Ramsey\Uuid\Uuid;
+use Throwable;
 
 /**
  * Creates and edits server templates and records an immutable revision whenever the effective
@@ -37,8 +40,7 @@ class TemplateService
         private ConnectionInterface $connection,
         private ValidationFactory $validator,
         private TemplateFileStore $files,
-    ) {
-    }
+    ) {}
 
     /**
      * @return array<string, mixed>
@@ -47,7 +49,7 @@ class TemplateService
     {
         return [
             'name' => 'required|string|min:1|max:80',
-            'slug' => ['sometimes', 'nullable', 'string', 'max:80', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', 'unique:gobia_server_templates,slug' . ($template ? ',' . $template->id : '')],
+            'slug' => ['sometimes', 'nullable', 'string', 'max:80', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', 'unique:gobia_server_templates,slug'.($template ? ','.$template->id : '')],
             'description' => 'nullable|string|max:500',
             'enabled' => 'sometimes|boolean',
             'api_enabled' => 'sometimes|boolean',
@@ -63,7 +65,7 @@ class TemplateService
             'database_limit' => 'nullable|integer|min:0|max:1000',
             'allocation_limit' => 'nullable|integer|min:0|max:1000',
             'backup_limit' => 'nullable|integer|min:0|max:1000',
-            'placement_mode' => 'required|in:' . implode(',', [ServerTemplate::PLACEMENT_FIXED, ServerTemplate::PLACEMENT_ALLOWED, ServerTemplate::PLACEMENT_ANY]),
+            'placement_mode' => 'required|in:'.implode(',', [ServerTemplate::PLACEMENT_FIXED, ServerTemplate::PLACEMENT_ALLOWED, ServerTemplate::PLACEMENT_ANY]),
             'node_id' => 'nullable|integer|exists:nodes,id',
             'allowed_nodes' => 'sometimes|array|max:100',
             'allowed_nodes.*' => 'integer|distinct|exists:nodes,id',
@@ -97,7 +99,7 @@ class TemplateService
             }
 
             $egg = Egg::query()->find($input['egg_id']);
-            if (!in_array($input['docker_image'], array_values($egg->docker_images ?? []), true)) {
+            if (! in_array($input['docker_image'], array_values($egg->docker_images ?? []), true)) {
                 $validator->errors()->add('docker_image', 'The Docker image must be one of the images defined by the selected software.');
             }
 
@@ -108,7 +110,7 @@ class TemplateService
             if ($mode === ServerTemplate::PLACEMENT_ALLOWED && empty($input['allowed_nodes'])) {
                 $validator->errors()->add('allowed_nodes', 'Choose at least one allowed node.');
             }
-            if (!empty($input['preferred_ports']) && PortSpec::parse($input['preferred_ports']) === null) {
+            if (! empty($input['preferred_ports']) && PortSpec::parse($input['preferred_ports']) === null) {
                 $validator->errors()->add('preferred_ports', 'Use a comma separated list of ports or ranges, for example 25565,25570-25580.');
             }
 
@@ -116,8 +118,9 @@ class TemplateService
             $known = EggVariable::query()->where('egg_id', $egg->id)->get()->keyBy('env_variable');
             foreach ($input['variables'] ?? [] as $env => $row) {
                 $variable = $known->get($env);
-                if (!$variable) {
+                if (! $variable) {
                     $validator->errors()->add("variables.$env", "$env is not a variable of the selected software.");
+
                     continue;
                 }
                 if (($row['value'] ?? null) === null || $row['value'] === '') {
@@ -135,7 +138,7 @@ class TemplateService
 
     /**
      * @throws ValidationException
-     * @throws \Throwable
+     * @throws Throwable
      */
     public function create(array $input): ServerTemplate
     {
@@ -145,7 +148,7 @@ class TemplateService
             $template = new ServerTemplate();
             $this->fill($template, $data);
             $template->uuid = Uuid::uuid4()->toString();
-            $template->slug = $this->uniqueSlug(!empty($data['slug']) ? $data['slug'] : $data['name']);
+            $template->slug = $this->uniqueSlug(! empty($data['slug']) ? $data['slug'] : $data['name']);
             $template->revision = 1;
             $template->save();
 
@@ -158,7 +161,7 @@ class TemplateService
 
     /**
      * @throws ValidationException
-     * @throws \Throwable
+     * @throws Throwable
      */
     public function update(ServerTemplate $template, array $input): ServerTemplate
     {
@@ -166,7 +169,7 @@ class TemplateService
 
         return $this->connection->transaction(function () use ($template, $data) {
             $this->fill($template, $data);
-            if (!empty($data['slug'])) {
+            if (! empty($data['slug'])) {
                 $template->slug = $data['slug'];
             }
             $template->save();
@@ -190,15 +193,15 @@ class TemplateService
      * Copies a template, including its variables, nodes and files. The copy starts disabled so it
      * cannot be used before somebody has looked at it.
      *
-     * @throws \Throwable
+     * @throws Throwable
      */
     public function duplicate(ServerTemplate $source): ServerTemplate
     {
         return $this->connection->transaction(function () use ($source) {
             $copy = $source->replicate(['uuid', 'slug', 'revision', 'name']);
             $copy->uuid = Uuid::uuid4()->toString();
-            $copy->name = Str::limit($source->name, 70, '') . ' (copy)';
-            $copy->slug = $this->uniqueSlug($source->slug . '-copy');
+            $copy->name = Str::limit($source->name, 70, '').' (copy)';
+            $copy->slug = $this->uniqueSlug($source->slug.'-copy');
             $copy->enabled = false;
             $copy->revision = 1;
             $copy->save();
@@ -254,7 +257,7 @@ class TemplateService
     }
 
     /**
-     * @param resource $stream
+     * @param  resource  $stream
      *
      * @throws DisplayException
      */
@@ -322,7 +325,7 @@ class TemplateService
             }
             $seen[$entry['path']] = true;
             $known = $published->get($entry['path']);
-            if (!$known) {
+            if (! $known) {
                 $added[] = $entry['path'];
             } elseif ($known->size !== $entry['size'] || $entry['modified'] >= $publishedAt) {
                 // Same size and not touched since publishing means unchanged; otherwise compare the content.
@@ -417,7 +420,7 @@ class TemplateService
     {
         $snapshot = $this->snapshot($template);
         $latest = $template->revisions()->first();
-        if ($latest && $latest->snapshot == json_decode(json_encode($snapshot), true)) {
+        if ($latest && $latest->snapshot === json_decode(json_encode($snapshot), true)) {
             return;
         }
 
@@ -438,7 +441,7 @@ class TemplateService
     private function fill(ServerTemplate $template, array $data): void
     {
         foreach (self::SCALAR_FIELDS as $field) {
-            if ($field === 'slug' || !array_key_exists($field, $data)) {
+            if ($field === 'slug' || ! array_key_exists($field, $data)) {
                 continue;
             }
             $template->{$field} = $data[$field];
@@ -464,7 +467,7 @@ class TemplateService
                 $variable = $known->get($env);
                 $value = $row['value'] ?? null;
                 $overridable = (bool) ($row['overridable'] ?? false);
-                if (!$variable || ($value === null && !$overridable)) {
+                if (! $variable || ($value === null && ! $overridable)) {
                     continue;
                 }
                 ServerTemplateVariable::query()->insert([
@@ -484,8 +487,8 @@ class TemplateService
         $slug = Str::slug($base) ?: 'template';
         $slug = Str::limit($slug, 70, '');
         $candidate = $slug;
-        for ($i = 2; ServerTemplate::query()->where('slug', $candidate)->exists(); ++$i) {
-            $candidate = $slug . '-' . $i;
+        for ($i = 2; ServerTemplate::query()->where('slug', $candidate)->exists(); $i++) {
+            $candidate = $slug.'-'.$i;
         }
 
         return $candidate;
