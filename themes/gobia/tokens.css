@@ -1,0 +1,126 @@
+/*
+ * Gobia design tokens for Pterodactyl 2.0.
+ *
+ * Only tokens are defined here (colour roles, radius, layout, fonts). No component CSS, no selectors beyond :root and .dark.
+ * Published to /assets/theme.css by `php artisan p:theme:apply gobia`; fonts and logos ship in this theme's assets/ folder
+ * (published to /assets/theme/).
+ *
+ * Palette: Gobia blue on dark navy surfaces with thin borders. Light and dark are separately designed palettes; the panel
+ * decides which applies by the `dark` class on <html> (gobia-core sets it from the user's Appearance choice: Dark, Light, System).
+ */
+
+@font-face {
+    font-family: 'Manrope';
+    font-style: normal;
+    font-display: swap;
+    font-weight: 200 800;
+    src: url('/assets/theme/fonts/manrope-latin-wght-normal.woff2') format('woff2-variations');
+}
+
+@font-face {
+    font-family: 'Space Grotesk';
+    font-style: normal;
+    font-display: swap;
+    font-weight: 300 700;
+    src: url('/assets/theme/fonts/space-grotesk-latin-wght-normal.woff2') format('woff2-variations');
+}
+
+:root {
+    --font-sans: 'Manrope', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --font-header: 'Space Grotesk', 'Manrope', system-ui, sans-serif;
+
+    --radius: 0.625rem;
+    --layout-content-width: 80rem;
+    --layout-auth-width: 43.75rem;
+    --layout-sidebar-width: 16.5rem;
+
+    --color-scheme: light;
+    --theme-color: #1264d1;
+
+    /* Light palette */
+    --background: #f6f8fb;
+    --foreground: #111a2c;
+    --card: #ffffff;
+    --card-foreground: #111a2c;
+    --popover: #ffffff;
+    --popover-foreground: #111a2c;
+    --primary: #1264d1;
+    --primary-foreground: #f7fafd;
+    --secondary: #eef2f7;
+    --secondary-foreground: #111a2c;
+    --muted: #eef2f7;
+    --muted-foreground: #5c6880;
+    --accent: #3b82e0;
+    --accent-foreground: #f7fafd;
+    --destructive: #b91c1c;
+    --destructive-foreground: #f7fafd;
+    --border: #dde3ed;
+    --input: #cbd3e1;
+    --ring: #3b82e0;
+
+    --state-foreground: #0b1220;
+    --success: #166534;
+    --success-foreground: #f7fafd;
+    --warning: #9a4506;
+    --warning-foreground: #f7fafd;
+    --caution: #b45309;
+    --caution-foreground: #f7fafd;
+
+    --sidebar: #ffffff;
+    --sidebar-foreground: #111a2c;
+    --sidebar-primary: #1264d1;
+    --sidebar-primary-foreground: #f7fafd;
+    --sidebar-accent: #eef2f7;
+    --sidebar-accent-foreground: #111a2c;
+    --sidebar-border: #dde3ed;
+    --sidebar-ring: #3b82e0;
+
+    --terminal-background: #0a0f17;
+    --terminal-foreground: #d6e0ee;
+}
+
+.dark {
+    --color-scheme: dark;
+    --theme-color: #0a0f17;
+
+    /* Dark palette */
+    --background: #0a0f17;
+    --foreground: #e9f0fa;
+    --card: #10161f;
+    --card-foreground: #e9f0fa;
+    --popover: #161e2a;
+    --popover-foreground: #e9f0fa;
+    --primary: #4da3ff;
+    --primary-foreground: #04101d;
+    --secondary: #161e2a;
+    --secondary-foreground: #e9f0fa;
+    --muted: #161e2a;
+    --muted-foreground: #94a3ba;
+    --accent: #5eaeff;
+    --accent-foreground: #04101d;
+    --destructive: #f87171;
+    --destructive-foreground: #04101d;
+    --border: #222c3c;
+    --input: #2b384c;
+    --ring: #4da3ff;
+
+    --state-foreground: #04101d;
+    --success: #4ade80;
+    --success-foreground: #04101d;
+    --warning: #fbbf24;
+    --warning-foreground: #04101d;
+    --caution: #fb923c;
+    --caution-foreground: #04101d;
+
+    --sidebar: #10161f;
+    --sidebar-foreground: #e9f0fa;
+    --sidebar-primary: #4da3ff;
+    --sidebar-primary-foreground: #04101d;
+    --sidebar-accent: #161e2a;
+    --sidebar-accent-foreground: #e9f0fa;
+    --sidebar-border: #222c3c;
+    --sidebar-ring: #4da3ff;
+
+    --terminal-background: #070b11;
+    --terminal-foreground: #d6e0ee;
+}
