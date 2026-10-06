@@ -42,12 +42,12 @@ Legend for "Core or Extension": `Ext` extension API only, `Theme` design tokens,
 | 25 | Create Instance flow (Custom / Template) and Template browser | `CreateInstanceModal`, `TemplateBrowserController` | gobia-templates dashboard slot | Ext | no | yes | yes | yes | Done | Dialog in gobia-core, verified live: browse, confirm, provisioning stages, ready |
 | 26 | Provisioning stages, idempotency, job progress | `ProvisionTemplateInstanceJob`, `TemplateProvisioningService`, `TemplateInstance` | gobia-templates using `ExtensionJobProgress` | Ext | yes (`stage_ms`) | yes | yes | yes | Done | Adaptive polling, timings |
 | 27 | Template application API (auth, 2FA, rate limit, permissions) | `Api/Application/Templates/*` | extension route registration + OpenAPI | Ext | no | no | yes | yes | Done | |
-| 28 | File manager (context menu, three dot, rename/move/duplicate/download/copy path/delete) | `fileOps.ts`, `useMoveEntries`, `FileActionsContext` | gobia-files over 2.0 file hooks/mutations | Ext | no | yes | no | yes | Todo | |
-| 29 | Drag and drop, OS drag upload, folder upload, queue, progress, cancel, retry | `dragDrop.ts`, `uploadQueue.ts`, `UploadPanel` | gobia-files | Ext | no | yes | no | yes | Todo | |
-| 30 | Multi file editor (tabs, dirty, save, Ctrl/Cmd S, unsaved protection, conflict detection, explorer) | `FileWorkspace`, `FileTree` | gobia-files, `useNavigationBlocker` | Ext | no | yes | no | yes | Todo | |
-| 31 | Monaco, lazy | `MonacoEditor.tsx` | evaluate 2.0 CodeMirror first; Monaco only if required and lazy | Ext | no | yes | no | bundle budget | Todo | Never on dashboard |
-| 32 | Structured validation (JSON, YAML, TOML, XML) | `validation.ts` | gobia-files | Ext | no | yes | no | yes | Todo | Only deterministic errors block save |
-| 33 | Mobile files (drawer, tabs, bottom sheets) | `FileWorkspace` mobile CSS | gobia-files | Ext | no | yes | no | responsive | Todo | |
+| 28 | File manager (context menu, three dot, rename/move/duplicate/download/copy path/delete) | `fileOps.ts`, `useMoveEntries`, `FileActionsContext` | gobia-files over 2.0 file hooks/mutations | Ext | no | yes | no | yes | Done | |
+| 29 | Drag and drop, OS drag upload, folder upload, queue, progress, cancel, retry | `dragDrop.ts`, `uploadQueue.ts`, `UploadPanel` | gobia-files | Ext | no | yes | no | yes | Done | |
+| 30 | Multi file editor (tabs, dirty, save, Ctrl/Cmd S, unsaved protection, conflict detection, explorer) | `FileWorkspace`, `FileTree` | gobia-files, `useNavigationBlocker` | Ext | no | yes | no | yes | Done | |
+| 31 | Monaco, lazy | `MonacoEditor.tsx` | evaluate 2.0 CodeMirror first; Monaco only if required and lazy | Ext | no | yes | no | bundle budget | Done (CodeMirror, lazy; Monaco not justified) | Never on dashboard |
+| 32 | Structured validation (JSON, YAML, TOML, XML) | `validation.ts` | gobia-files | Ext | no | yes | no | yes | Done | Only deterministic errors block save |
+| 33 | Mobile files (drawer, tabs, bottom sheets) | `FileWorkspace` mobile CSS | gobia-files | Ext | no | yes | no | responsive | Done | |
 | 34 | Server timing telemetry, query log, perf budgets | `ServerTiming`, `PerfTimings`, `check-bundle-budget.js` | gobia-core dev tooling + CI structural budgets | Ext | no | no | yes | yes | Todo | |
 | 35 | Wings HTTP client reuse | `DaemonRepository` | re-evaluate against 2.0 | Core? | no | no | maybe | yes | Todo | Port only if still useful |
 | 36 | Updater (1.x implementation) | `app/Services/Updater/*`, `UpdateController`, `docs/updates.md` | **Not ported**: Gobia Updates frontend + contract only; privileged updater is Majcek's | Ext | no | yes | contract | yes | Done (frontend and read only compatibility API; privileged updater is Majcek's) | See `MAJCEK_HANDOFF.md` |

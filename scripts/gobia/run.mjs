@@ -23,6 +23,14 @@ function run(command, args, cwd = root) {
     }
 }
 
+// Extensions that declare their own dependencies (extension package.json) get them installed on first use.
+for (const name of extensions) {
+    const directory = join(root, 'extensions', name);
+    if (existsSync(join(directory, 'package-lock.json')) && !existsSync(join(directory, 'node_modules'))) {
+        run('npm', ['ci', '--no-audit', '--no-fund'], directory);
+    }
+}
+
 const tasks = {
     build: () => extensions.forEach((name) => existsSync(join(root, 'extensions', name, 'vite.config.mjs')) && run(bin('vite'), ['build'], join(root, 'extensions', name))),
     test: () => run(bin('vitest'), ['run', '--config', 'vitest.gobia.config.ts']),

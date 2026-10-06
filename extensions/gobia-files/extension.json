@@ -1,0 +1,20 @@
+{
+    "id": "gobia-files",
+    "name": "Gobia Files",
+    "version": "1.0.0",
+    "description": "File workspace: persistent explorer, multi file editor tabs, conflict detection and structured validation.",
+    "author": "Gobia",
+    "requires": {
+        "panel": "^2.0.0-dev",
+        "sdk": ">=2.0.0-beta.4 <3.0",
+        "php": "^8.3"
+    },
+    "ui": {
+        "entry": "dist/client.js",
+        "mode": "native",
+        "prefix": "gf",
+        "components": [
+            "server.files.manager"
+        ]
+    }
+}
