@@ -64,7 +64,7 @@ test('search matches the name, the identifier and the address and escapes wildca
     $this->actingAs($me);
 
     expect(names($this->getJson(BASE.'/servers?q=surv')))->toBe(['Survival World']);
-    expect(names($this->getJson(BASE.'/servers?q='.substr($first->uuid, 0, 8))))->toBe(['Survival World']);
+    expect(names($this->getJson(BASE.'/servers?q='.mb_substr($first->uuid, 0, 8))))->toBe(['Survival World']);
     expect(names($this->getJson(BASE.'/servers?q=100%25')))->toBe(['Creative 100%']);
     expect(names($this->getJson(BASE.'/servers?q=%25')))->toBe(['Creative 100%']);
     expect(names($this->getJson(BASE.'/servers?q=zzz')))->toBe([]);

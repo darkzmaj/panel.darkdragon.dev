@@ -22,6 +22,11 @@ class AvatarService
 
     public function __construct(private readonly PngImageProcessor $processor, private readonly ExtensionSettingFiles $files) {}
 
+    public static function url(UserProfile $profile): ?string
+    {
+        return $profile->avatar_file === null ? null : ExtensionSettingFiles::url(self::EXTENSION, $profile->avatar_file);
+    }
+
     public function store(User $user, UploadedFile $upload): UserProfile
     {
         $bytes = $this->processor->normalize($upload->getRealPath(), self::SIZE, self::SIZE, true);
@@ -54,10 +59,5 @@ class AvatarService
         }
 
         return $profile;
-    }
-
-    public static function url(UserProfile $profile): ?string
-    {
-        return $profile->avatar_file === null ? null : ExtensionSettingFiles::url(self::EXTENSION, $profile->avatar_file);
     }
 }

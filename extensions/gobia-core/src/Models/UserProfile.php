@@ -20,11 +20,11 @@ class UserProfile extends Model
 {
     public const array THEMES = ['system', 'light', 'dark'];
 
+    public $incrementing = false;
+
     protected $table = 'gobia_user_profiles';
 
     protected $primaryKey = 'user_id';
-
-    public $incrementing = false;
 
     protected $fillable = ['avatar_file', 'theme', 'recent_icon_colors'];
 

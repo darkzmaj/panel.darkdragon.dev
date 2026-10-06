@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Knuckles\Scribe\Attributes\Endpoint;
 use Knuckles\Scribe\Attributes\Group;
+use stdClass;
 
 #[Group('Gobia instances')]
 class ServerListController
@@ -35,7 +36,7 @@ class ServerListController
         $categories = $this->layout->categoriesFor($user, $page->getCollection());
 
         return new JsonResponse([
-            'data' => $page->getCollection()->map(fn (\stdClass $server): array => [
+            'data' => $page->getCollection()->map(fn (stdClass $server): array => [
                 'uuid' => $server->uuid,
                 'identifier' => $server->uuidShort,
                 'name' => $server->name,

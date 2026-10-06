@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use GobiaCore\Http\Controllers\CategoryController;
 use GobiaCore\Http\Controllers\ProfileController;
 use GobiaCore\Http\Controllers\ServerListController;

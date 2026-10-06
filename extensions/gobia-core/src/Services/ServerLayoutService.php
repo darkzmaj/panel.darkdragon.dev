@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Pterodactyl\Models\Server;
 use Pterodactyl\Models\User;
+use stdClass;
 
 /**
  * A user's personal organisation of the servers they can open: filters (all, owned, shared), categories, the order of
@@ -46,7 +47,7 @@ class ServerLayoutService
      *
      * @param  'all'|'you'|'other'  $view
      * @param  int|'none'|null  $category  a category id, "none" for servers in no category, or null for every server
-     * @return LengthAwarePaginator<int, \stdClass> plain rows, not models: only a handful of columns are selected
+     * @return LengthAwarePaginator<int, stdClass> plain rows, not models: only a handful of columns are selected
      */
     public function page(User $user, string $view, int|string|null $category, string $search, int $page, int $perPage): LengthAwarePaginator
     {
@@ -98,7 +99,7 @@ class ServerLayoutService
     /**
      * Category ids per server uuid, for the servers on one page.
      *
-     * @param  Collection<int, \stdClass>  $servers rows from page()
+     * @param  Collection<int, stdClass>  $servers  rows from page()
      * @return array<int, list<int>> server id => category ids
      */
     public function categoriesFor(User $user, Collection $servers): array
@@ -270,24 +271,6 @@ class ServerLayoutService
         });
     }
 
-    /** Give every server the user can open a position (in the current default order) the first time they reorder. */
-    private function materialisePositions(User $user): void
-    {
-        $missing = $this->accessible($user)
-            ->leftJoin('gobia_server_preferences as gp', fn ($join) => $join->on('gp.server_id', '=', 'servers.id')->where('gp.user_id', '=', $user->id))
-            ->whereNull('gp.position')
-            ->orderBy('servers.name')->orderBy('servers.id')
-            ->pluck('servers.id');
-        if ($missing->isEmpty()) {
-            return;
-        }
-
-        $next = (int) DB::table('gobia_server_preferences')->where('user_id', $user->id)->max('position');
-        foreach ($missing as $id) {
-            DB::table('gobia_server_preferences')->updateOrInsert(['user_id' => $user->id, 'server_id' => $id], ['position' => ++$next]);
-        }
-    }
-
     /** Sets or clears the user's icon colour for a server and remembers it in their recent colours. */
     public function setIconColor(User $user, string $uuid, ?string $color): UserProfile
     {
@@ -311,7 +294,7 @@ class ServerLayoutService
 
     /**
      * @param  list<string>  $uuids
-     * @return Collection<int, \stdClass> rows with id and uuid, in the order given
+     * @return Collection<int, stdClass> rows with id and uuid, in the order given
      */
     public function resolve(User $user, array $uuids): Collection
     {
@@ -322,7 +305,25 @@ class ServerLayoutService
         }
         $byUuid = $servers->keyBy('uuid');
 
-        return collect($unique)->map(fn (string $uuid): \stdClass => $byUuid[$uuid]);
+        return collect($unique)->map(fn (string $uuid): stdClass => $byUuid[$uuid]);
+    }
+
+    /** Give every server the user can open a position (in the current default order) the first time they reorder. */
+    private function materialisePositions(User $user): void
+    {
+        $missing = $this->accessible($user)
+            ->leftJoin('gobia_server_preferences as gp', fn ($join) => $join->on('gp.server_id', '=', 'servers.id')->where('gp.user_id', '=', $user->id))
+            ->whereNull('gp.position')
+            ->orderBy('servers.name')->orderBy('servers.id')
+            ->pluck('servers.id');
+        if ($missing->isEmpty()) {
+            return;
+        }
+
+        $next = (int) DB::table('gobia_server_preferences')->where('user_id', $user->id)->max('position');
+        foreach ($missing as $id) {
+            DB::table('gobia_server_preferences')->updateOrInsert(['user_id' => $user->id, 'server_id' => $id], ['position' => ++$next]);
+        }
     }
 
     private function ownedCategory(User $user, int $id): void
