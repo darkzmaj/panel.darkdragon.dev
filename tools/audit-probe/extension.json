@@ -1,0 +1,21 @@
+{
+    "$schema": "./node_modules/@pterodactyl/sdk/manifest.schema.json",
+    "id": "audit-probe",
+    "name": "Audit Probe",
+    "version": "1.0.0",
+    "requires": { "panel": "^2.0.0-dev", "sdk": ">=2.0.0-beta.4 <3.0", "php": "^8.3" },
+    "provider": "AuditProbe\\AuditProbeProvider",
+    "autoload": { "AuditProbe\\": "src" },
+    "ui": {
+        "entry": "dist/client.js",
+        "mode": "native",
+        "prefix": "ap",
+        "components": ["dashboard.serverCard"],
+        "screens": [
+            { "id": "main", "area": "server", "path": "audit-probe", "nav": { "label": "Audit Probe" }, "permission": ["ext.audit-probe.view"] },
+            { "id": "account", "area": "account", "path": "audit-probe", "nav": { "label": "Audit Probe" } },
+            { "id": "admin", "area": "admin", "path": "audit-probe", "nav": { "label": "Audit Probe" } },
+            { "id": "usertab", "area": "admin", "parent": "admin.user", "path": "audit-probe-tab", "nav": { "label": "Probe" } }
+        ]
+    }
+}
