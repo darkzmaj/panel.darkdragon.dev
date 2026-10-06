@@ -1,0 +1,25 @@
+{
+    "id": "gobia-templates",
+    "name": "Gobia Templates",
+    "version": "1.0.0",
+    "description": "Server templates: revisions, files, SFTP, provisioning, create instance flow and template API.",
+    "author": "Gobia",
+    "requires": {
+        "panel": "^2.0.0-dev",
+        "sdk": ">=2.0.0-beta.4 <3.0",
+        "php": "^8.3",
+        "extensions": {
+            "gobia-core": "^1.0"
+        }
+    },
+    "provider": "GobiaTemplates\\GobiaTemplatesProvider",
+    "autoload": {
+        "GobiaTemplates\\": "src"
+    },
+    "ui": {
+        "entry": "dist/client.js",
+        "mode": "native",
+        "prefix": "gt",
+        "screens": []
+    }
+}
