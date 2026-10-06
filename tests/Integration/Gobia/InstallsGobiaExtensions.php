@@ -29,7 +29,9 @@ trait InstallsGobiaExtensions
     {
         $this->gobiaDirectory = sys_get_temp_dir().'/gobia-ext-'.uniqid();
         File::ensureDirectoryExists($this->gobiaDirectory.'/installed');
-        config(['extensions.enabled' => true, 'extensions.directory' => $this->gobiaDirectory.'/installed']);
+        // Published bundles go to a temporary directory too, so tests never overwrite a developer's real public/assets/extensions.
+        File::ensureDirectoryExists($this->gobiaDirectory.'/assets');
+        config(['extensions.enabled' => true, 'extensions.directory' => $this->gobiaDirectory.'/installed', 'extensions.assets_directory' => $this->gobiaDirectory.'/assets']);
         $this->app->make(ExtensionRepository::class)->flushDiscovery();
 
         foreach ($ids as $id) {

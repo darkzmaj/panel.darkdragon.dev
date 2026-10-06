@@ -104,6 +104,26 @@ class TemplateProvisioningServiceTest extends IntegrationTestCase
         $this->assertArrayHasKey('installing', $instance->stage_ms ?? []);
     }
 
+    public function test_large_files_are_streamed_byte_for_byte(): void
+    {
+        $this->makeNode();
+        $service = app(TemplateService::class);
+        $template = $this->makeTemplate(['start_automatically' => false]);
+        $size = TemplateProvisioningService::INLINE_BYTES + 1024;
+        $payload = random_bytes($size);
+        $stream = fopen('php://temp', 'w+b');
+        fwrite($stream, $payload);
+        rewind($stream);
+        $service->uploadFile($template, 'server.jar', $stream, $size);
+        $service->publish($template);
+
+        $this->assertSame(TemplateInstance::STATE_READY, $this->drive($this->queue($template->refresh()))->state);
+
+        $writes = $this->callsTo('POST', '#/files/write$#');
+        $this->assertCount(1, $writes);
+        $this->assertSame(hash('sha256', $payload), hash('sha256', $writes[0]['body']));
+    }
+
     public function test_the_server_is_not_started_when_the_template_says_not(): void
     {
         $this->makeNode();

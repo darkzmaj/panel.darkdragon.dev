@@ -23,7 +23,8 @@ uses(ClientApiIntegrationTestCase::class);
 beforeEach(function (): void {
     $this->directory = sys_get_temp_dir().'/ptero-audit-'.uniqid();
     mkdir($this->directory.'/installed', 0777, true);
-    config(['extensions.enabled' => true, 'extensions.directory' => $this->directory.'/installed']);
+    mkdir($this->directory.'/assets', 0777, true);
+    config(['extensions.enabled' => true, 'extensions.directory' => $this->directory.'/installed', 'extensions.assets_directory' => $this->directory.'/assets']);
     $this->app->make(ExtensionRepository::class)->flushDiscovery();
     $source = $this->directory.'/source';
     \Illuminate\Support\Facades\File::copyDirectory(base_path('tools/audit-probe'), $source);

@@ -20,6 +20,22 @@
         "entry": "dist/client.js",
         "mode": "native",
         "prefix": "gt",
-        "screens": []
+        "screens": [
+            {
+                "id": "templates",
+                "area": "admin",
+                "path": "templates",
+                "nav": {
+                    "label": "Templates",
+                    "icon": "layout-template",
+                    "order": 55
+                }
+            },
+            {
+                "id": "editor",
+                "area": "admin",
+                "path": "templates/$template"
+            }
+        ]
     }
 }
