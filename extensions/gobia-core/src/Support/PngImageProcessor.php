@@ -29,7 +29,7 @@ class PngImageProcessor
         if ($handle === false) {
             return false;
         }
-        $signature = fread($handle, mb_strlen(self::SIGNATURE));
+        $signature = fread($handle, mb_strlen(self::SIGNATURE, '8bit'));
         fclose($handle);
 
         if ($signature !== self::SIGNATURE || (new finfo(FILEINFO_MIME_TYPE))->file($path) !== 'image/png') {
