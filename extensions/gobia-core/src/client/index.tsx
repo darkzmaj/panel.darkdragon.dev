@@ -12,6 +12,7 @@ export default definePterodactylExtension({
         slots.register('nav.items.after', ProfileSync);
         screens.register('profile', () => import('./screens/ProfileScreen'));
         components.replace('dashboard.page', { load: () => import('./dashboard/DashboardPage') });
+        screens.register('access', () => import('./screens/AccessScreen'));
         screens.register('appearance', () => import('./screens/AppearanceScreen'));
     },
 });

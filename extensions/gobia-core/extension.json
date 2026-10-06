@@ -29,6 +29,16 @@
                 }
             },
             {
+                "id": "access",
+                "area": "account",
+                "path": "access",
+                "nav": {
+                    "label": "Access",
+                    "icon": "users",
+                    "order": 30
+                }
+            },
+            {
                 "id": "appearance",
                 "area": "account",
                 "path": "appearance",

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use GobiaCore\Http\Controllers\AccessController;
 use GobiaCore\Http\Controllers\CategoryController;
 use GobiaCore\Http\Controllers\ProfileController;
 use GobiaCore\Http\Controllers\ServerListController;
@@ -25,3 +26,8 @@ Route::put('/categories/{category}', [CategoryController::class, 'update'])->whe
 Route::delete('/categories/{category}', [CategoryController::class, 'destroy'])->whereNumber('category')->name('categories.destroy');
 Route::put('/categories/{category}/servers', [CategoryController::class, 'assign'])->whereNumber('category')->name('categories.assign');
 Route::put('/categories/{category}/servers/{uuid}', [CategoryController::class, 'membership'])->whereNumber('category')->whereUuid('uuid')->name('categories.membership');
+
+Route::get('/access', [AccessController::class, 'index'])->name('access');
+Route::post('/access', [AccessController::class, 'store'])->name('access.store');
+Route::put('/access/{person}', [AccessController::class, 'update'])->whereUuid('person')->name('access.update');
+Route::delete('/access/{person}', [AccessController::class, 'destroy'])->whereUuid('person')->name('access.destroy');
