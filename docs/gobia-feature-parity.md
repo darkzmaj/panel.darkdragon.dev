@@ -54,7 +54,7 @@ Legend for "Core or Extension": `Ext` extension API only, `Theme` design tokens,
 | 37 | Gobia footer / branding footer | `FooterService`, `GobiaFooter` | gobia-core slot | Ext | no | yes | yes | yes | Todo | |
 | 38 | Login page (split layout, interactive preview, logo in left half, mobile logo above form) | `LoginFormContainer`, `AuthPreview` | 2.0 auth screen restyle via tokens/slots | Theme / Ext / Core? | no | yes | no | yes | Todo | Auth screens may need a core patch |
 | 39 | Notification bell, toasts, shell | `NotificationBell`, `Toaster`, `AppShell` | use 2.0 `sonner` and shell | n/a | no | no | no | n/a | Dropped (2.0 provides) | Verify |
-| 40 | Existing 1.x database upgrade | custom migrations (8 files listed above) | migration tooling + fixture test | n/a | yes | no | yes | yes | Todo | Preserve avatars, usernames, branding, categories, order, colours, access, templates |
+| 40 | Existing 1.x database upgrade | custom migrations (8 files listed above) | migration tooling + fixture test | n/a | yes | no | yes | yes | Done (docs/gobia-upgrade-from-1x.md, tested on a real 1.x DB copy) | Preserve avatars, usernames, branding, categories, order, colours, access, templates |
 | 41 | Gobia version metadata + compatibility API | none | gobia-core | Ext | no | yes | yes | yes | Done (frontend and read only compatibility API; privileged updater is Majcek's) | Feeds updater preflight |
 | 42 | Gobia Updates frontend | none | gobia-core admin screen | Ext | no | yes | contract | yes | Done (frontend and read only compatibility API; privileged updater is Majcek's) | Update button gate rule |
 

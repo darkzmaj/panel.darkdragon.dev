@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GobiaCore;
 
+use GobiaCore\Console\ImportLegacyCommand;
 use Pterodactyl\Extensions\ExtensionProvider;
 use Pterodactyl\Services\Extensions\ExtensionSettingDefinition;
 use Pterodactyl\Services\Extensions\ExtensionSettingsDefinition;
@@ -19,6 +20,7 @@ class GobiaCoreProvider extends ExtensionProvider
     {
         $this->registerApiRoutes();
         $this->loadExtensionMigrations();
+        $this->registerCommands([ImportLegacyCommand::class]);
         $definition = new ExtensionSettingsDefinition($this->settings(), [
             ExtensionSettingDefinition::make('logo', 'logo', self::DEFAULT_LOGO)
                 ->label('Logo')

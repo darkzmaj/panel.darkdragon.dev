@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace GobiaTemplates;
 
 use GobiaTemplates\Console\ExpireTemplateInstancesCommand;
+use GobiaTemplates\Console\ImportLegacyCommand;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Http\Middleware\TrimStrings;
 use Illuminate\Http\Request;
@@ -25,7 +26,7 @@ class GobiaTemplatesProvider extends ExtensionProvider
         $this->registerApiRoutes();
         $this->registerWebRoutes($this->extensionPath('routes', 'web.php'));
         $this->loadExtensionMigrations();
-        $this->registerCommands([ExpireTemplateInstancesCommand::class]);
+        $this->registerCommands([ExpireTemplateInstancesCommand::class, ImportLegacyCommand::class]);
         $this->registerSchedule(fn (Schedule $schedule) => $schedule->command('gobia-templates:expire-instances')->everyMinute()->withoutOverlapping());
     }
 }
