@@ -8,7 +8,7 @@ export const NavLabel = ({ children }: { children: React.ReactNode }) => (
 
 interface ItemProps extends Omit<React.ComponentProps<'a'>, 'href'> {
     to: string;
-    icon: LucideIcon;
+    icon?: LucideIcon;
     exact?: boolean;
     params?: Record<string, string>;
     hash?: string;
@@ -25,7 +25,7 @@ export function NavItem({ to, icon: Icon, exact = false, params, children, ...re
             className={'gb-nav-item'}
             {...rest}
         >
-            <Icon aria-hidden />
+            {Icon && <Icon aria-hidden />}
             <span>{children}</span>
         </Link>
     );

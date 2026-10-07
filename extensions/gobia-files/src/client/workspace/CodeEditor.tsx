@@ -21,6 +21,9 @@ export interface CodeEditorProps {
     readOnly: boolean;
     onChange: (content: string) => void;
     onSave: () => void;
+    wordWrap?: boolean;
+    /** Move the cursor to a position and scroll it into view; a new `nonce` repeats the request. */
+    reveal?: { line: number; column: number; nonce: number } | null;
 }
 
 // Colours come from the theme tokens, so the editor stays readable in light and dark mode.
@@ -41,22 +44,31 @@ const highlight = HighlightStyle.define([
 ]);
 
 const theme = EditorView.theme({
-    '&': { height: '100%', color: 'var(--foreground)', backgroundColor: 'transparent', fontSize: '13px' },
+    '&': { height: '100%', color: 'var(--gb-text)', backgroundColor: 'var(--gb-bg)', fontSize: '13px' },
     '.cm-scroller': { fontFamily: 'var(--font-mono, ui-monospace, monospace)', overflow: 'auto' },
-    '.cm-gutters': { backgroundColor: 'transparent', color: 'var(--muted-foreground)', border: 'none' },
-    '.cm-activeLine, .cm-activeLineGutter': { backgroundColor: 'color-mix(in srgb, var(--muted) 60%, transparent)' },
+    '.cm-gutters': { backgroundColor: 'var(--gb-bg)', color: 'var(--gb-text-3)', border: 'none' },
+    '.cm-activeLine, .cm-activeLineGutter': { backgroundColor: 'var(--gb-hover)' },
     '.cm-cursor': { borderLeftColor: 'var(--foreground)' },
-    '&.cm-focused': { outline: '2px solid var(--ring)', outlineOffset: '-2px' },
+    '&.cm-focused': { outline: 'none' },
     '.cm-selectionBackground, &.cm-focused .cm-selectionBackground': {
         backgroundColor: 'color-mix(in srgb, var(--primary) 30%, transparent)',
     },
 });
 
-export default function CodeEditor({ path, content, readOnly, onChange, onSave }: CodeEditorProps) {
+export default function CodeEditor({
+    path,
+    content,
+    readOnly,
+    onChange,
+    onSave,
+    wordWrap = false,
+    reveal = null,
+}: CodeEditorProps) {
     const host = useRef<HTMLDivElement>(null);
     const view = useRef<EditorView | null>(null);
     const states = useRef(new Map<string, EditorState>());
     const language = useRef(new Compartment());
+    const wrapping = useRef(new Compartment());
     const current = useRef(path);
     const callbacks = useRef({ onChange, onSave });
 
@@ -98,6 +110,7 @@ export default function CodeEditor({ path, content, readOnly, onChange, onSave }
                     highlightSelectionMatches(),
                     syntaxHighlighting(highlight),
                     language.current.of([]),
+                    wrapping.current.of(wordWrap ? EditorView.lineWrapping : []),
                     keymap.of([
                         {
                             key: 'Mod-s',
@@ -135,6 +148,19 @@ export default function CodeEditor({ path, content, readOnly, onChange, onSave }
         // The document is created from `content` only when the path changes; later edits flow out through onChange.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [path, readOnly]);
+
+    useEffect(() => {
+        view.current?.dispatch({ effects: wrapping.current.reconfigure(wordWrap ? EditorView.lineWrapping : []) });
+    }, [wordWrap, path]);
+
+    useEffect(() => {
+        const editor = view.current;
+        if (!editor || !reveal) return;
+        const line = editor.state.doc.line(Math.min(Math.max(reveal.line, 1), editor.state.doc.lines));
+        const at = line.from + Math.min(Math.max(reveal.column - 1, 0), line.length);
+        editor.dispatch({ selection: { anchor: at }, scrollIntoView: true });
+        editor.focus();
+    }, [reveal]);
 
     return <div ref={host} className={'gf:h-full gf:min-h-0 gf:overflow-hidden'} data-testid={'code-editor'} />;
 }

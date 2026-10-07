@@ -101,7 +101,10 @@ function StatusNote({ status }: { status: string }) {
 }
 
 interface Live {
-    attributes: { current_state: string; resources: { cpu_absolute: number; memory_bytes: number; disk_bytes: number } };
+    attributes: {
+        current_state: string;
+        resources: { cpu_absolute: number; memory_bytes: number; disk_bytes: number };
+    };
 }
 
 /** Polls the live numbers; only mounted for a row that has been on screen. */
@@ -233,12 +236,12 @@ function InstanceRow({ instance, dragging, drag, onColor, onCategories }: Props)
                     </span>
                     <RowBody instance={instance} visible={visible} />
                 </PanelLink>
-                    <DropdownMenu
-                        triggerContent={<Ellipsis aria-label={`Actions for ${instance.name}`} />}
-                        triggerClassName={'gb-icon-btn gb-icon-btn-sm gb-row-more'}
-                    >
-                        {items}
-                    </DropdownMenu>
+                <DropdownMenu
+                    triggerContent={<Ellipsis aria-label={`Actions for ${instance.name}`} />}
+                    triggerClassName={'gb-icon-btn gb-icon-btn-sm gb-row-more'}
+                >
+                    {items}
+                </DropdownMenu>
             </div>
         </ContextDropdownMenu>
     );

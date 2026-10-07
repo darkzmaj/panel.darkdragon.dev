@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Link, useLocation } from '@tanstack/react-router';
-import { Menu, X } from 'lucide-react';
+import { Menu, Server, X } from 'lucide-react';
 import { useSiteSettings } from '@/api/settings/queries';
 import { useLogout } from '@/api/auth/queries';
 import SpinnerOverlay from '@/components/elements/SpinnerOverlay';
@@ -16,6 +16,7 @@ function Shell({ children }: { children: React.ReactNode }) {
     const { pathname } = useLocation();
     const name = useSiteSettings().name;
     const logout = useLogout();
+    const admin = pathname === '/panel' || pathname.startsWith('/panel/');
 
     // Navigating always closes the mobile drawer.
     useEffect(() => setDrawerOpen(false), [pathname, setDrawerOpen]);
@@ -47,6 +48,11 @@ function Shell({ children }: { children: React.ReactNode }) {
                 <div className={'gb-topbar-actions'}>
                     <Slot name={'nav.items.before'} />
                     <Slot name={'nav.items.after'} />
+                    {admin && (
+                        <Link to={'/'} className={'gb-btn gb-btn-sm gb-hide-sm'}>
+                            <Server aria-hidden /> Instances
+                        </Link>
+                    )}
                     <UserMenu onLogout={() => logout.mutate({})} />
                 </div>
             </header>
@@ -54,11 +60,11 @@ function Shell({ children }: { children: React.ReactNode }) {
                 <div className={'gb-sidebar-wrap'}>
                     <aside className={'gb-sidebar'} aria-label={'Primary'}>
                         <nav className={'gb-sidebar-scroll'} ref={setSidebarEl} />
-                        <Link to={'/account'} className={'gb-sidebar-foot'}>
+                        <Link to={admin ? '/' : '/account'} className={'gb-sidebar-foot'}>
                             <img src={DEFAULT_ICON} alt={''} />
                             <span style={{ minWidth: 0 }}>
                                 <strong>{name}</strong>
-                                <span>Beyond The Clouds</span>
+                                <span>{admin ? 'Back to instances' : 'Beyond The Clouds'}</span>
                             </span>
                         </Link>
                     </aside>

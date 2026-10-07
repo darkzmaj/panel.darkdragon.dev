@@ -109,7 +109,9 @@ export default function DialogComponent({
                                             type={'button'}
                                             size={'xsmall'}
                                             onClick={onClose}
-                                            className={'group w-8 h-8 p-0 inline-flex items-center justify-center rounded-lg'}
+                                            className={
+                                                'group w-8 h-8 p-0 inline-flex items-center justify-center rounded-lg'
+                                            }
                                         >
                                             <X className={closeIconClass} />
                                         </Button.Text>

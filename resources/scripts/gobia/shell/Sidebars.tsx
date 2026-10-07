@@ -1,11 +1,12 @@
 import type { ClientServerResource } from '@/api/generated/types.gen';
 import {
     Activity,
-    ArchiveRestore,
+    Archive,
     ArrowLeft,
     Blocks,
-    CalendarClock,
-    Cloud,
+    Clock,
+    Folder,
+    SquareTerminal,
     Copy,
     Database,
     Egg,
@@ -16,17 +17,16 @@ import {
     MapPin,
     Network,
     Play,
-    Puzzle,
     RefreshCw,
     Server,
     Settings,
     ShieldCheck,
     Tag,
-    Terminal,
     Users,
     type LucideIcon,
 } from 'lucide-react';
 import { useCurrentUser } from '@/api/account/queries';
+import { useServerStatus } from '@/state/server';
 import Can from '@/components/elements/Can';
 import NavigationLabel from '@/extensions/NavigationLabel';
 import { ScreenGate } from '@/extensions/screenNavigation';
@@ -61,12 +61,12 @@ export function DefaultSidebar() {
 }
 
 const serverIcons: Record<string, LucideIcon> = {
-    '': Terminal,
-    files: FolderTree,
+    '': SquareTerminal,
+    files: Folder,
     databases: Database,
-    schedules: CalendarClock,
+    schedules: Clock,
     users: Users,
-    backups: ArchiveRestore,
+    backups: Archive,
     network: Network,
     startup: Play,
     settings: Settings,
@@ -84,6 +84,7 @@ interface ServerSidebarProps {
 /** Back link, instance card and the instance pages. */
 export function ServerSidebar({ id, name, node, internalId, server }: ServerSidebarProps) {
     const rootAdmin = useCurrentUser().rootAdmin;
+    const power = useServerStatus();
     const to = (segment: string) => `/server/${id}${segment ? `/${segment}` : ''}`;
 
     return (
@@ -91,28 +92,41 @@ export function ServerSidebar({ id, name, node, internalId, server }: ServerSide
             <NavItem to={'/'} exact icon={ArrowLeft}>
                 All instances
             </NavItem>
-            <div className={'gb-subcard'} style={{ margin: '10px 0 2px', padding: '12px 14px', minWidth: 0 }}>
-                <strong
-                    style={{
-                        display: 'block',
-                        color: 'var(--gb-text-strong)',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                    }}
-                >
-                    {name}
-                </strong>
-                <span className={'gb-secondary'} style={{ fontSize: 12 }}>
-                    {node}
+            <div
+                className={'gb-subcard'}
+                style={{ margin: '10px 0 2px', padding: '12px 14px', display: 'flex', gap: 10, alignItems: 'center' }}
+            >
+                <span
+                    className={
+                        'gb-dot ' +
+                        (power === 'running' ? 'gb-dot-success' : power && power !== 'offline' ? 'gb-dot-warning' : '')
+                    }
+                    role={'img'}
+                    aria-label={power || 'offline'}
+                />
+                <span style={{ minWidth: 0 }}>
+                    <strong
+                        style={{
+                            display: 'block',
+                            color: 'var(--gb-text-strong)',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                        }}
+                    >
+                        {name}
+                    </strong>
+                    <span className={'gb-secondary'} style={{ fontSize: 12 }}>
+                        {node} · {power || 'offline'}
+                    </span>
                 </span>
             </div>
             <NavLabel>Instance</NavLabel>
             <Slot name={'server.navigation.before'} data={server} />
             {getAreaNav('server').map(({ segment, label, exact, permission, ...meta }) => {
                 const link = (
-                    <NavItem to={to(segment)} exact={exact} icon={serverIcons[segment] ?? Puzzle}>
-                        <NavigationLabel label={label} {...meta} />
+                    <NavItem to={to(segment)} exact={exact} icon={serverIcons[segment]}>
+                        <NavigationLabel label={label} {...meta} icon={serverIcons[segment] ? undefined : meta.icon} />
                     </NavItem>
                 );
 
@@ -176,8 +190,8 @@ export function AdminSidebar() {
 
     const render = (entry: AreaNavEntry) => (
         <ScreenGate key={entry.segment || '/'} screen={entry.screen}>
-            <NavItem to={hrefFor(entry)} exact={entry.exact ?? entry.segment === ''} icon={adminIcons[entry.segment] ?? Cloud}>
-                <NavigationLabel {...entry} />
+            <NavItem to={hrefFor(entry)} exact={entry.exact ?? entry.segment === ''} icon={adminIcons[entry.segment]}>
+                <NavigationLabel {...entry} icon={adminIcons[entry.segment] ? undefined : entry.icon} />
             </NavItem>
         </ScreenGate>
     );

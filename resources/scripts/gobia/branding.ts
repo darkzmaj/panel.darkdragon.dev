@@ -21,4 +21,9 @@ function subscribe(listener: () => void): () => void {
     return () => window.removeEventListener(BRANDING_EVENT, listener);
 }
 
-export const useBranding = (key: Key): string => useSyncExternalStore(subscribe, () => read(key), () => '');
+export const useBranding = (key: Key): string =>
+    useSyncExternalStore(
+        subscribe,
+        () => read(key),
+        () => ''
+    );

@@ -11,7 +11,14 @@ type Props = Readonly<
 >;
 
 /** The standard Gobia card: title, optional description, then the content. */
-const ContentBox = ({ title, description, borderColor: _borderColor, showLoadingOverlay, children, ...props }: Props) => (
+const ContentBox = ({
+    title,
+    description,
+    borderColor: _borderColor,
+    showLoadingOverlay,
+    children,
+    ...props
+}: Props) => (
     <div {...props}>
         <div className={'gb-card'} style={{ position: 'relative' }}>
             {(title || description) && (

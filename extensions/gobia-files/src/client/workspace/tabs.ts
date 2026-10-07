@@ -25,6 +25,8 @@ export type TabsAction =
     | { type: 'saved'; path: string; content: string; modifiedAt: string | null }
     | { type: 'activate'; path: string }
     | { type: 'close'; path: string }
+    /** A file or folder moved on the server: tabs under `from` follow it and keep their text. */
+    | { type: 'rename'; from: string; to: string }
     | { type: 'restore'; state: TabsState };
 
 export const EMPTY_TABS: TabsState = { tabs: [], active: null };
@@ -82,6 +84,21 @@ export function tabsReducer(state: TabsState, action: TabsAction): TabsState {
             const active =
                 state.active === action.path ? (tabs[Math.min(index, tabs.length - 1)]?.path ?? null) : state.active;
             return { tabs, active };
+        }
+        case 'rename': {
+            const moved = (path: string) =>
+                path === action.from
+                    ? action.to
+                    : path.startsWith(`${action.from}/`)
+                      ? `${action.to}${path.slice(action.from.length)}`
+                      : path;
+            return {
+                tabs: state.tabs.map((tab) => {
+                    const path = moved(tab.path);
+                    return path === tab.path ? tab : { ...tab, path, name: path.slice(path.lastIndexOf('/') + 1) };
+                }),
+                active: state.active === null ? null : moved(state.active),
+            };
         }
         case 'restore':
             return action.state;

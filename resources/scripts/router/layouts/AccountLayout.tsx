@@ -51,7 +51,11 @@ export default function AccountLayout() {
                                 <NavLink to={`/account${segment ? `/${segment}` : ''}`} exact={exact}>
                                     <Icon aria-hidden />
                                     <span>
-                                        <NavigationLabel label={segment === '' ? 'Security' : label} {...meta} />
+                                        <NavigationLabel
+                                            label={segment === '' ? 'Security' : label}
+                                            {...meta}
+                                            icon={undefined}
+                                        />
                                     </span>
                                     <ChevronRight aria-hidden className={'gb-chevron'} />
                                 </NavLink>

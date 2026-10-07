@@ -49,4 +49,15 @@ describe('tabsReducer', () => {
         const state = run(open('/a'), { type: 'failed', path: '/a', error: 'nope' });
         expect(state.tabs[0]).toMatchObject({ status: 'error', error: 'nope' });
     });
+
+    it('moves tabs with a renamed file or folder and keeps unsaved text', () => {
+        let state = run(open('/plugins/a.yml'), loaded('/plugins/a.yml'), open('/b.txt'), loaded('/b.txt'));
+        state = tabsReducer(state, { type: 'edit', path: '/plugins/a.yml', content: 'changed' });
+        state = tabsReducer(state, { type: 'rename', from: '/plugins', to: '/mods' });
+        expect(state.tabs.map((tab) => tab.path)).toEqual(['/mods/a.yml', '/b.txt']);
+        expect(state.tabs[0]?.content).toBe('changed');
+        expect(isDirty(state.tabs[0] as never)).toBe(true);
+        state = tabsReducer(state, { type: 'rename', from: '/b.txt', to: '/c.txt' });
+        expect(state.tabs[1]).toMatchObject({ path: '/c.txt', name: 'c.txt' });
+    });
 });

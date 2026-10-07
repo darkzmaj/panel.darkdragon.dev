@@ -1,5 +1,6 @@
-import { Spinner, http } from '@pterodactyl/sdk';
+import { PanelLink, http } from '@pterodactyl/sdk';
 import { useQuery } from '@tanstack/react-query';
+import { Copy, Database, FolderTree, Network, Server, Users, type LucideIcon } from 'lucide-react';
 import { formatBytes } from '../dashboard/format';
 
 interface Resource {
@@ -35,59 +36,195 @@ interface Overview {
     nodes: NodeRow[];
 }
 
-const TOTALS = [
-    ['users', 'Users'],
-    ['administrators', 'Administrators'],
-    ['nodes', 'Nodes'],
-    ['instances', 'Instances'],
-    ['databases', 'Databases'],
-    ['locations', 'Locations'],
-    ['mounts', 'Mounts'],
-    ['templates', 'Templates'],
-] as const;
+type Totals = Overview['totals'];
 
-function Bar({ label, resource }: { label: string; resource: Resource }) {
-    const percent = (value: number) => (resource.total > 0 ? Math.min(100, (value / resource.total) * 100) : 0);
+const CARDS: Array<{ key: keyof Totals; label: string; icon: LucideIcon; to: string; note: (t: Totals) => string }> = [
+    {
+        key: 'users',
+        label: 'Users',
+        icon: Users,
+        to: '/panel/users',
+        note: (t) => `${t.administrators} administrator${t.administrators === 1 ? '' : 's'}`,
+    },
+    {
+        key: 'nodes',
+        label: 'Nodes',
+        icon: Network,
+        to: '/panel/nodes',
+        note: (t) => `${t.locations} location${t.locations === 1 ? '' : 's'}`,
+    },
+    { key: 'instances', label: 'Instances', icon: Server, to: '/panel/servers', note: () => 'across all nodes' },
+    { key: 'templates', label: 'Templates', icon: Copy, to: '/panel/templates', note: () => 'reusable setups' },
+    { key: 'databases', label: 'Databases', icon: Database, to: '/panel/databases', note: () => 'database hosts' },
+    { key: 'mounts', label: 'Mounts', icon: FolderTree, to: '/panel/mounts', note: () => 'shared mounts' },
+];
+
+const level = (percent: number | null) =>
+    percent === null ? '' : percent >= 90 ? 'crit' : percent >= 75 ? 'warn' : '';
+const pct = (part: number | null, whole: number) =>
+    part !== null && whole > 0 ? Math.min(100, (part / whole) * 100) : null;
+const live = (value: number | null, total: number) =>
+    value === null ? 'unavailable' : `${formatBytes(value)}${total ? ` (${Math.round(pct(value, total) ?? 0)}%)` : ''}`;
+
+function Meter({ label, used, total, text }: { label: string; used: number | null; total: number; text: string }) {
+    const percent = pct(used, total);
+
     return (
-        <div className={'gb:flex gb:flex-col gb:gap-1.5'}>
-            <div className={'gb:flex gb:items-baseline gb:justify-between gb:text-sm'}>
-                <span className={'gb:font-medium'}>{label}</span>
-                <span className={'gb:text-xs gb:text-muted-foreground'}>{formatBytes(resource.total)} total</span>
+        <div className={'gb-meter'}>
+            <div className={'gb-meter-head'}>
+                <span>{label}</span>
+                <span>{text}</span>
             </div>
-            <div
-                className={'gb:relative gb:h-2 gb:overflow-hidden gb:rounded-full gb:bg-sunken'}
-                role={'img'}
-                aria-label={`${label}: ${formatBytes(resource.allocated)} allocated${resource.used === null ? '' : `, ${formatBytes(resource.used)} in use`}`}
-            >
-                <div
-                    style={{ width: `${percent(resource.allocated)}%` }}
-                    className={'gb:absolute gb:inset-y-0 gb:left-0 gb:bg-primary/35'}
-                />
-                {resource.used !== null && (
-                    <div
-                        style={{ width: `${percent(resource.used)}%` }}
-                        className={'gb:absolute gb:inset-y-0 gb:left-0 gb:bg-primary'}
-                    />
-                )}
-            </div>
-            <div className={'gb:flex gb:gap-4 gb:text-xs gb:text-muted-foreground'}>
-                <span>Allocated {formatBytes(resource.allocated)}</span>
-                <span>
-                    {resource.used === null ? 'Live usage unavailable' : `In use ${formatBytes(resource.used)}`}
-                </span>
+            <div className={'gb-bar'}>
+                <span className={level(percent)} style={{ width: `${percent ?? 0}%` }} />
             </div>
         </div>
     );
 }
 
-function Status({ status }: { status: NodeRow['status'] }) {
-    const tone =
-        status === 'online' ? 'gb:bg-success' : status === 'maintenance' ? 'gb:bg-warning' : 'gb:bg-destructive';
+/** A ring for what is promised to instances (allocation) and, separately, a bar for what is really in use. */
+function Gauge({
+    title,
+    percent,
+    headline,
+    caption,
+    rows,
+    usage,
+}: {
+    title: string;
+    percent: number | null;
+    headline: string;
+    caption: string;
+    rows: Array<[string, string]>;
+    usage?: { used: number | null; total: number };
+}) {
+    const radius = 52;
+    const circumference = 2 * Math.PI * radius;
+
     return (
-        <span className={'gb:inline-flex gb:items-center gb:gap-2 gb:text-xs'}>
-            <span className={`gb:size-2 gb:rounded-full ${tone}`} aria-hidden />
-            {status === 'online' ? 'Online' : status === 'maintenance' ? 'Maintenance' : 'Offline'}
-        </span>
+        <div className={'gb-gauge'}>
+            <div className={'gb-gauge-top'}>
+                <svg
+                    viewBox={'0 0 128 128'}
+                    role={'img'}
+                    aria-label={title + (percent === null ? ' unavailable' : ` ${Math.round(percent)} percent`)}
+                >
+                    <circle
+                        className={'gb-ring-bg'}
+                        cx={64}
+                        cy={64}
+                        r={radius}
+                        fill={'none'}
+                        strokeWidth={12}
+                        strokeLinecap={'round'}
+                    />
+                    <circle
+                        className={'gb-ring-fg ' + level(percent)}
+                        cx={64}
+                        cy={64}
+                        r={radius}
+                        fill={'none'}
+                        strokeWidth={12}
+                        strokeLinecap={'round'}
+                        strokeDasharray={`${(circumference * (percent ?? 0)) / 100} ${circumference}`}
+                        transform={'rotate(-90 64 64)'}
+                    />
+                    <text className={'gb-ring-text'} x={64} y={64}>
+                        {percent === null ? 'n/a' : `${Math.round(percent)}%`}
+                    </text>
+                </svg>
+                <div className={'gb-gauge-body'}>
+                    <h4>{title}</h4>
+                    <div className={'gb-gauge-value'}>{headline}</div>
+                    <div className={'gb-gauge-caption'}>{caption}</div>
+                </div>
+            </div>
+            <dl>
+                {rows.map(([name, text]) => (
+                    <div key={name}>
+                        <dt>{name}</dt>
+                        <dd>{text}</dd>
+                    </div>
+                ))}
+            </dl>
+            {usage && (
+                <Meter
+                    label={'Live usage'}
+                    used={usage.used}
+                    total={usage.total}
+                    text={live(usage.used, usage.total)}
+                />
+            )}
+        </div>
+    );
+}
+
+function NodeCard({ node }: { node: NodeRow }) {
+    const offline = node.status === 'offline';
+    const liveText = (used: number | null, total: number) =>
+        offline ? 'offline' : used === null ? 'unavailable' : `${formatBytes(used)} / ${formatBytes(total)}`;
+    const tone =
+        node.status === 'online'
+            ? 'gb-badge-success'
+            : node.status === 'maintenance'
+              ? 'gb-badge-warning'
+              : 'gb-badge-danger';
+
+    return (
+        <div className={'gb-node is-' + node.status}>
+            <header>
+                <div>
+                    <PanelLink destination={{ to: '/panel/nodes/$id', params: { id: String(node.id) } } as never}>
+                        {node.name}
+                    </PanelLink>
+                    <div className={'gb-sub'}>{node.location ?? 'No location'}</div>
+                </div>
+                <span className={'gb-badge ' + tone}>{node.status}</span>
+            </header>
+            <dl className={'gb-node-facts'}>
+                <div>
+                    <dt>Instances</dt>
+                    <dd>
+                        {node.instances}
+                        {node.instances_running !== null && ` (${node.instances_running} running)`}
+                    </dd>
+                </div>
+            </dl>
+            <Meter
+                label={'RAM live'}
+                used={node.ram.used}
+                total={node.ram.total}
+                text={liveText(node.ram.used, node.ram.total)}
+            />
+            <Meter
+                label={'RAM allocated'}
+                used={node.ram.allocated}
+                total={node.ram.total}
+                text={`${formatBytes(node.ram.allocated)} / ${formatBytes(node.ram.total)}`}
+            />
+            <Meter
+                label={'Storage live'}
+                used={node.storage.used}
+                total={node.storage.total}
+                text={liveText(node.storage.used, node.storage.total)}
+            />
+            <Meter
+                label={'Storage allocated'}
+                used={node.storage.allocated}
+                total={node.storage.total}
+                text={`${formatBytes(node.storage.allocated)} / ${formatBytes(node.storage.total)}`}
+            />
+            <Meter
+                label={'CPU'}
+                used={node.cpu.percent}
+                total={100}
+                text={
+                    node.cpu.percent === null
+                        ? 'unavailable'
+                        : `${node.cpu.percent}%${node.cpu.cores ? ` of ${node.cpu.cores} cores` : ''}`
+                }
+            />
+        </div>
     );
 }
 
@@ -99,93 +236,91 @@ export default function OverviewPanel() {
         refetchInterval: 60_000,
     });
 
-    if (isPending) return <Spinner centered />;
-    if (isError)
-        return <p className={'gb:mb-6 gb:text-sm gb:text-destructive'}>The Gobia overview could not be loaded.</p>;
+    if (isPending) {
+        return (
+            <section aria-label={'Gobia overview'}>
+                <div className={'gb-stats gb-stats-lg'}>
+                    {CARDS.map((card) => (
+                        <div key={card.key} className={'gb-skeleton'} style={{ height: 96, borderRadius: 14 }} />
+                    ))}
+                </div>
+            </section>
+        );
+    }
+    if (isError) return <p className={'gb-badge gb-badge-danger'}>The overview could not be loaded.</p>;
+
+    const { ram, storage, cpu, instances, nodes } = data.resources;
 
     return (
-        <section aria-label={'Gobia overview'} className={'gb:mb-8 gb:flex gb:flex-col gb:gap-6'}>
-            <div className={'gb:grid gb:grid-cols-2 gb:gap-3 gb:sm:grid-cols-4'}>
-                {TOTALS.map(([key, label]) => (
-                    <div key={key} className={'gb:rounded-lg gb:border gb:border-border gb:bg-card gb:p-4'}>
-                        <p className={'gb:text-2xl gb:font-semibold gb:tabular-nums'}>{data.totals[key]}</p>
-                        <p className={'gb:text-xs gb:text-muted-foreground'}>{label}</p>
-                    </div>
+        <section aria-label={'Gobia overview'}>
+            <div className={'gb-stats gb-stats-lg'}>
+                {CARDS.map(({ key, label, icon: Icon, to, note }) => (
+                    <PanelLink key={key} destination={{ to } as never} className={'gb-stat'}>
+                        <span className={'gb-stat-icon'}>
+                            <Icon aria-hidden />
+                        </span>
+                        <span>
+                            <span className={'gb-num'}>{data.totals[key].toLocaleString()}</span>
+                            <span className={'gb-label'}>{label}</span>
+                            <span className={'gb-note'}>{note(data.totals)}</span>
+                        </span>
+                    </PanelLink>
                 ))}
             </div>
 
-            <div
-                className={
-                    'gb:grid gb:gap-4 gb:rounded-lg gb:border gb:border-border gb:bg-card gb:p-4 gb:md:grid-cols-3'
-                }
-            >
-                <Bar label={'Memory'} resource={data.resources.ram} />
-                <Bar label={'Storage'} resource={data.resources.storage} />
-                <div className={'gb:flex gb:flex-col gb:gap-1.5 gb:text-sm'}>
-                    <span className={'gb:font-medium'}>Processor</span>
-                    <span className={'gb:text-2xl gb:font-semibold gb:tabular-nums'}>
-                        {data.resources.cpu.percent === null ? 'n/a' : `${data.resources.cpu.percent}%`}
-                    </span>
-                    <span className={'gb:text-xs gb:text-muted-foreground'}>
-                        {data.resources.nodes.online + data.resources.nodes.maintenance} of {data.resources.nodes.total}{' '}
-                        nodes reporting
-                        {data.resources.instances.running !== null &&
-                            ` · ${data.resources.instances.running} of ${data.resources.instances.total} instances running`}
-                    </span>
-                </div>
+            <div className={'gb-section-title'}>Resources across all nodes</div>
+            <div className={'gb-gauges gb-gauges-lg'}>
+                <Gauge
+                    title={'RAM'}
+                    percent={pct(ram.allocated, ram.total)}
+                    headline={formatBytes(ram.allocated)}
+                    caption={`allocated of ${formatBytes(ram.total)}`}
+                    rows={[
+                        ['Available to allocate', formatBytes(Math.max(0, ram.total - ram.allocated))],
+                        ['In use now', live(ram.used, ram.total)],
+                    ]}
+                    usage={{ used: ram.used, total: ram.total }}
+                />
+                <Gauge
+                    title={'Storage'}
+                    percent={pct(storage.allocated, storage.total)}
+                    headline={formatBytes(storage.allocated)}
+                    caption={`allocated of ${formatBytes(storage.total)}`}
+                    rows={[
+                        ['Available to allocate', formatBytes(Math.max(0, storage.total - storage.allocated))],
+                        ['In use now', live(storage.used, storage.total)],
+                    ]}
+                    usage={{ used: storage.used, total: storage.total }}
+                />
+                <Gauge
+                    title={'CPU'}
+                    percent={cpu.percent === null ? null : Math.min(100, cpu.percent)}
+                    headline={cpu.percent === null ? 'n/a' : `${cpu.percent}%`}
+                    caption={'live utilisation'}
+                    rows={[
+                        ['Nodes reporting', `${cpu.nodes_reporting} of ${nodes.total}`],
+                        ['Weighting', 'by core count'],
+                    ]}
+                />
+                <Gauge
+                    title={'Instances'}
+                    percent={instances.running === null ? null : pct(instances.running, instances.total)}
+                    headline={instances.running === null ? 'n/a' : `${instances.running} running`}
+                    caption={`of ${instances.total} instances`}
+                    rows={[
+                        ['Nodes online', `${nodes.online} of ${nodes.total}`],
+                        ['In maintenance', String(nodes.maintenance)],
+                    ]}
+                />
             </div>
 
-            {data.nodes.length > 0 && (
-                <div className={'gb:overflow-x-auto gb:rounded-lg gb:border gb:border-border gb:bg-card'}>
-                    <table className={'gb:w-full gb:text-left gb:text-sm'}>
-                        <caption className={'gb:sr-only'}>Nodes</caption>
-                        <thead className={'gb:text-xs gb:uppercase gb:text-muted-foreground'}>
-                            <tr>
-                                {['Node', 'Status', 'Instances', 'Memory', 'Storage', 'CPU'].map((heading) => (
-                                    <th key={heading} scope={'col'} className={'gb:px-4 gb:py-2 gb:font-medium'}>
-                                        {heading}
-                                    </th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {data.nodes.map((node) => (
-                                <tr key={node.id} className={'gb:border-t gb:border-border'}>
-                                    <th scope={'row'} className={'gb:px-4 gb:py-2 gb:font-medium'}>
-                                        {node.name}
-                                        {node.location && (
-                                            <span
-                                                className={'gb:ml-2 gb:text-xs gb:font-normal gb:text-muted-foreground'}
-                                            >
-                                                {node.location}
-                                            </span>
-                                        )}
-                                    </th>
-                                    <td className={'gb:px-4 gb:py-2'}>
-                                        <Status status={node.status} />
-                                    </td>
-                                    <td className={'gb:px-4 gb:py-2 gb:tabular-nums'}>
-                                        {node.instances_running === null
-                                            ? node.instances
-                                            : `${node.instances_running} / ${node.instances}`}
-                                    </td>
-                                    <td className={'gb:px-4 gb:py-2 gb:tabular-nums'}>
-                                        {node.ram.used === null ? '–' : formatBytes(node.ram.used)} /{' '}
-                                        {formatBytes(node.ram.allocated)} allocated
-                                    </td>
-                                    <td className={'gb:px-4 gb:py-2 gb:tabular-nums'}>
-                                        {node.storage.used === null ? '–' : formatBytes(node.storage.used)} /{' '}
-                                        {formatBytes(node.storage.allocated)} allocated
-                                    </td>
-                                    <td className={'gb:px-4 gb:py-2 gb:tabular-nums'}>
-                                        {node.cpu.percent === null ? '–' : `${node.cpu.percent}%`}
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            )}
+            <div className={'gb-section-title'}>Nodes</div>
+            <div className={'gb-nodes'}>
+                {data.nodes.length === 0 && <div className={'gb-muted'}>No nodes have been created yet.</div>}
+                {data.nodes.map((node) => (
+                    <NodeCard key={node.id} node={node} />
+                ))}
+            </div>
         </section>
     );
 }

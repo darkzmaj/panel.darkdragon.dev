@@ -81,7 +81,9 @@ function Browser({ templates, onPick }: { templates: BrowserTemplate[]; onPick: 
                 )}
                 {shown.map((template) => (
                     <div key={template.id} className={'gb-template-card'}>
-                        <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', justifyContent: 'space-between' }}>
+                        <div
+                            style={{ display: 'flex', gap: 8, alignItems: 'baseline', justifyContent: 'space-between' }}
+                        >
                             <strong>{template.name}</strong>
                             <span className={'gb-badge'}>r{template.revision}</span>
                         </div>
@@ -227,8 +229,7 @@ function Confirm({
                 {data.name}
             </h3>
             <p className={'gb-card-sub'} style={{ marginBottom: 16 }}>
-                Revision {data.revision}. Only the values below can be changed; everything else comes from the
-                template.
+                Revision {data.revision}. Only the values below can be changed; everything else comes from the template.
             </p>
             <label className={'gb-label'} htmlFor={'gb-ci-name'}>
                 Name
@@ -336,9 +337,14 @@ function Progress({ template, instance, onDone }: { template: BrowserTemplate; i
                 {status.data?.name ?? template.name}
             </p>
             {state === 'failed' ? (
-                <p role={'alert'} className={'gb-badge gb-badge-danger'} style={{ height: 'auto', padding: '10px 12px' }}>
-                    Failed while {status.data?.failed_stage ? status.data.failed_stage.replace('_', ' ') : 'provisioning'}
-                    : {status.data?.error ?? 'Provisioning failed.'}
+                <p
+                    role={'alert'}
+                    className={'gb-badge gb-badge-danger'}
+                    style={{ height: 'auto', padding: '10px 12px' }}
+                >
+                    Failed while{' '}
+                    {status.data?.failed_stage ? status.data.failed_stage.replace('_', ' ') : 'provisioning'}:{' '}
+                    {status.data?.error ?? 'Provisioning failed.'}
                 </p>
             ) : (
                 <ol className={'gb-steps'}>
