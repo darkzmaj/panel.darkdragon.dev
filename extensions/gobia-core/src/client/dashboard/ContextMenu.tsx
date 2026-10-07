@@ -20,6 +20,17 @@ export interface MenuState {
 export default function ContextMenu({ menu, onClose }: { menu: MenuState | null; onClose: () => void }) {
     const root = useRef<HTMLDivElement>(null);
     const [position, setPosition] = useState<{ left: number; top: number } | null>(null);
+    // The element that had focus when the menu opened gets it back when the menu is dismissed with Escape, and a touch
+    // release right after opening is ignored.
+    const opener = useRef<HTMLElement | null>(null);
+    const openedAt = useRef(0);
+
+    useLayoutEffect(() => {
+        if (menu) {
+            opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+            openedAt.current = performance.now();
+        }
+    }, [menu]);
 
     useLayoutEffect(() => {
         if (!menu || !root.current) {
@@ -38,7 +49,11 @@ export default function ContextMenu({ menu, onClose }: { menu: MenuState | null;
         const away = (event: Event) => {
             if (!root.current?.contains(event.target as Node)) onClose();
         };
-        const key = (event: KeyboardEvent) => event.key === 'Escape' && onClose();
+        const key = (event: KeyboardEvent) => {
+            if (event.key !== 'Escape') return;
+            onClose();
+            opener.current?.focus();
+        };
         document.addEventListener('mousedown', away);
         document.addEventListener('keydown', key);
         window.addEventListener('blur', onClose);
@@ -84,7 +99,10 @@ export default function ContextMenu({ menu, onClose }: { menu: MenuState | null;
                     type={'button'}
                     role={'menuitem'}
                     className={'gb-menu-item' + (danger ? ' danger' : '')}
-                    onClick={() => {
+                    onClick={(event) => {
+                        // The release of the long press that opened the menu must not choose the item under the finger.
+                        const touch = (event.nativeEvent as PointerEvent).pointerType === 'touch';
+                        if (touch && performance.now() - openedAt.current < 300) return;
                         onClose();
                         onSelect();
                     }}

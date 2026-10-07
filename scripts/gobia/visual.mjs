@@ -1,7 +1,7 @@
 // Browser checks for the Gobia interface against a running development stack.
 //   node scripts/gobia/visual.mjs                run: screenshots vs baselines, responsive overflow, accessibility
 //   node scripts/gobia/visual.mjs --update       store the current screenshots as the new baselines
-//   node scripts/gobia/visual.mjs visual|responsive|a11y   run one part
+//   node scripts/gobia/visual.mjs visual|responsive|a11y|smoke|flows   run one part
 // Needs the stack from `npm run dev:gobia`. Environment:
 //   GOBIA_URL (default http://localhost:8000), GOBIA_VISUAL_USER, GOBIA_VISUAL_PASSWORD (required),
 //   GOBIA_BROWSER (path to a Chromium based browser; Edge and Chrome are looked up on Windows).
@@ -277,6 +277,22 @@ try {
             await small.getByRole('button', { name: 'Open navigation' }).waitFor();
         });
         await phone.close();
+    }
+
+    if (run('flows')) {
+        const { dashboardFlows, fileFlows } = await import('./flows.mjs');
+        const check = async (label, work) => {
+            try {
+                await work();
+                note(`ok flow ${label}`);
+            } catch (error) {
+                fail(`flow ${label}: ${String(error.message).split(/\r?\n/)[0]}`);
+            }
+        };
+        // GOBIA_FLOWS=dashboard or files runs half of them while debugging.
+        const only = process.env.GOBIA_FLOWS;
+        if (!only || only === 'dashboard') await dashboardFlows({ context, baseUrl, check });
+        if (!only || only === 'files') await fileFlows({ context, baseUrl, check });
     }
 
     if (run('a11y')) {

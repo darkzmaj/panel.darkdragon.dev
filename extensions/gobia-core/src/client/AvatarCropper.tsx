@@ -6,6 +6,26 @@ const VIEWPORT = 280;
 const OUTPUT = 256;
 const KEY_STEP = 12;
 
+/** The exact circular result at a given size, redrawn live, so the user sees what the picture will look like. */
+function Preview({ image, rect, size }: { image: HTMLImageElement | null; rect: { x: number; y: number; size: number } | null; size: number }) {
+    const canvas = useRef<HTMLCanvasElement>(null);
+    useEffect(() => {
+        const context = canvas.current?.getContext('2d');
+        if (!context) return;
+        context.clearRect(0, 0, size, size);
+        if (image && rect) context.drawImage(image, rect.x, rect.y, rect.size, rect.size, 0, 0, size, size);
+    });
+    return (
+        <canvas
+            ref={canvas}
+            width={size}
+            height={size}
+            aria-hidden
+            style={{ width: size, height: size, borderRadius: '50%', background: 'var(--gb-surface-2)' }}
+        />
+    );
+}
+
 /** How an arrow key moves the image, or null for any other key. */
 function keyboardMove(key: string): [number, number] | null {
     switch (key) {
@@ -141,6 +161,7 @@ export default function AvatarCropper({ file, onCancel, onApply }: Props) {
     };
 
     const scale = state ? scaleFor(state) : 1;
+    const rect = state ? sourceRect(state) : null;
 
     return (
         <Dialog
@@ -149,7 +170,7 @@ export default function AvatarCropper({ file, onCancel, onApply }: Props) {
             title={'Crop your avatar'}
             description={'Drag to move, scroll or use the slider to zoom.'}
         >
-            <div className={'gb:flex gb:flex-col gb:items-center gb:gap-4'}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: 24 }}>
                 {failed ? (
                     <p className={'gb:text-sm gb:text-destructive'}>This file could not be read as an image.</p>
                 ) : (
@@ -186,7 +207,17 @@ export default function AvatarCropper({ file, onCancel, onApply }: Props) {
                         )}
                     </div>
                 )}
-                <label className={'gb:flex gb:w-full gb:items-center gb:gap-3 gb:text-sm gb:text-muted-foreground'}>
+                <div style={{ display: 'grid', gap: 10, justifyItems: 'center' }} aria-label={'Preview'} role={'group'}>
+                    <Preview image={image} rect={rect} size={72} />
+                    <Preview image={image} rect={rect} size={40} />
+                    <span className={'gb-muted'} style={{ fontSize: 12 }}>
+                        Preview
+                    </span>
+                </div>
+                <label
+                    className={'gb-secondary'}
+                    style={{ display: 'flex', width: '100%', alignItems: 'center', gap: 12, fontSize: 13 }}
+                >
                     Zoom
                     <input
                         type={'range'}
@@ -196,7 +227,7 @@ export default function AvatarCropper({ file, onCancel, onApply }: Props) {
                         value={state?.zoom ?? 1}
                         disabled={!state}
                         onChange={(event) => update({ zoom: Number(event.currentTarget.value) })}
-                        className={'gb:flex-1'}
+                        style={{ flex: 1 }}
                     />
                 </label>
             </div>

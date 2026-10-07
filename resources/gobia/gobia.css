@@ -3683,11 +3683,11 @@ a.gb-stat:hover {
 }
 .gb-enter,
 .gb-main-inner.gb-route {
-    animation: gb-fade-up var(--gb-dur-page) var(--gb-ease) both;
+    animation: gb-fade-up var(--gb-dur-page) var(--gb-ease) backwards;
 }
 .gb-menu,
 .gb-pop {
-    animation: gb-pop-in var(--gb-dur-menu) var(--gb-ease) both;
+    animation: gb-pop-in var(--gb-dur-menu) var(--gb-ease) backwards;
     transform-origin: top left;
 }
 .gb-btn:active:not(:disabled),
@@ -3793,7 +3793,7 @@ html {
     flex-direction: column;
     gap: 14px;
     padding-top: 4px;
-    animation: gb-fade-up var(--gb-dur-page) var(--gb-ease) both;
+    animation: gb-fade-up var(--gb-dur-page) var(--gb-ease) backwards;
 }
 .gb-skel-page .gb-skeleton {
     border-radius: var(--gb-radius-md);

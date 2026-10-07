@@ -29,12 +29,17 @@ function ViewMenu({
 }) {
     const [open, setOpen] = useState(false);
     const root = useRef<HTMLDivElement>(null);
+    const trigger = useRef<HTMLButtonElement>(null);
     const current = VIEWS.find((item) => item.id === view) ?? VIEWS[0];
 
     useEffect(() => {
         if (!open) return;
         const away = (event: MouseEvent) => !root.current?.contains(event.target as Node) && setOpen(false);
-        const key = (event: KeyboardEvent) => event.key === 'Escape' && setOpen(false);
+        const key = (event: KeyboardEvent) => {
+            if (event.key !== 'Escape') return;
+            setOpen(false);
+            trigger.current?.focus();
+        };
         document.addEventListener('mousedown', away);
         document.addEventListener('keydown', key);
         return () => {
@@ -46,6 +51,7 @@ function ViewMenu({
     return (
         <div ref={root} style={{ position: 'relative', flex: 'none' }}>
             <button
+                ref={trigger}
                 type={'button'}
                 aria-haspopup={'listbox'}
                 aria-expanded={open}
@@ -71,6 +77,7 @@ function ViewMenu({
                             onClick={() => {
                                 onChange(item.id);
                                 setOpen(false);
+                                trigger.current?.focus();
                             }}
                             className={'gb-menu-item'}
                             style={{ height: 'auto', padding: '8px 10px', minWidth: 260 }}
