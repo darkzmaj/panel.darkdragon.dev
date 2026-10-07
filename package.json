@@ -96,6 +96,7 @@
         "api:refresh": "PTERODACTYL_EXTENSIONS_ENABLED=false composer docs:openapi:verify && npm run api:generate",
         "api:check": "npm run sdk:check && npm run tsc && npm run lint",
         "dev": "vite",
+        "dev:gobia": "node scripts/gobia/dev.mjs",
         "watch": "vite build --watch",
         "prebuild": "npm run sdk:generate",
         "build": "vite build",
