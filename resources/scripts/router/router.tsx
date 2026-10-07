@@ -2,7 +2,7 @@ import { createBrowserHistory, createRouter } from '@tanstack/react-router';
 import { queryClient } from '@/api/queryClient';
 import { buildRouteTree } from '@/router/routeTree';
 import RouteError from '@/router/RouteError';
-import Spinner from '@/components/elements/Spinner';
+import PageSkeleton from '@/gobia/PageSkeleton';
 import { NotFound } from '@/components/elements/ScreenBlock';
 
 export const router = createRouter({
@@ -12,9 +12,12 @@ export const router = createRouter({
     defaultPreload: 'intent',
     defaultPreloadDelay: 800,
     defaultPreloadStaleTime: 0,
-    defaultViewTransition: true,
+    // The Gobia shell stays still and only the page area animates (gobia.css), so the root cross fade is off.
+    defaultViewTransition: false,
+    defaultPendingMs: 0,
+    defaultPendingMinMs: 0,
     scrollRestoration: true,
-    defaultPendingComponent: () => <Spinner centered />,
+    defaultPendingComponent: PageSkeleton,
     defaultNotFoundComponent: () => <NotFound />,
     defaultErrorComponent: RouteError,
 });

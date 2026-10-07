@@ -180,8 +180,9 @@ const adminIcons = new Map<string, LucideIcon>([
 // The Gobia admin groups. Entries a group does not name (extension screens) land in System.
 const adminGroups: Array<{ label: string; segments: string[] }> = [
     { label: 'Dashboard', segments: ['', 'activity', 'users'] },
-    { label: 'Network', segments: ['nodes', 'locations', 'servers', 'templates'] },
-    { label: 'Services', segments: ['eggs', 'tags', 'mounts', 'databases'] },
+    { label: 'Network', segments: ['nodes', 'servers', 'locations', 'templates'] },
+    { label: 'Services', segments: ['databases', 'mounts', 'eggs', 'tags'] },
+    { label: 'System', segments: ['settings', 'extensions', 'api', 'updates'] },
 ];
 
 const hrefFor = ({ segment }: AreaNavEntry) => `/panel${segment ? `/${segment}` : ''}`;
@@ -190,7 +191,8 @@ const hrefFor = ({ segment }: AreaNavEntry) => `/panel${segment ? `/${segment}` 
 export function AdminSidebar() {
     const entries = getAreaNav('admin');
     const grouped = new Set(adminGroups.flatMap((group) => group.segments));
-    const system = entries.filter((entry) => !grouped.has(entry.segment));
+    // Screens registered by other extensions land at the end of System.
+    const extra = entries.filter((entry) => !grouped.has(entry.segment));
 
     const render = (entry: AreaNavEntry) => (
         <ScreenGate key={entry.segment || '/'} screen={entry.screen}>
@@ -208,7 +210,10 @@ export function AdminSidebar() {
         <>
             <Slot name={'panel.navigation.before'} />
             {adminGroups.map((group) => {
-                const items = entries.filter((entry) => group.segments.includes(entry.segment));
+                const items = group.segments
+                    .map((segment) => entries.find((entry) => entry.segment === segment))
+                    .filter((entry): entry is AreaNavEntry => entry !== undefined)
+                    .concat(group.label === 'System' ? extra : []);
 
                 return items.length === 0 ? null : (
                     <div key={group.label}>
@@ -217,12 +222,6 @@ export function AdminSidebar() {
                     </div>
                 );
             })}
-            {system.length > 0 && (
-                <div>
-                    <NavLabel>System</NavLabel>
-                    {system.map(render)}
-                </div>
-            )}
             <Slot name={'panel.navigation.after'} />
         </>
     );

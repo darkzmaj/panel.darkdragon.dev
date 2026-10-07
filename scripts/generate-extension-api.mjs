@@ -19,7 +19,15 @@ const run = (command, args, cwd = root) => {
     if (result.status !== 0) process.exit(result.status ?? 1);
 };
 
-run('php', [resolve(root, 'scripts/generate-extension-openapi.php'), extension,
-    resolve(root, 'storage/app/private/scribe/openapi.yaml'), resolve(directory, 'openapi.yaml')]);
-run(resolve(root, 'node_modules/.bin/openapi-ts' + (process.platform === 'win32' ? '.cmd' : '')), ['-f', openapiConfig], directory);
+run('php', [
+    resolve(root, 'scripts/generate-extension-openapi.php'),
+    extension,
+    resolve(root, 'storage/app/private/scribe/openapi.yaml'),
+    resolve(directory, 'openapi.yaml'),
+]);
+run(
+    resolve(root, 'node_modules/.bin/openapi-ts' + (process.platform === 'win32' ? '.cmd' : '')),
+    ['-f', openapiConfig],
+    directory
+);
 run('node', [resolve(root, 'scripts/externalize-extension-api-runtime.mjs'), extension, directory]);

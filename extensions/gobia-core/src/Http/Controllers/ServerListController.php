@@ -34,6 +34,7 @@ class ServerListController
 
         $page = $this->layout->page($user, $data['view'] ?? 'all', $category, $data['q'] ?? '', (int) ($data['page'] ?? 1), (int) ($data['per_page'] ?? 30));
         $categories = $this->layout->categoriesFor($user, $page->getCollection());
+        $counts = $this->layout->viewCounts($user, $category, $data['q'] ?? '');
 
         return new JsonResponse([
             'data' => $page->getCollection()->map(fn (stdClass $server): array => [
@@ -49,7 +50,7 @@ class ServerListController
                 'icon_color' => $server->gobia_color,
                 'categories' => $categories[$server->id] ?? [],
             ])->all(),
-            'meta' => ['pagination' => [
+            'meta' => ['counts' => $counts, 'pagination' => [
                 'total' => $page->total(),
                 'count' => $page->count(),
                 'per_page' => $page->perPage(),

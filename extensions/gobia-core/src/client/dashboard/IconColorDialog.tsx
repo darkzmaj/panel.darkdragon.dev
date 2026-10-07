@@ -1,8 +1,20 @@
-import { Button, Dialog, toast } from '@pterodactyl/sdk';
+import { Dialog, toast } from '@pterodactyl/sdk';
 import { useState } from 'react';
-import { normaliseHex, PRESETS, readableOn } from './colors';
+import { normaliseHex } from './colors';
 import { useSetIconColor } from './queries';
 import type { Instance } from './types';
+
+// The 1.x presets, in the order of the old dialog.
+const PRESETS: ReadonlyArray<readonly [string, string]> = [
+    ['Blue', '#3b82f6'],
+    ['Cyan', '#06b6d4'],
+    ['Purple', '#a855f7'],
+    ['Green', '#22c55e'],
+    ['Orange', '#f97316'],
+    ['Red', '#ef4444'],
+    ['Gray', '#94a3b8'],
+];
+const FALLBACK = '#3b82f6';
 
 interface Props {
     instance: Instance;
@@ -10,162 +22,121 @@ interface Props {
     onClose: () => void;
 }
 
-function Swatch({
-    color,
-    selected,
-    onPick,
-    label,
-}: {
-    color: string;
-    selected: boolean;
-    onPick: (color: string) => void;
-    label: string;
-}) {
-    return (
-        <button
-            type={'button'}
-            aria-label={label}
-            aria-pressed={selected}
-            onClick={() => onPick(color)}
-            style={{ backgroundColor: color }}
-            className={
-                'gb:size-8 gb:rounded-md gb:border gb:border-border gb:outline-offset-2 gb:transition-transform gb:hover:scale-110 gb:focus-visible:outline-2 gb:focus-visible:outline-ring ' +
-                (selected ? 'gb:outline-2 gb:outline-primary' : '')
-            }
-        />
-    );
-}
-
-/** Choose a colour for one instance's icon: default, presets, a custom colour and the five most recent. Nothing is saved until Apply. */
+/**
+ * Picks the colour of one instance icon. Choosing only selects: nothing is saved, and the dialog stays open, until
+ * Apply. A click outside never closes it, because a stray click while using the native colour picker would otherwise
+ * throw the choice away.
+ */
 export default function IconColorDialog({ instance, recent, onClose }: Props) {
-    const [color, setColor] = useState<string | null>(instance.icon_color);
-    const [hex, setHex] = useState(instance.icon_color ?? '');
+    const [selected, setSelected] = useState<string | null>(instance.icon_color);
+    const [custom, setCustom] = useState(instance.icon_color ?? FALLBACK);
     const save = useSetIconColor();
 
-    const pick = (next: string | null) => {
-        setColor(next);
-        setHex(next ?? '');
-    };
+    const isSelected = (hex: string | null) => (selected ?? '').toLowerCase() === (hex ?? '').toLowerCase();
+    const unchanged = (selected ?? null) === (instance.icon_color ?? null);
     const typed = (value: string) => {
-        setHex(value);
+        setCustom(value);
         const valid = normaliseHex(value.startsWith('#') ? value : `#${value}`);
-        if (valid) setColor(valid);
+        if (valid) setSelected(valid);
     };
 
     const apply = () =>
         save.mutate(
-            { uuid: instance.uuid, color },
-            {
-                onSuccess: onClose,
-                onError: () => toast.error('Could not save the icon colour.'),
-            }
+            { uuid: instance.uuid, color: selected },
+            { onSuccess: onClose, onError: () => toast.error('Could not save the icon colour.') }
         );
+
+    const swatch = (hex: string, name: string) => (
+        <button
+            key={`${hex}-${name}`}
+            type={'button'}
+            className={'gb-swatch' + (isSelected(hex) ? ' selected' : '')}
+            style={{ background: hex }}
+            aria-label={name}
+            aria-pressed={isSelected(hex)}
+            title={name}
+            onClick={() => setSelected(hex)}
+        />
+    );
 
     return (
         <Dialog
             open
-            onClose={save.isPending ? () => {} : onClose}
+            onClose={onClose}
+            preventExternalClose
             title={'Icon colour'}
-            description={`Only you see this colour for ${instance.name}.`}
+            description={`Choose a colour for ${instance.name}. Only you see it.`}
         >
-            <div className={'gb:flex gb:flex-col gb:gap-5'}>
-                <div className={'gb:flex gb:items-center gb:gap-4'}>
-                    <div
-                        aria-hidden
-                        style={color ? { backgroundColor: color, color: readableOn(color) } : undefined}
-                        className={
-                            'gb:grid gb:size-14 gb:place-items-center gb:rounded-xl gb:border gb:border-border gb:bg-secondary gb:text-lg gb:font-semibold gb:text-secondary-foreground'
-                        }
-                    >
-                        {instance.name.slice(0, 1).toUpperCase()}
-                    </div>
-                    <Button.Text type={'button'} onClick={() => pick(null)} disabled={color === null}>
-                        Use default
-                    </Button.Text>
-                </div>
-
-                <section aria-label={'Presets'}>
-                    <h3
-                        className={
-                            'gb:mb-2 gb:text-xs gb:font-medium gb:uppercase gb:tracking-wide gb:text-muted-foreground'
-                        }
-                    >
-                        Presets
-                    </h3>
-                    <div className={'gb:flex gb:flex-wrap gb:gap-2'}>
-                        {PRESETS.map((preset) => (
-                            <Swatch
-                                key={preset}
-                                color={preset}
-                                selected={color === preset}
-                                onPick={pick}
-                                label={`Colour ${preset}`}
-                            />
-                        ))}
-                    </div>
-                </section>
-
-                {recent.length > 0 && (
-                    <section aria-label={'Recent colours'}>
-                        <h3
-                            className={
-                                'gb:mb-2 gb:text-xs gb:font-medium gb:uppercase gb:tracking-wide gb:text-muted-foreground'
-                            }
-                        >
-                            Recent
-                        </h3>
-                        <div className={'gb:flex gb:flex-wrap gb:gap-2'}>
-                            {recent.map((item) => (
-                                <Swatch
-                                    key={item}
-                                    color={item}
-                                    selected={color === item}
-                                    onPick={pick}
-                                    label={`Recent colour ${item}`}
-                                />
-                            ))}
-                        </div>
-                    </section>
-                )}
-
-                <section aria-label={'Custom colour'} className={'gb:flex gb:items-center gb:gap-3'}>
-                    <input
-                        type={'color'}
-                        aria-label={'Pick a custom colour'}
-                        value={color ?? '#4da3ff'}
-                        onChange={(event) => pick(event.currentTarget.value)}
-                        className={
-                            'gb:size-9 gb:cursor-pointer gb:rounded-md gb:border gb:border-border gb:bg-transparent gb:p-0'
-                        }
-                    />
-                    <input
-                        type={'text'}
-                        aria-label={'Hex colour'}
-                        value={hex}
-                        placeholder={'#4da3ff'}
-                        maxLength={7}
-                        spellCheck={false}
-                        onChange={(event) => typed(event.currentTarget.value)}
-                        className={
-                            'gb:w-28 gb:rounded-md gb:border gb:border-input gb:bg-background gb:px-2 gb:py-1.5 gb:font-mono gb:text-sm'
-                        }
-                    />
-                </section>
+            <div className={'gb-eyebrow'} style={{ marginBottom: 8 }}>
+                Colours
             </div>
-            <Dialog.Footer>
-                <Button.Text type={'button'} onClick={onClose} disabled={save.isPending}>
-                    Cancel
-                </Button.Text>
-                <Button
+            <div className={'gb-swatches'} role={'group'} aria-label={'Colours'}>
+                <button
                     type={'button'}
-                    color={'primary'}
-                    isLoading={save.isPending}
-                    disabled={color === instance.icon_color}
+                    className={'gb-swatch default' + (selected === null ? ' selected' : '')}
+                    aria-pressed={selected === null}
+                    onClick={() => setSelected(null)}
+                >
+                    Default
+                </button>
+                {PRESETS.map(([name, hex]) => swatch(hex, name))}
+            </div>
+
+            <div className={'gb-eyebrow'} style={{ margin: '16px 0 8px' }}>
+                Custom
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <input
+                    type={'color'}
+                    aria-label={'Pick a custom colour'}
+                    value={normaliseHex(custom) ?? FALLBACK}
+                    onChange={(event) => {
+                        setCustom(event.currentTarget.value);
+                        setSelected(event.currentTarget.value);
+                    }}
+                    style={{
+                        width: 44,
+                        height: 40,
+                        padding: 2,
+                        border: 0,
+                        background: 'transparent',
+                        cursor: 'pointer',
+                    }}
+                />
+                <input
+                    className={'gb-input'}
+                    aria-label={'Hex colour'}
+                    maxLength={7}
+                    value={custom}
+                    placeholder={FALLBACK}
+                    onChange={(event) => typed(event.currentTarget.value)}
+                />
+            </div>
+
+            {recent.length > 0 && (
+                <>
+                    <div className={'gb-eyebrow'} style={{ margin: '16px 0 8px' }}>
+                        Recently used
+                    </div>
+                    <div className={'gb-swatches'} role={'group'} aria-label={'Recently used'}>
+                        {recent.slice(0, 5).map((hex) => swatch(hex, hex))}
+                    </div>
+                </>
+            )}
+
+            <div className={'gb-modal-actions'}>
+                <button type={'button'} className={'gb-btn'} onClick={onClose}>
+                    Cancel
+                </button>
+                <button
+                    type={'button'}
+                    className={'gb-btn gb-btn-primary'}
+                    disabled={save.isPending || unchanged || (selected !== null && !normaliseHex(selected))}
                     onClick={apply}
                 >
-                    Apply
-                </Button>
-            </Dialog.Footer>
+                    {save.isPending ? 'Applying…' : 'Apply'}
+                </button>
+            </div>
         </Dialog>
     );
 }

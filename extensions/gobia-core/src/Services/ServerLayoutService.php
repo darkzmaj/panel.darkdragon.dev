@@ -51,10 +51,7 @@ class ServerLayoutService
      */
     public function page(User $user, string $view, int|string|null $category, string $search, int $page, int $perPage): LengthAwarePaginator
     {
-        $query = $this->accessible($user)
-            ->leftJoin('gobia_server_preferences as gp', fn ($join) => $join->on('gp.server_id', '=', 'servers.id')->where('gp.user_id', '=', $user->id))
-            ->leftJoin('allocations as ga', 'ga.id', '=', 'servers.allocation_id')
-            ->leftJoin('nodes as gn', 'gn.id', '=', 'servers.node_id')
+        $query = $this->filtered($user, $category, $search)
             ->select(['servers.id', 'servers.uuid', 'servers.uuidShort', 'servers.name', 'servers.description', 'servers.owner_id', 'servers.status', 'servers.memory', 'servers.disk', 'servers.cpu', 'ga.ip as gobia_ip', 'ga.ip_alias as gobia_alias', 'ga.port as gobia_port', 'gn.name as gobia_node', 'gp.position as gobia_position', 'gp.icon_color as gobia_color']);
 
         match ($view) {
@@ -63,28 +60,9 @@ class ServerLayoutService
             default => null,
         };
 
-        if ($category === 'none') {
-            $query->whereNotExists(fn (QueryBuilder $members) => $members->selectRaw('1')->from('gobia_server_category_members as gm')
-                ->join('gobia_server_categories as gc', 'gc.id', '=', 'gm.category_id')->whereColumn('gm.server_id', 'servers.id')->where('gc.user_id', $user->id));
-        } elseif (is_int($category)) {
-            $query->whereExists(fn (QueryBuilder $members) => $members->selectRaw('1')->from('gobia_server_category_members as gm')
-                ->join('gobia_server_categories as gc', 'gc.id', '=', 'gm.category_id')->whereColumn('gm.server_id', 'servers.id')
-                ->where('gc.user_id', $user->id)->where('gc.id', $category));
+        if (is_int($category)) {
             $query->leftJoin('gobia_server_category_members as gcm', fn ($join) => $join->on('gcm.server_id', '=', 'servers.id')->where('gcm.category_id', '=', $category));
             $query->addSelect('gcm.position as gobia_category_position');
-        }
-
-        $search = mb_trim($search);
-        if ($search !== '') {
-            $contains = '%'.addcslashes($search, '%_\\').'%';
-            $prefix = addcslashes($search, '%_\\').'%';
-            $query->where(function (Builder $inner) use ($contains, $prefix): void {
-                $inner->where('servers.name', 'like', $contains)
-                    ->orWhere('servers.description', 'like', $contains)
-                    ->orWhere('servers.uuid', 'like', $prefix)
-                    ->orWhere('servers.uuidShort', 'like', $prefix)
-                    ->orWhereRaw("CONCAT(ga.ip, ':', ga.port) LIKE ?", [$prefix]);
-            });
         }
 
         if (is_int($category)) {
@@ -95,6 +73,60 @@ class ServerLayoutService
         $query->orderBy('servers.name')->orderBy('servers.id');
 
         return $query->toBase()->paginate(perPage: min($perPage, self::MAX_PER_PAGE), page: $page);
+    }
+
+    /**
+     * The servers the user can open, joined to what search and sorting need, narrowed by category and search.
+     * Ownership (all, you, other) is applied by the callers so the three counts share one definition.
+     *
+     * @param  int|'none'|null  $category
+     */
+    private function filtered(User $user, int|string|null $category, string $search): Builder
+    {
+        $query = $this->accessible($user)
+            ->leftJoin('gobia_server_preferences as gp', fn ($join) => $join->on('gp.server_id', '=', 'servers.id')->where('gp.user_id', '=', $user->id))
+            ->leftJoin('allocations as ga', 'ga.id', '=', 'servers.allocation_id')
+            ->leftJoin('nodes as gn', 'gn.id', '=', 'servers.node_id');
+
+        if ($category === 'none') {
+            $query->whereNotExists(fn (QueryBuilder $members) => $members->selectRaw('1')->from('gobia_server_category_members as gm')
+                ->join('gobia_server_categories as gc', 'gc.id', '=', 'gm.category_id')->whereColumn('gm.server_id', 'servers.id')->where('gc.user_id', $user->id));
+        } elseif (is_int($category)) {
+            $query->whereExists(fn (QueryBuilder $members) => $members->selectRaw('1')->from('gobia_server_category_members as gm')
+                ->join('gobia_server_categories as gc', 'gc.id', '=', 'gm.category_id')->whereColumn('gm.server_id', 'servers.id')
+                ->where('gc.user_id', $user->id)->where('gc.id', $category));
+        }
+
+        $search = mb_trim($search);
+        if ($search !== '') {
+            $contains = '%'.addcslashes($search, '%_\\').'%';
+            $prefix = addcslashes($search, '%_\\').'%';
+            $query->where(function (Builder $inner) use ($contains, $prefix): void {
+                $inner->where('servers.name', 'like', $contains)
+                    ->orWhere('servers.description', 'like', $contains)
+                    ->orWhere('gn.name', 'like', $contains)
+                    ->orWhere('servers.uuid', 'like', $prefix)
+                    ->orWhere('servers.uuidShort', 'like', $prefix)
+                    ->orWhereRaw("CONCAT(COALESCE(ga.ip_alias, ga.ip), ':', ga.port) LIKE ?", [$contains])
+                    ->orWhereRaw("CONCAT(ga.ip, ':', ga.port) LIKE ?", [$contains]);
+            });
+        }
+
+        return $query;
+    }
+
+    /**
+     * How many servers each view would list for the same category and search, so the view menu can show true numbers.
+     *
+     * @param  int|'none'|null  $category
+     * @return array{all: int, you: int, other: int}
+     */
+    public function viewCounts(User $user, int|string|null $category, string $search): array
+    {
+        $all = $this->filtered($user, $category, $search)->count();
+        $you = $this->filtered($user, $category, $search)->where('servers.owner_id', $user->id)->count();
+
+        return ['all' => $all, 'you' => $you, 'other' => $all - $you];
     }
 
     /**

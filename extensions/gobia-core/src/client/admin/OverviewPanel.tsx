@@ -1,6 +1,6 @@
 import { PanelLink, http } from '@pterodactyl/sdk';
 import { useQuery } from '@tanstack/react-query';
-import { Copy, Database, FolderTree, Network, Server, Users, type LucideIcon } from 'lucide-react';
+import { Copy, Database, FolderTree, MapPin, Network, Server, ShieldCheck, Users, type LucideIcon } from 'lucide-react';
 import { formatBytes } from '../dashboard/format';
 
 interface Resource {
@@ -13,6 +13,9 @@ interface NodeRow {
     id: number;
     name: string;
     location: string | null;
+    fqdn?: string;
+    version?: string | null;
+    allocations?: { used: number; total: number };
     status: 'online' | 'maintenance' | 'offline';
     instances: number;
     instances_running: number | null;
@@ -39,23 +42,19 @@ interface Overview {
 type Totals = Overview['totals'];
 
 const CARDS: Array<{ key: keyof Totals; label: string; icon: LucideIcon; to: string; note: (t: Totals) => string }> = [
+    { key: 'users', label: 'Users', icon: Users, to: '/panel/users', note: () => 'accounts on this panel' },
     {
-        key: 'users',
-        label: 'Users',
-        icon: Users,
+        key: 'administrators',
+        label: 'Admins',
+        icon: ShieldCheck,
         to: '/panel/users',
-        note: (t) => `${t.administrators} administrator${t.administrators === 1 ? '' : 's'}`,
+        note: (t) => `of ${t.users} user${t.users === 1 ? '' : 's'}`,
     },
-    {
-        key: 'nodes',
-        label: 'Nodes',
-        icon: Network,
-        to: '/panel/nodes',
-        note: (t) => `${t.locations} location${t.locations === 1 ? '' : 's'}`,
-    },
+    { key: 'nodes', label: 'Nodes', icon: Network, to: '/panel/nodes', note: () => 'Wings daemons' },
     { key: 'instances', label: 'Instances', icon: Server, to: '/panel/servers', note: () => 'across all nodes' },
     { key: 'templates', label: 'Templates', icon: Copy, to: '/panel/templates', note: () => 'reusable setups' },
     { key: 'databases', label: 'Databases', icon: Database, to: '/panel/databases', note: () => 'database hosts' },
+    { key: 'locations', label: 'Locations', icon: MapPin, to: '/panel/locations', note: () => 'node groups' },
     { key: 'mounts', label: 'Mounts', icon: FolderTree, to: '/panel/mounts', note: () => 'shared mounts' },
 ];
 
@@ -177,7 +176,10 @@ function NodeCard({ node }: { node: NodeRow }) {
                     <PanelLink destination={{ to: '/panel/nodes/$id', params: { id: String(node.id) } } as never}>
                         {node.name}
                     </PanelLink>
-                    <div className={'gb-sub'}>{node.location ?? 'No location'}</div>
+                    <div className={'gb-sub'}>
+                        {node.location ?? 'No location'}
+                        {node.fqdn ? ` · ${node.fqdn}` : ''}
+                    </div>
                 </div>
                 <span className={'gb-badge ' + tone}>{node.status}</span>
             </header>
@@ -188,6 +190,18 @@ function NodeCard({ node }: { node: NodeRow }) {
                         {node.instances}
                         {node.instances_running !== null && ` (${node.instances_running} running)`}
                     </dd>
+                </div>
+                {node.allocations && (
+                    <div>
+                        <dt>Allocations</dt>
+                        <dd>
+                            {node.allocations.used} / {node.allocations.total}
+                        </dd>
+                    </div>
+                )}
+                <div>
+                    <dt>Wings</dt>
+                    <dd>{node.version ?? 'n/a'}</dd>
                 </div>
             </dl>
             <Meter

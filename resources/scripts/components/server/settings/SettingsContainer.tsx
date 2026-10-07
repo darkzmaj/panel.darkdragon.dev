@@ -28,13 +28,23 @@ const SettingsContainer = () => {
                             <div>
                                 <Label htmlFor={'sftp-address'}>Server Address</Label>
                                 <CopyOnClick text={`sftp://${ip(sftp.ip)}:${sftp.port}`}>
-                                    <TextInput id={'sftp-address'} type={'text'} value={`sftp://${ip(sftp.ip)}:${sftp.port}`} readOnly />
+                                    <TextInput
+                                        id={'sftp-address'}
+                                        type={'text'}
+                                        value={`sftp://${ip(sftp.ip)}:${sftp.port}`}
+                                        readOnly
+                                    />
                                 </CopyOnClick>
                             </div>
                             <div className={'mt-6'}>
                                 <Label htmlFor={'sftp-username'}>Username</Label>
                                 <CopyOnClick text={`${username}.${id}`}>
-                                    <TextInput id={'sftp-username'} type={'text'} value={`${username}.${id}`} readOnly />
+                                    <TextInput
+                                        id={'sftp-username'}
+                                        type={'text'}
+                                        value={`${username}.${id}`}
+                                        readOnly
+                                    />
                                 </CopyOnClick>
                             </div>
                             <div className={'mt-6 flex items-center'}>

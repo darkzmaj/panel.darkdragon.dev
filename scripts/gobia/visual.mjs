@@ -209,11 +209,17 @@ try {
         await check('create instance dialog offers Custom and Template', async () => {
             await page.getByRole('button', { name: /create instance/i }).click();
             await page.getByText('Configure everything manually.').waitFor();
-            await page.getByText('Deploy using a reusable template.').or(page.getByText('No enabled templates yet.')).waitFor();
+            await page
+                .getByText('Deploy using a reusable template.')
+                .or(page.getByText('No enabled templates yet.'))
+                .waitFor();
             await page.keyboard.press('Escape');
         });
         await check('row menu offers Open, colour and category', async () => {
-            await page.getByRole('button', { name: /^Actions for /i }).first().click({ force: true });
+            await page
+                .getByRole('button', { name: /^Actions for /i })
+                .first()
+                .click({ force: true });
             await page.getByRole('menuitem', { name: /Change icon colour/ }).waitFor();
             await page.keyboard.press('Escape');
         });
@@ -231,14 +237,22 @@ try {
             await page.getByRole('button', { name: 'Create', exact: true }).click();
             await page.locator('.gb-tree-name', { hasText: name }).waitFor();
             await page.locator('.gb-tab-name', { hasText: name }).waitFor();
-            await page.locator('.gb-tree-row', { hasText: name }).first().locator('button.gb-tree-more').click({ force: true });
+            await page
+                .locator('.gb-tree-row', { hasText: name })
+                .first()
+                .locator('button.gb-tree-more')
+                .click({ force: true });
             await page.getByRole('menuitem', { name: 'Rename' }).click();
             const renamed = name.replace('smoke', 'renamed');
             await page.getByLabel('New name').fill(renamed);
             await page.getByRole('button', { name: 'Rename', exact: true }).click();
             await page.locator('.gb-tree-name', { hasText: renamed }).waitFor();
             await page.locator('.gb-tab-name', { hasText: renamed }).waitFor();
-            await page.locator('.gb-tree-row', { hasText: renamed }).first().locator('button.gb-tree-more').click({ force: true });
+            await page
+                .locator('.gb-tree-row', { hasText: renamed })
+                .first()
+                .locator('button.gb-tree-more')
+                .click({ force: true });
             await page.getByRole('menuitem', { name: 'Delete' }).click();
             await page.getByRole('button', { name: 'Delete', exact: true }).click();
             await page.locator('.gb-tree-name', { hasText: renamed }).waitFor({ state: 'detached' });

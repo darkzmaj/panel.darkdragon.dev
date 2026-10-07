@@ -1,18 +1,8 @@
-import { ContextDropdownMenu, DropdownMenu, DropdownMenuItem, PanelLink, useServerResources } from '@pterodactyl/sdk';
-import {
-    Cpu,
-    Ellipsis,
-    FolderPlus,
-    GripVertical,
-    HardDrive,
-    MemoryStick,
-    Palette,
-    Server as ServerIcon,
-    SquareArrowOutUpRight,
-} from 'lucide-react';
-import { memo, useEffect, useState, type CSSProperties, type ReactNode } from 'react';
+import { PanelLink, useServerResources } from '@pterodactyl/sdk';
+import { Cpu, Ellipsis, GripVertical, HardDrive, MemoryStick, Server as ServerIcon } from 'lucide-react';
+import { memo, useEffect, useState, type CSSProperties } from 'react';
 import { formatBytes, formatCpu, formatLimit } from './format';
-import type { DragState } from './useDragReorder';
+import type { useSortable } from './useSortable';
 import type { Instance } from './types';
 
 type PowerState = 'offline' | 'stopped' | 'starting' | 'running' | 'stopping';
@@ -38,8 +28,8 @@ function dotClass(state: PowerState | null): string {
 }
 
 /** True once the element has been on screen, so off screen rows never poll for live stats. */
-function useEverVisible(): [(element: HTMLDivElement | null) => void, boolean] {
-    const [element, setElement] = useState<HTMLDivElement | null>(null);
+function useEverVisible(): [(element: HTMLElement | null) => void, boolean] {
+    const [element, setElement] = useState<HTMLElement | null>(null);
     const [seen, setSeen] = useState(false);
     useEffect(() => {
         if (!element || seen) return;
@@ -181,69 +171,66 @@ function RowDetails({ instance, live }: { instance: Instance; live: Live | undef
 
 interface Props {
     instance: Instance;
-    dragging: boolean;
-    drag: DragState;
-    onColor: (instance: Instance) => void;
-    onCategories: (instance: Instance) => void;
+    index: number;
+    sortable: ReturnType<typeof useSortable>;
+    onMenu: (instance: Instance, x: number, y: number) => void;
 }
 
-function InstanceRow({ instance, dragging, drag, onColor, onCategories }: Props) {
+function InstanceRow({ instance, index, sortable, onMenu }: Props) {
     const [visibleRef, visible] = useEverVisible();
     const color = instance.icon_color;
     const destination = { to: '/server/$id', params: { id: instance.identifier } } as const;
     const iconStyle: CSSProperties | undefined = color
         ? { color, background: color + '1f', borderColor: color + '55' }
         : undefined;
-
-    const items: ReactNode = (
-        <>
-            <PanelLink destination={destination} className={'contents'}>
-                <DropdownMenuItem icon={SquareArrowOutUpRight}>Open</DropdownMenuItem>
-            </PanelLink>
-            <DropdownMenuItem icon={Palette} onClick={() => onColor(instance)}>
-                Change icon colour
-            </DropdownMenuItem>
-            <DropdownMenuItem icon={FolderPlus} onClick={() => onCategories(instance)}>
-                Add to category
-            </DropdownMenuItem>
-        </>
-    );
+    const register = sortable.register(instance.uuid);
 
     return (
-        <ContextDropdownMenu items={items}>
-            <div
-                ref={(element) => {
-                    drag.rowRef(instance.uuid)(element);
-                    visibleRef(element);
-                }}
-                data-instance={instance.uuid}
-                className={'gb-server-item' + (dragging ? ' dragging' : '')}
-            >
-                <div className={'gb-grip'}>
-                    <button
-                        type={'button'}
-                        aria-label={`Reorder ${instance.name}. Press Space to pick up, then use the arrow keys.`}
-                        title={'Drag to reorder'}
-                        {...drag.handleProps(instance.uuid)}
-                        style={{ touchAction: 'none', cursor: 'grab' }}
-                    >
-                        <GripVertical aria-hidden />
-                    </button>
-                </div>
-                <PanelLink destination={destination} className={'gb-server-row'}>
-                    <span className={'gb-file-icon'} style={iconStyle} aria-hidden>
-                        <ServerIcon />
-                    </span>
-                    <RowBody instance={instance} visible={visible} />
-                </PanelLink>
-                <DropdownMenu
-                    triggerContent={<Ellipsis aria-label={`Actions for ${instance.name}`} />}
-                    triggerClassName={'gb-icon-btn gb-icon-btn-sm gb-row-more'}
+        <li
+            ref={(element) => {
+                register(element);
+                visibleRef(element);
+            }}
+            data-instance={instance.uuid}
+            className={'gb-server-item'}
+            {...sortable.rowProps(instance.uuid, index)}
+            onContextMenu={(event) => {
+                // A touch long press is handled by the hold timers of the sortable list, never by the browser menu.
+                event.preventDefault();
+                if ((event.nativeEvent as PointerEvent).pointerType !== 'touch')
+                    onMenu(instance, event.clientX, event.clientY);
+            }}
+        >
+            <div className={'gb-grip'}>
+                <button
+                    type={'button'}
+                    aria-label={`Reorder ${instance.name}. Use the up and down arrow keys, or drag.`}
+                    title={'Drag to reorder'}
+                    {...sortable.gripProps(instance.uuid, index)}
+                    style={{ touchAction: 'none', cursor: 'grab' }}
                 >
-                    {items}
-                </DropdownMenu>
+                    <GripVertical aria-hidden />
+                </button>
             </div>
-        </ContextDropdownMenu>
+            <PanelLink destination={destination} className={'gb-server-row'}>
+                <span className={'gb-file-icon'} style={iconStyle} aria-hidden>
+                    <ServerIcon />
+                </span>
+                <RowBody instance={instance} visible={visible} />
+            </PanelLink>
+            <button
+                type={'button'}
+                className={'gb-icon-btn gb-icon-btn-sm gb-row-more'}
+                aria-label={`Actions for ${instance.name}`}
+                aria-haspopup={'menu'}
+                onClick={(event) => {
+                    const box = event.currentTarget.getBoundingClientRect();
+                    onMenu(instance, box.right, box.bottom);
+                }}
+            >
+                <Ellipsis aria-hidden />
+            </button>
+        </li>
     );
 }
 

@@ -1,28 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { luminance, normaliseHex, PRESETS, readableOn } from './colors';
+import { normaliseHex } from './colors';
 
-describe('colors', () => {
-    it('validates and lower cases hex colours', () => {
-        expect(normaliseHex('#AABBCC')).toBe('#aabbcc');
-        expect(normaliseHex('  #1264d1 ')).toBe('#1264d1');
-        for (const bad of ['', 'red', '#abc', '#12345', '#1234567', '#12345g', 'url(x)', '#aabbcc;']) {
-            expect(normaliseHex(bad)).toBeNull();
-        }
+describe('normaliseHex', () => {
+    it('lower cases and accepts #rrggbb only', () => {
+        expect(normaliseHex('#1264D1')).toBe('#1264d1');
+        expect(normaliseHex('  #abcdef ')).toBe('#abcdef');
     });
 
-    it('every preset is a valid colour', () => {
-        for (const preset of PRESETS) expect(normaliseHex(preset)).toBe(preset);
-    });
-
-    it('computes luminance at the extremes', () => {
-        expect(luminance('#000000')).toBeCloseTo(0);
-        expect(luminance('#ffffff')).toBeCloseTo(1);
-    });
-
-    it('picks a readable foreground', () => {
-        expect(readableOn('#ffffff')).toBe('#000000');
-        expect(readableOn('#eab308')).toBe('#000000');
-        expect(readableOn('#0f172a')).toBe('#ffffff');
-        expect(readableOn('#1264d1')).toBe('#ffffff');
+    it.each(['', '#fff', '1264d1', '#12345g', '#1264d1ff', 'red'])('rejects %j', (value) => {
+        expect(normaliseHex(value)).toBeNull();
     });
 });

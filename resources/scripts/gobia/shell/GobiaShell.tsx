@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Link, useLocation } from '@tanstack/react-router';
 import { Menu, Server, X } from 'lucide-react';
 import { useSiteSettings } from '@/api/settings/queries';
@@ -16,7 +16,17 @@ function Shell({ children }: { children: React.ReactNode }) {
     const { pathname } = useLocation();
     const name = useSiteSettings().name;
     const logout = useLogout();
+    const content = useRef<HTMLDivElement>(null);
     const admin = pathname === '/panel' || pathname.startsWith('/panel/');
+
+    // Only the page area animates on navigation: restart its short fade without remounting anything.
+    useEffect(() => {
+        const element = content.current;
+        if (!element) return;
+        element.classList.remove('gb-route');
+        void element.offsetWidth;
+        element.classList.add('gb-route');
+    }, [pathname]);
 
     // Navigating always closes the mobile drawer.
     useEffect(() => setDrawerOpen(false), [pathname, setDrawerOpen]);
@@ -71,7 +81,9 @@ function Shell({ children }: { children: React.ReactNode }) {
                 </div>
                 <div className={'gb-drawer-backdrop'} onClick={() => setDrawerOpen(false)} aria-hidden />
                 <main className={'gb-main'} id={'gb-main'}>
-                    <div className={'gb-main-inner'}>{children}</div>
+                    <div ref={content} className={'gb-main-inner'}>
+                        {children}
+                    </div>
                 </main>
             </div>
             <GobiaFooter />

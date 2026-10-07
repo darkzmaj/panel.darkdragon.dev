@@ -1,13 +1,15 @@
-import { PageContentBlock, Pagination, type ReplacementProps } from '@pterodactyl/sdk';
-import { Check, ChevronDown, Pencil, Plus } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import CreateInstanceDialog from '../create/CreateInstanceDialog';
-import { AddToCategoryDialog, ManageCategoriesDialog } from './CategoryDialogs';
+import { PageContentBlock, Pagination, toast, usePanelNavigate, type ReplacementProps } from '@pterodactyl/sdk';
+import { useQueryClient } from '@tanstack/react-query';
+import { Check, ChevronDown, FolderPlus, Palette, Pencil, Plus, Search, SquareArrowOutUpRight, X } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import CategoryEditor from './CategoryEditor';
+import ContextMenu, { type MenuState } from './ContextMenu';
 import IconColorDialog from './IconColorDialog';
 import InstanceRow from './InstanceRow';
-import { useInstances, useReorder, useSummary } from './queries';
-import type { CategoryFilter, Instance, View } from './types';
-import { useDragReorder } from './useDragReorder';
+import { keys, useInstances, useReorder, useSummary } from './queries';
+import type { CategoryFilter, Instance, InstancePage, View } from './types';
+import { useSortable } from './useSortable';
+import CreateInstanceDialog from '../create/CreateInstanceDialog';
 
 const VIEWS: { id: View; label: string; hint: string }[] = [
     { id: 'all', label: 'All', hint: 'Every instance you can access' },
@@ -15,8 +17,16 @@ const VIEWS: { id: View; label: string; hint: string }[] = [
     { id: 'other', label: 'Other', hint: 'Instances shared with you by someone else' },
 ];
 
-/** The "All / You / Other" chip: opens a small menu to pick which instances are listed. */
-function ViewMenu({ view, onChange }: { view: View; onChange: (view: View) => void }) {
+/** The "All / You / Other" chip: opens a small menu to pick which instances are listed, with true counts. */
+function ViewMenu({
+    view,
+    counts,
+    onChange,
+}: {
+    view: View;
+    counts: Record<View, number> | undefined;
+    onChange: (view: View) => void;
+}) {
     const [open, setOpen] = useState(false);
     const root = useRef<HTMLDivElement>(null);
     const current = VIEWS.find((item) => item.id === view) ?? VIEWS[0];
@@ -42,14 +52,14 @@ function ViewMenu({ view, onChange }: { view: View; onChange: (view: View) => vo
                 onClick={() => setOpen((value) => !value)}
                 className={'gb-chip active'}
             >
-                {current.label}
+                {current?.label}
                 <ChevronDown aria-hidden />
             </button>
             {open && (
                 <div
                     role={'listbox'}
                     aria-label={'Instance view'}
-                    className={'gb-menu'}
+                    className={'gb-menu gb-pop'}
                     style={{ position: 'absolute', left: 0, top: 'calc(100% + 6px)', zIndex: 30 }}
                 >
                     {VIEWS.map((item) => (
@@ -68,6 +78,12 @@ function ViewMenu({ view, onChange }: { view: View; onChange: (view: View) => vo
                             <span style={{ flex: 1 }}>
                                 <span style={{ display: 'block', color: 'var(--gb-text-strong)', fontWeight: 600 }}>
                                     {item.label}
+                                    {counts && (
+                                        <span className={'gb-muted'} style={{ fontWeight: 400 }}>
+                                            {' '}
+                                            · {counts[item.id]}
+                                        </span>
+                                    )}
                                 </span>
                                 <span className={'gb-secondary'} style={{ fontSize: 12 }}>
                                     {item.hint}
@@ -83,34 +99,106 @@ function ViewMenu({ view, onChange }: { view: View; onChange: (view: View) => vo
 }
 
 export default function DashboardPage({ model }: ReplacementProps<'dashboard.page'>) {
+    const queryClient = useQueryClient();
+    const navigate = usePanelNavigate();
     const [view, setView] = useState<View>('all');
     const [category, setCategory] = useState<CategoryFilter>(null);
+    const [search, setSearch] = useState('');
+    const [q, setQ] = useState('');
     const [page, setPage] = useState(1);
     const [colorFor, setColorFor] = useState<Instance | null>(null);
-    const [categoriesFor, setCategoriesFor] = useState<Instance | null>(null);
-    const [managing, setManaging] = useState(false);
+    const [editing, setEditing] = useState<{ instance: Instance | null } | null>(null);
     const [creating, setCreating] = useState(false);
+    const [menu, setMenu] = useState<MenuState | null>(null);
 
-    const params = useMemo(() => ({ view, category, q: '', page }), [view, category, page]);
+    // The list follows the search box a moment after typing stops.
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setQ(search);
+            setPage(1);
+        }, 200);
+        return () => clearTimeout(timer);
+    }, [search]);
+
+    const params = useMemo(() => ({ view, category, q, page }), [view, category, q, page]);
     const { data, isPending, isError, refetch } = useInstances(params);
     const { data: summary } = useSummary();
-    const reorder = useReorder();
+    const persist = useReorder();
+
+    // A category that was deleted (here or elsewhere) must never stay selected: its list would be empty for no visible reason.
+    useEffect(() => {
+        if (typeof category === 'number' && summary && !summary.categories.some((item) => item.id === category)) {
+            setCategory(null);
+            setPage(1);
+        }
+    }, [summary, category]);
 
     const items = useMemo(() => data?.data ?? [], [data]);
     const byUuid = useMemo(() => new Map(items.map((item) => [item.uuid, item])), [items]);
-    const drag = useDragReorder({
+
+    // The new order shows at once; if it cannot be stored the previous one is restored and the user is told.
+    const reorder = useCallback(
+        (ids: string[]) => {
+            const key = keys.list(params);
+            const previous = queryClient.getQueryData<InstancePage>(key);
+            if (previous) {
+                const next = ids.map((id) => byUuid.get(id)).filter((item): item is Instance => item !== undefined);
+                queryClient.setQueryData<InstancePage>(key, { ...previous, data: next });
+            }
+            persist.mutate(
+                { category, servers: ids },
+                {
+                    onError: () => {
+                        if (previous) queryClient.setQueryData(key, previous);
+                        toast.error('Could not save the instance order. Your previous order is unchanged.');
+                    },
+                }
+            );
+        },
+        [params, queryClient, byUuid, persist, category]
+    );
+
+    const openMenu = useCallback(
+        (instance: Instance, x: number, y: number) =>
+            setMenu({
+                x,
+                y,
+                label: `Actions for ${instance.name}`,
+                items: [
+                    {
+                        key: 'open',
+                        label: 'Open',
+                        icon: SquareArrowOutUpRight,
+                        onSelect: () => void navigate({ to: '/server/$id', params: { id: instance.identifier } }),
+                    },
+                    { key: 'color', label: 'Change icon colour', icon: Palette, onSelect: () => setColorFor(instance) },
+                    {
+                        key: 'category',
+                        label: 'Add to category',
+                        icon: FolderPlus,
+                        onSelect: () => setEditing({ instance }),
+                    },
+                ],
+            }),
+        [navigate]
+    );
+
+    const sortable = useSortable({
         ids: items.map((item) => item.uuid),
-        label: (id) => byUuid.get(id)?.name ?? 'Instance',
-        onCommit: (servers) => reorder.mutate({ category, servers }),
+        onReorder: reorder,
+        onMenu: (id, x, y) => {
+            const instance = byUuid.get(id);
+            if (instance) openMenu(instance, x, y);
+        },
     });
-    const ordered = drag.order.map((id) => byUuid.get(id)).filter((item): item is Instance => item !== undefined);
-    const dragged = drag.draggingId ? byUuid.get(drag.draggingId) : undefined;
 
     const choose = (next: { view?: View; category?: CategoryFilter }) => {
         if (next.view !== undefined) setView(next.view);
         if (next.category !== undefined) setCategory(next.category);
         setPage(1);
     };
+
+    const filtering = category !== null || view !== 'all' || q.trim() !== '';
 
     return (
         <PageContentBlock title={'Instances'}>
@@ -130,7 +218,7 @@ export default function DashboardPage({ model }: ReplacementProps<'dashboard.pag
 
             <div style={{ marginBottom: 16 }}>
                 <div className={'gb-filterbar'} role={'toolbar'} aria-label={'Instance views'}>
-                    <ViewMenu view={view} onChange={(next) => choose({ view: next })} />
+                    <ViewMenu view={view} counts={data?.meta.counts} onChange={(next) => choose({ view: next })} />
                     <div className={'gb-filterbar-scroll'}>
                         {summary?.categories.map((item) => (
                             <button
@@ -154,9 +242,25 @@ export default function DashboardPage({ model }: ReplacementProps<'dashboard.pag
                             </button>
                         )}
                     </div>
+                    <label className={'gb-filter-search'}>
+                        <Search aria-hidden />
+                        <input
+                            type={'search'}
+                            value={search}
+                            onChange={(event) => setSearch(event.currentTarget.value)}
+                            placeholder={'Search'}
+                            aria-label={'Search instances'}
+                            autoComplete={'off'}
+                        />
+                        {search && (
+                            <button type={'button'} aria-label={'Clear search'} onClick={() => setSearch('')}>
+                                <X aria-hidden />
+                            </button>
+                        )}
+                    </label>
                     <button
                         type={'button'}
-                        onClick={() => setManaging(true)}
+                        onClick={() => setEditing({ instance: null })}
                         title={'Edit categories'}
                         aria-label={'Edit categories'}
                         className={'gb-chip gb-chip-icon'}
@@ -167,12 +271,8 @@ export default function DashboardPage({ model }: ReplacementProps<'dashboard.pag
                 </div>
             </div>
 
-            <div aria-live={'polite'} className={'sr-only'}>
-                {drag.announcement}
-            </div>
-
             {isPending ? (
-                <div className={'gb-list'}>
+                <div className={'gb-list gb-enter'}>
                     {[0, 1, 2, 3].map((row) => (
                         <div
                             key={row}
@@ -194,26 +294,28 @@ export default function DashboardPage({ model }: ReplacementProps<'dashboard.pag
                         Retry
                     </button>
                 </div>
-            ) : data && ordered.length > 0 ? (
+            ) : data && items.length > 0 ? (
                 <Pagination data={data} onPageSelect={setPage}>
                     {() => (
-                        <div className={'gb-list gb-server-list'}>
+                        <div className={'gb-list gb-server-list gb-enter'}>
                             <div className={'gb-list-head gb-server-head'} aria-hidden>
                                 <span>Instance</span>
                                 <span className={'gb-col-where'}>Node &amp; address</span>
                                 <span className={'gb-col-stats'}>CPU &middot; Memory &middot; Storage</span>
                             </div>
-                            <ul style={{ listStyle: 'none', margin: 0, padding: 0 }} aria-label={'Instances'}>
-                                {ordered.map((instance) => (
-                                    <li key={instance.uuid} style={{ display: 'contents' }}>
-                                        <InstanceRow
-                                            instance={instance}
-                                            dragging={drag.draggingId === instance.uuid}
-                                            drag={drag}
-                                            onColor={setColorFor}
-                                            onCategories={setCategoriesFor}
-                                        />
-                                    </li>
+                            <ul
+                                ref={sortable.list}
+                                style={{ listStyle: 'none', margin: 0, padding: 0 }}
+                                aria-label={'Instances'}
+                            >
+                                {items.map((instance, index) => (
+                                    <InstanceRow
+                                        key={instance.uuid}
+                                        instance={instance}
+                                        index={index}
+                                        sortable={sortable}
+                                        onMenu={openMenu}
+                                    />
                                 ))}
                             </ul>
                         </div>
@@ -221,28 +323,13 @@ export default function DashboardPage({ model }: ReplacementProps<'dashboard.pag
                 </Pagination>
             ) : (
                 <p className={'gb-list gb-secondary'} style={{ textAlign: 'center', padding: '40px 16px' }}>
-                    {category !== null || view !== 'all'
+                    {filtering
                         ? 'No instances match this view.'
                         : 'There are no instances associated with your account.'}
                 </p>
             )}
 
-            {dragged && drag.pointer && (
-                <div
-                    aria-hidden
-                    style={{
-                        position: 'fixed',
-                        left: drag.pointer.x + 12,
-                        top: drag.pointer.y - 18,
-                        pointerEvents: 'none',
-                        zIndex: 60,
-                    }}
-                    className={'gb-card'}
-                >
-                    {dragged.name}
-                </div>
-            )}
-
+            <ContextMenu menu={menu} onClose={() => setMenu(null)} />
             {colorFor && (
                 <IconColorDialog
                     instance={colorFor}
@@ -250,17 +337,17 @@ export default function DashboardPage({ model }: ReplacementProps<'dashboard.pag
                     onClose={() => setColorFor(null)}
                 />
             )}
-            {categoriesFor && (
-                <AddToCategoryDialog
-                    instance={categoriesFor}
+            {editing && (
+                <CategoryEditor
                     categories={summary?.categories ?? []}
-                    onClose={() => setCategoriesFor(null)}
+                    instance={editing.instance}
+                    onClose={() => setEditing(null)}
+                    onDeleted={(id) => {
+                        if (category === id) choose({ category: null });
+                    }}
                 />
             )}
             {creating && <CreateInstanceDialog onClose={() => setCreating(false)} />}
-            {managing && (
-                <ManageCategoriesDialog categories={summary?.categories ?? []} onClose={() => setManaging(false)} />
-            )}
         </PageContentBlock>
     );
 }

@@ -3648,3 +3648,246 @@ a.gb-stat:hover {
     font-weight: 600;
     color: var(--gb-text-strong);
 }
+
+/* ------------------------------------------------------------------ motion system
+ * One set of durations and one ease out curve. Fast, never bouncy: hover and press 80 to 120 ms, menus 120, dialogs 150,
+ * the mobile drawer 160 and the content of a page 130. Only the main area animates on navigation; the shell stays put. */
+:root {
+    --gb-dur-hover: 100ms;
+    --gb-dur-press: 80ms;
+    --gb-dur-menu: 120ms;
+    --gb-dur-dialog: 150ms;
+    --gb-dur-drawer: 160ms;
+    --gb-dur-page: 130ms;
+    --gb-dur-tab: 100ms;
+}
+@keyframes gb-fade-up {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+@keyframes gb-pop-in {
+    from {
+        opacity: 0;
+        transform: translateY(-3px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+.gb-enter,
+.gb-main-inner.gb-route {
+    animation: gb-fade-up var(--gb-dur-page) var(--gb-ease) both;
+}
+.gb-menu,
+.gb-pop {
+    animation: gb-pop-in var(--gb-dur-menu) var(--gb-ease) both;
+    transform-origin: top left;
+}
+.gb-btn:active:not(:disabled),
+.gb-icon-btn:active:not(:disabled),
+.gb-chip:active {
+    transform: translateY(1px);
+}
+.gb-btn,
+.gb-icon-btn,
+.gb-chip,
+.gb-nav-item,
+.gb-menu-item,
+.gb-tabbar-item,
+.gb-tab {
+    transition-duration: var(--gb-dur-hover);
+}
+.gb-drawer-open .gb-sidebar-wrap {
+    transition-duration: var(--gb-dur-drawer);
+}
+.gb-main {
+    scrollbar-gutter: stable;
+}
+html {
+    scrollbar-gutter: stable;
+}
+.gb-filter-search {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    flex: none;
+    width: 200px;
+    height: 36px;
+    border: 1px solid var(--gb-border-muted);
+    border-radius: var(--gb-radius-md);
+    background: var(--gb-surface);
+    color: var(--gb-text-3);
+    transition:
+        border-color var(--gb-dur-hover) var(--gb-ease),
+        width var(--gb-dur-menu) var(--gb-ease);
+}
+.gb-filter-search:focus-within {
+    border-color: var(--gb-primary);
+    width: 260px;
+}
+.gb-filter-search svg {
+    width: 15px;
+    height: 15px;
+    margin-left: 10px;
+    flex: none;
+}
+.gb-filter-search input {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    padding: 0 8px;
+    border: 0;
+    background: transparent;
+    outline: 0;
+    color: var(--gb-text);
+    font: inherit;
+    font-size: 14px;
+}
+.gb-filter-search input::placeholder {
+    color: var(--gb-text-3);
+}
+.gb-filter-search button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    margin-right: 4px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--gb-text-3);
+    cursor: pointer;
+}
+.gb-filter-search button:hover {
+    background: var(--gb-surface-2);
+    color: var(--gb-text-strong);
+}
+@media (max-width: 700px) {
+    .gb-filter-search {
+        width: 120px;
+    }
+    .gb-filter-search:focus-within {
+        width: 160px;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .gb-enter,
+    .gb-main-inner.gb-route,
+    .gb-menu,
+    .gb-pop {
+        animation: none;
+    }
+}
+
+/* Page skeleton: the geometry of a typical page (heading, subtitle, a row of cards) so content replaces it without a jump. */
+.gb-skel-page {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding-top: 4px;
+    animation: gb-fade-up var(--gb-dur-page) var(--gb-ease) both;
+}
+.gb-skel-page .gb-skeleton {
+    border-radius: var(--gb-radius-md);
+}
+.gb-skel-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+}
+
+/* Admin overview density: eight equal stat cards in a fixed grid, compact resource gauges, node cards. */
+.gb-stats.gb-stats-lg {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+}
+.gb-stats-lg .gb-stat {
+    min-height: 92px;
+    padding: 16px 18px;
+    gap: 14px;
+}
+.gb-stats-lg .gb-stat-icon {
+    width: 44px;
+    height: 44px;
+}
+.gb-stats-lg .gb-num {
+    font-size: 26px;
+}
+.gb-stats-lg .gb-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gb-text);
+}
+@media (max-width: 1100px) {
+    .gb-stats.gb-stats-lg {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+@media (max-width: 520px) {
+    .gb-stats.gb-stats-lg {
+        grid-template-columns: 1fr;
+    }
+}
+.gb-gauges.gb-gauges-lg {
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 14px;
+}
+.gb-gauges-lg .gb-gauge {
+    padding: 16px 18px;
+}
+.gb-gauges-lg .gb-gauge svg {
+    width: 84px;
+    height: 84px;
+}
+.gb-gauges-lg .gb-ring-text {
+    font-size: 22px;
+}
+.gb-gauge-top {
+    gap: 14px;
+}
+.gb-gauge-value {
+    font-size: 20px;
+}
+.gb-gauges-lg dl {
+    margin-top: 12px;
+    padding-top: 10px;
+}
+.gb-nodes {
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 14px;
+}
+.gb-node {
+    padding: 16px 18px;
+}
+.gb-node-facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 6px 14px;
+    margin: 10px 0 4px;
+}
+.gb-node-facts div {
+    display: block;
+}
+.gb-node-facts dt {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--gb-text-3);
+}
+.gb-node-facts dd {
+    margin: 0;
+    font-size: 13px;
+    color: var(--gb-text);
+}
+.gb-section-title {
+    margin: 26px 0 12px;
+}

@@ -3,6 +3,7 @@ import { cva } from 'class-variance-authority';
 import { useLocation, useRouter } from '@tanstack/react-router';
 import { cn } from '@/lib/cn';
 import ErrorBoundary from '@/components/elements/ErrorBoundary';
+import PageSkeleton from '@/gobia/PageSkeleton';
 
 export type SpinnerSize = 'small' | 'base' | 'large';
 
@@ -44,9 +45,14 @@ const SpinnerComponent = ({ size, isBlue }: Props) => (
 
 const Spinner = (({ centered, ...props }: Props) =>
     centered ? (
-        <div className={cn('flex justify-center items-center', props.size === 'large' ? 'm-20' : 'm-6')}>
-            <SpinnerComponent {...props} />
-        </div>
+        // A centred large spinner stands for a whole page loading: show the page skeleton instead.
+        props.size === 'large' ? (
+            <PageSkeleton />
+        ) : (
+            <div className={'m-6 flex items-center justify-center'}>
+                <SpinnerComponent {...props} />
+            </div>
+        )
     ) : (
         <SpinnerComponent {...props} />
     )) as SpinnerComponentType;

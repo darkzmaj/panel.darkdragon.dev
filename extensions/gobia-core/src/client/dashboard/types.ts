@@ -22,9 +22,15 @@ export interface Pagination {
     total_pages: number;
 }
 
+export interface ViewCounts {
+    all: number;
+    you: number;
+    other: number;
+}
+
 export interface InstancePage {
     data: Instance[];
-    meta: { pagination: Pagination };
+    meta: { pagination: Pagination; counts: ViewCounts };
 }
 
 export interface Category {

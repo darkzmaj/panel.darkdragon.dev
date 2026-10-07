@@ -61,8 +61,14 @@ it('does not emit a preload map that resolves lazy chunks against the page inste
     const directory = mkdtempSync(resolve(tmpdir(), 'extension-preload-'));
     try {
         writeFileSync(resolve(directory, 'shared.js'), 'export const shared = () => "shared";');
-        writeFileSync(resolve(directory, 'one.js'), "import { shared } from './shared.js'; export default () => shared() + 'one';");
-        writeFileSync(resolve(directory, 'two.js'), "import { shared } from './shared.js'; export default () => shared() + 'two';");
+        writeFileSync(
+            resolve(directory, 'one.js'),
+            "import { shared } from './shared.js'; export default () => shared() + 'one';"
+        );
+        writeFileSync(
+            resolve(directory, 'two.js'),
+            "import { shared } from './shared.js'; export default () => shared() + 'two';"
+        );
         writeFileSync(
             resolve(directory, 'entry.js'),
             "export default { setup() { return [import('./one.js'), import('./two.js')]; } };"
