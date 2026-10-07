@@ -47,13 +47,22 @@ import { isDirty, tabsReducer } from './tabs';
 import type { FileResult } from './search';
 import SearchPanel, { type ReplaceResult } from './SearchPanel';
 import Tree, { ROOT, validTarget, type Inline } from './Tree';
+import { mark } from './timing';
 import UploadPanel from './UploadPanel';
 import { pickedFromDrop, pickedFromInput, useUploadQueue } from './uploads';
 import { useTree } from './useTree';
 import { formatOf, validate, type Problem } from './validation';
 
 // CodeMirror and the language packs are only fetched once a file is actually opened.
-const CodeEditor = lazy(() => import('./CodeEditor'));
+const loadEditor = () => {
+    mark('monaco-requested', true);
+    return import('./CodeEditor').then((loaded) => {
+        mark('monaco-chunk-loaded', true);
+        return loaded;
+    });
+};
+const CodeEditor = lazy(loadEditor);
+const DiffView = lazy(() => import('./DiffView'));
 
 // Not in the DOM typings; the folder picker needs both spellings.
 const DIRECTORY_PICKER = { webkitdirectory: '', directory: '' };
@@ -88,7 +97,8 @@ const languageLabel = (name: string) =>
 
 type Prompt =
     | { kind: 'invalid'; path: string; problem: Problem }
-    | { kind: 'conflict'; path: string; missing: boolean }
+    | { kind: 'conflict'; path: string; missing: boolean; remote: string | null }
+    | { kind: 'compare'; path: string; remote: string; modified: string | null }
     | { kind: 'close'; path: string }
     | { kind: 'delete'; entries: readonly TreeEntry[] };
 
@@ -155,6 +165,16 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
 
     const permissions = model.permissions;
 
+    useEffect(() => mark('workspace-mounted', true), []);
+    useEffect(() => {
+        if (tree.listings['/'] && tree.listings['/'] !== 'loading') mark('explorer-visible', true);
+    }, [tree.listings]);
+    // The editor chunk is fetched once the explorer is up, so the first file opens without waiting for it.
+    useEffect(() => {
+        const timer = window.setTimeout(() => void loadEditor(), 600);
+        return () => window.clearTimeout(timer);
+    }, []);
+
     useEffect(() => {
         const query = window.matchMedia('(max-width: 767px)');
         const change = () => setMobile(query.matches);
@@ -214,6 +234,7 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
                 toast.error(`${entry.name} is larger than 2 MB. Download it to edit it.`);
                 return;
             }
+            mark('file-clicked');
             const exists = latest.current.state.tabs.some((tab) => tab.path === entry.path);
             dispatch({ type: 'open', path: entry.path, name: entry.name });
             setDrawer(false);
@@ -237,7 +258,7 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
             try {
                 const remote = await modifiedAt(uuid, path);
                 if (remote !== tab.modifiedAt) {
-                    setPrompt({ kind: 'conflict', path, missing: remote === null });
+                    setPrompt({ kind: 'conflict', path, missing: remote === null, remote });
                     return false;
                 }
                 dispatch({ type: 'saving', path, saving: true });
@@ -310,6 +331,56 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
             return { ok: true };
         } catch (error) {
             return { ok: false, reason: httpErrorToHuman(error as Error) };
+        }
+    };
+
+    // A file changed by someone else (console, another panel user, a server process) while it is open. A clean tab simply
+    // refreshes; one with unsaved edits asks first. "Cancel" is remembered for that remote version only.
+    const dismissed = useRef<Record<string, string | null>>({});
+    const tabStrip = useRef<HTMLDivElement>(null);
+    const [tabDrag, setTabDrag] = useState<{ path: string; over: string | null; after: boolean } | null>(null);
+    // The active tab is always scrolled into view, also when a search result or a restored session activates it.
+    useEffect(() => {
+        const strip = tabStrip.current;
+        const current = strip?.querySelector<HTMLElement>('.gb-tab.active');
+        current?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }, [state.active, state.tabs.length]);
+    useEffect(() => {
+        const check = async () => {
+            const { state: current } = latest.current;
+            const tab = current.tabs.find((candidate) => candidate.path === current.active);
+            if (!tab || tab.status !== 'ready' || tab.saving || document.hidden) return;
+            let remote: string | null;
+            try {
+                remote = await modifiedAt(uuid, tab.path);
+            } catch {
+                return;
+            }
+            const now = latest.current.state.tabs.find((candidate) => candidate.path === tab.path);
+            if (!now || now.saving || remote === now.modifiedAt || dismissed.current[tab.path] === remote) return;
+            if (!isDirty(now)) {
+                if (remote === null) return;
+                await load(tab.path);
+                toast.success(`${tab.name} was updated from the server.`);
+                return;
+            }
+            setPrompt((existing) => existing ?? { kind: 'conflict', path: tab.path, missing: remote === null, remote });
+        };
+        const timer = window.setInterval(() => void check(), 10_000);
+        const focus = () => void check();
+        window.addEventListener('focus', focus);
+        return () => {
+            window.clearInterval(timer);
+            window.removeEventListener('focus', focus);
+        };
+    }, [uuid, load]);
+
+    const compare = async (path: string) => {
+        try {
+            const [remote, modified] = await Promise.all([readFile(uuid, path), modifiedAt(uuid, path)]);
+            setPrompt({ kind: 'compare', path, remote, modified });
+        } catch (error) {
+            toast.error(httpErrorToHuman(error as Error));
         }
     };
 
@@ -800,6 +871,7 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
                     style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}
                 >
                     <div
+                        ref={tabStrip}
                         role={'group'}
                         aria-label={'Open files'}
                         className={'gb-tabs'}
@@ -811,7 +883,41 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
                                 title={tab.path}
                                 onClick={() => dispatch({ type: 'activate', path: tab.path })}
                                 onAuxClick={(event) => event.button === 1 && requestClose(tab.path)}
-                                className={'gb-tab' + (tab.path === state.active ? ' active' : '')}
+                                onMouseDown={(event) => event.button === 1 && event.preventDefault()}
+                                draggable
+                                onDragStart={(event) => {
+                                    event.dataTransfer.setData('application/x-gobia-tab', tab.path);
+                                    event.dataTransfer.effectAllowed = 'move';
+                                    setTabDrag({ path: tab.path, over: null, after: false });
+                                }}
+                                onDragOver={(event) => {
+                                    if (!tabDrag) return;
+                                    event.preventDefault();
+                                    const box = event.currentTarget.getBoundingClientRect();
+                                    const after = event.clientX > box.left + box.width / 2;
+                                    if (tabDrag.over !== tab.path || tabDrag.after !== after)
+                                        setTabDrag({ ...tabDrag, over: tab.path, after });
+                                }}
+                                onDrop={(event) => {
+                                    event.preventDefault();
+                                    if (!tabDrag) return;
+                                    const from = state.tabs.findIndex((candidate) => candidate.path === tabDrag.path);
+                                    const index = state.tabs.findIndex((candidate) => candidate.path === tab.path);
+                                    const slot = index + (tabDrag.after ? 1 : 0);
+                                    dispatch({ type: 'reorder', path: tabDrag.path, to: from < slot ? slot - 1 : slot });
+                                    setTabDrag(null);
+                                }}
+                                onDragEnd={() => setTabDrag(null)}
+                                className={
+                                    'gb-tab' +
+                                    (tab.path === state.active ? ' active' : '') +
+                                    (tabDrag?.path === tab.path ? ' dragging' : '') +
+                                    (tabDrag?.over === tab.path && tabDrag.path !== tab.path
+                                        ? tabDrag.after
+                                            ? ' drop-after'
+                                            : ' drop-before'
+                                        : '')
+                                }
                             >
                                 <button
                                     type={'button'}
@@ -1048,20 +1154,34 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
             {prompt?.kind === 'conflict' && target && (
                 <Dialog
                     open
-                    onClose={() => setPrompt(null)}
+                    onClose={() => {
+                        dismissed.current[target.path] = prompt.remote;
+                        setPrompt(null);
+                    }}
                     title={
                         prompt.missing ? `${target.name} was moved or deleted` : `${target.name} changed on the server`
                     }
                     description={
                         prompt.missing
                             ? 'The file no longer exists where you opened it. Saving creates it again.'
-                            : 'Someone or something else wrote this file after you opened it. Saving now replaces their version.'
+                            : 'Someone or something else wrote this file after you opened it, and you have unsaved changes. Choose which version to keep.'
                     }
                 >
                     <Dialog.Footer>
-                        <Button.Text type={'button'} onClick={() => setPrompt(null)}>
+                        <Button.Text
+                            type={'button'}
+                            onClick={() => {
+                                dismissed.current[target.path] = prompt.remote;
+                                setPrompt(null);
+                            }}
+                        >
                             Cancel
                         </Button.Text>
+                        {!prompt.missing && (
+                            <Button type={'button'} onClick={() => void compare(target.path)}>
+                                Compare
+                            </Button>
+                        )}
                         {!prompt.missing && (
                             <Button
                                 type={'button'}
@@ -1070,7 +1190,7 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
                                     void reloadFromServer(target.path);
                                 }}
                             >
-                                Discard mine and reload
+                                Reload
                             </Button>
                         )}
                         <Button
@@ -1082,6 +1202,51 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
                             }}
                         >
                             {prompt.missing ? 'Save as new file' : 'Overwrite'}
+                        </Button>
+                    </Dialog.Footer>
+                </Dialog>
+            )}
+            {prompt?.kind === 'compare' && target && (
+                <Dialog
+                    open
+                    onClose={() => {
+                        dismissed.current[target.path] = prompt.modified;
+                        setPrompt(null);
+                    }}
+                    title={`Server version of ${target.name} against yours`}
+                    description={'Red lines are only on the server. Green lines are only in your tab.'}
+                >
+                    <Suspense fallback={<div className={'gb-skeleton gb-diff'} />}>
+                        <DiffView path={target.path} remote={prompt.remote} mine={target.content} />
+                    </Suspense>
+                    <Dialog.Footer>
+                        <Button.Text
+                            type={'button'}
+                            onClick={() => {
+                                dismissed.current[target.path] = prompt.modified;
+                                setPrompt(null);
+                            }}
+                        >
+                            Cancel
+                        </Button.Text>
+                        <Button
+                            type={'button'}
+                            onClick={() => {
+                                setPrompt(null);
+                                void reloadFromServer(target.path);
+                            }}
+                        >
+                            Reload
+                        </Button>
+                        <Button
+                            type={'button'}
+                            color={'primary'}
+                            onClick={() => {
+                                setPrompt(null);
+                                void overwrite(target.path);
+                            }}
+                        >
+                            Overwrite
                         </Button>
                     </Dialog.Footer>
                 </Dialog>

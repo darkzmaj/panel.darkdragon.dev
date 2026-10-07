@@ -5,6 +5,35 @@ const run = (...actions: TabsAction[]): TabsState => actions.reduce(tabsReducer,
 const open = (path: string): TabsAction => ({ type: 'open', path, name: path.split('/').pop() ?? path });
 const loaded = (path: string, content = 'a'): TabsAction => ({ type: 'loaded', path, content, modifiedAt: 't1' });
 
+import { tabsReducer as reducer, type TabsState as State } from './tabs';
+
+const three: State = {
+    tabs: ['/a', '/b', '/c'].map((path) => ({
+        path,
+        name: path.slice(1),
+        original: '',
+        content: '',
+        modifiedAt: null,
+        status: 'ready' as const,
+        error: null,
+        saving: false,
+    })),
+    active: '/a',
+};
+
+describe('tab reordering', () => {
+    it('moves a tab to the dropped index and keeps the active one', () => {
+        const next = reducer(three, { type: 'reorder', path: '/a', to: 2 });
+        expect(next.tabs.map((tab) => tab.path)).toEqual(['/b', '/c', '/a']);
+        expect(next.active).toBe('/a');
+    });
+
+    it('ignores unknown paths and clamps the target', () => {
+        expect(reducer(three, { type: 'reorder', path: '/x', to: 0 })).toBe(three);
+        expect(reducer(three, { type: 'reorder', path: '/c', to: -4 }).tabs[0]?.path).toBe('/c');
+    });
+});
+
 describe('tabsReducer', () => {
     it('opens a file once and focuses it again', () => {
         const state = run(open('/a.txt'), open('/b.txt'), open('/a.txt'));

@@ -27,6 +27,8 @@ export type TabsAction =
     | { type: 'close'; path: string }
     /** A file or folder moved on the server: tabs under `from` follow it and keep their text. */
     | { type: 'rename'; from: string; to: string }
+    /** Drag a tab to a new position: `to` is the index it should end up at. */
+    | { type: 'reorder'; path: string; to: number }
     | { type: 'restore'; state: TabsState };
 
 export const EMPTY_TABS: TabsState = { tabs: [], active: null };
@@ -99,6 +101,16 @@ export function tabsReducer(state: TabsState, action: TabsAction): TabsState {
                 }),
                 active: state.active === null ? null : moved(state.active),
             };
+        }
+        case 'reorder': {
+            const from = state.tabs.findIndex((tab) => tab.path === action.path);
+            if (from < 0) return state;
+            const to = Math.min(Math.max(action.to, 0), state.tabs.length - 1);
+            if (from === to) return state;
+            const tabs = [...state.tabs];
+            const [moved] = tabs.splice(from, 1);
+            if (moved) tabs.splice(to, 0, moved);
+            return { ...state, tabs };
         }
         case 'restore':
             return action.state;

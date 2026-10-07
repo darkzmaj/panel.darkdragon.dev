@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { applyTheme, languageOf, monaco } from './monaco';
+import { mark } from './timing';
 import type { Problem } from './validation';
 
 export interface CodeEditorProps {
@@ -62,12 +63,15 @@ export default function CodeEditor({
         });
         editor.current = instance;
         applyTheme(isDark());
+        mark('monaco-ready', true);
+        const typed = instance.onKeyDown(() => mark('first-key', true));
         instance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => callbacks.current.onSave());
         const observer = new MutationObserver(() => applyTheme(isDark()));
         observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
         const open = views.current;
         return () => {
             observer.disconnect();
+            typed.dispose();
             instance.dispose();
             editor.current = null;
             open.clear();
@@ -90,6 +94,7 @@ export default function CodeEditor({
         // Text replaced from outside (reload from disk, overwrite) is pushed in as one undoable edit.
         else if (model.getValue() !== content) model.setValue(content);
         instance.setModel(model);
+        mark('file-visible');
         const saved = views.current.get(path);
         if (saved) instance.restoreViewState(saved);
         const subscription = model.onDidChangeContent(() => callbacks.current.onChange(model.getValue()));
