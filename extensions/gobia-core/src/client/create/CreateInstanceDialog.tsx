@@ -1,5 +1,6 @@
-import { Button, Dialog, PanelLink, Spinner, httpErrorToHuman, toast } from '@pterodactyl/sdk';
+import { Dialog, PanelLink, httpErrorToHuman, toast } from '@pterodactyl/sdk';
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { ArrowLeft, Check, Layers, LayoutTemplate, SlidersHorizontal } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { formatBytes } from '../dashboard/format';
 import {
@@ -10,11 +11,9 @@ import {
     searchOwners,
     type BrowserTemplate,
     type InstanceRequest,
+    type TemplateDetails,
 } from './api';
-import { progressPercent, stageStatuses } from './stages';
-
-const input =
-    'gb:w-full gb:rounded-md gb:border gb:border-input gb:bg-background gb:px-3 gb:py-2 gb:text-sm gb:text-foreground';
+import { stageStatuses } from './stages';
 
 type Step =
     | { kind: 'choose' }
@@ -22,31 +21,30 @@ type Step =
     | { kind: 'confirm'; template: BrowserTemplate }
     | { kind: 'progress'; template: BrowserTemplate; instance: string };
 
-function Choice({
-    title,
-    description,
-    onClick,
-    disabled,
-    hint,
-}: {
-    title: string;
-    description: string;
-    onClick?: () => void;
-    disabled?: boolean;
-    hint?: string;
-}) {
+const resources = (t: Pick<BrowserTemplate, 'memory' | 'cpu' | 'disk'>) =>
+    [
+        t.memory ? formatBytes(t.memory * 1024 * 1024) + ' RAM' : 'Unlimited RAM',
+        t.cpu ? `${t.cpu}% CPU` : 'Unlimited CPU',
+        t.disk ? formatBytes(t.disk * 1024 * 1024) + ' disk' : 'Unlimited disk',
+    ].join(' · ');
+
+const lifecycle = (t: Pick<BrowserTemplate, 'lifecycle'>) =>
+    [
+        t.lifecycle.temporary
+            ? `Temporary${t.lifecycle.ttl_minutes ? ` (${t.lifecycle.ttl_minutes} min)` : ''}`
+            : 'Persistent',
+        t.lifecycle.start_automatically ? 'starts automatically' : 'starts manually',
+    ].join(', ');
+
+function Back({ label, onClick }: { label: string; onClick: () => void }) {
     return (
         <button
             type={'button'}
-            disabled={disabled}
+            className={'gb-btn gb-btn-ghost gb-btn-sm'}
             onClick={onClick}
-            className={
-                'gb:flex gb:flex-1 gb:flex-col gb:items-start gb:gap-1 gb:rounded-lg gb:border gb:border-border gb:bg-card gb:p-4 gb:text-left gb:transition-colors gb:hover:bg-secondary gb:disabled:cursor-not-allowed gb:disabled:opacity-50'
-            }
+            style={{ marginBottom: 8, marginLeft: -8 }}
         >
-            <span className={'gb:font-semibold'}>{title}</span>
-            <span className={'gb:text-sm gb:text-muted-foreground'}>{description}</span>
-            {hint && <span className={'gb:text-xs gb:text-warning'}>{hint}</span>}
+            <ArrowLeft aria-hidden /> {label}
         </button>
     );
 }
@@ -64,61 +62,102 @@ function Browser({ templates, onPick }: { templates: BrowserTemplate[]; onPick: 
     );
 
     return (
-        <div className={'gb:flex gb:flex-col gb:gap-3'}>
+        <div>
             <input
+                className={'gb-input'}
                 type={'search'}
-                aria-label={'Search templates'}
                 placeholder={'Search templates'}
+                aria-label={'Search templates'}
                 value={query}
                 onChange={(event) => setQuery(event.currentTarget.value)}
-                className={input}
             />
-            <ul className={'gb:grid gb:max-h-[55vh] gb:gap-3 gb:overflow-y-auto gb:pr-1 gb:sm:grid-cols-2'}>
+            <div className={'gb-template-grid'}>
+                {shown.length === 0 && (
+                    <p className={'gb-muted'} style={{ gridColumn: '1 / -1', padding: 16, textAlign: 'center' }}>
+                        {templates.length === 0
+                            ? 'No templates yet. Create one under Network, Templates in the admin area.'
+                            : 'No template matches your search.'}
+                    </p>
+                )}
                 {shown.map((template) => (
-                    <li key={template.id}>
+                    <div key={template.id} className={'gb-template-card'}>
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', justifyContent: 'space-between' }}>
+                            <strong>{template.name}</strong>
+                            <span className={'gb-badge'}>r{template.revision}</span>
+                        </div>
+                        <p className={'gb-secondary'} style={{ margin: '4px 0 10px', fontSize: 13 }}>
+                            {template.description || 'No description.'}
+                        </p>
+                        <div className={'gb-tags'}>
+                            {template.tags.map((tag) => (
+                                <span key={tag} className={'gb-badge'}>
+                                    {tag}
+                                </span>
+                            ))}
+                        </div>
+                        <dl className={'gb-facts'}>
+                            <div>
+                                <dt>Resources</dt>
+                                <dd>{resources(template)}</dd>
+                            </div>
+                            <div>
+                                <dt>Placement</dt>
+                                <dd>
+                                    {template.placement}
+                                    {template.location && ` · ${template.location}`}
+                                </dd>
+                            </div>
+                            <div>
+                                <dt>Lifecycle</dt>
+                                <dd>{lifecycle(template)}</dd>
+                            </div>
+                        </dl>
                         <button
                             type={'button'}
+                            className={'gb-btn gb-btn-primary gb-btn-sm gb-btn-block'}
                             onClick={() => onPick(template)}
-                            className={
-                                'gb:flex gb:h-full gb:w-full gb:flex-col gb:gap-2 gb:rounded-lg gb:border gb:border-border gb:bg-card gb:p-3 gb:text-left gb:hover:bg-secondary'
-                            }
                         >
-                            <span className={'gb:flex gb:items-baseline gb:justify-between gb:gap-2'}>
-                                <span className={'gb:font-semibold'}>{template.name}</span>
-                                <span className={'gb:text-xs gb:text-muted-foreground'}>rev {template.revision}</span>
-                            </span>
-                            {template.description && (
-                                <span className={'gb:line-clamp-2 gb:text-xs gb:text-muted-foreground'}>
-                                    {template.description}
-                                </span>
-                            )}
-                            <span className={'gb:text-xs'}>
-                                {template.software} · {formatBytes(template.memory * 1024 * 1024)} RAM ·{' '}
-                                {formatBytes(template.disk * 1024 * 1024)} disk ·{' '}
-                                {template.cpu === 0 ? 'unlimited CPU' : `${template.cpu}% CPU`}
-                            </span>
-                            <span className={'gb:text-xs gb:text-muted-foreground'}>
-                                {template.placement}
-                                {template.location && ` · ${template.location}`} ·{' '}
-                                {template.lifecycle.temporary ? 'Temporary' : 'Persistent'}
-                            </span>
-                            <span className={'gb:flex gb:flex-wrap gb:gap-1'}>
-                                {template.tags.map((tag) => (
-                                    <span
-                                        key={tag}
-                                        className={
-                                            'gb:rounded-full gb:bg-secondary gb:px-2 gb:py-0.5 gb:text-[11px] gb:text-secondary-foreground'
-                                        }
-                                    >
-                                        {tag}
-                                    </span>
-                                ))}
-                            </span>
+                            Select
                         </button>
-                    </li>
+                    </div>
                 ))}
-                {shown.length === 0 && <li className={'gb:text-sm gb:text-muted-foreground'}>No templates match.</li>}
-            </ul>
+            </div>
+        </div>
+    );
+}
+
+function Facts({ data }: { data: TemplateDetails }) {
+    return (
+        <div className={'gb-subcard'} style={{ marginTop: 18, padding: 16 }}>
+            <dl className={'gb-facts'} style={{ margin: 0 }}>
+                <div>
+                    <dt>Software</dt>
+                    <dd>{data.software}</dd>
+                </div>
+                <div>
+                    <dt>Resources</dt>
+                    <dd>{resources(data)}</dd>
+                </div>
+                <div>
+                    <dt>Placement</dt>
+                    <dd>
+                        {data.placement}
+                        {data.location && ` · ${data.location}`}
+                    </dd>
+                </div>
+                <div>
+                    <dt>Lifecycle</dt>
+                    <dd>{lifecycle(data)}</dd>
+                </div>
+                <div>
+                    <dt>Files</dt>
+                    <dd>
+                        {data.files_count === 0
+                            ? 'None'
+                            : `${data.files_count} file${data.files_count === 1 ? '' : 's'} (${formatBytes(data.files_size)}) deployed before the first start`}
+                    </dd>
+                </div>
+            </dl>
         </div>
     );
 }
@@ -126,10 +165,12 @@ function Browser({ templates, onPick }: { templates: BrowserTemplate[]; onPick: 
 function Confirm({
     template,
     onBack,
+    onClose,
     onCreated,
 }: {
     template: BrowserTemplate;
     onBack: () => void;
+    onClose: () => void;
     onCreated: (instance: string) => void;
 }) {
     const details = useQuery({
@@ -162,9 +203,16 @@ function Confirm({
         onError: (error: Error) => toast.error(httpErrorToHuman(error)),
     });
 
-    if (details.isPending) return <Spinner centered />;
-    if (details.isError) return <p className={'gb:text-sm gb:text-destructive'}>This template could not be loaded.</p>;
+    if (details.isPending) return <div className={'gb-skeleton'} style={{ height: 220 }} />;
+    if (details.isError) {
+        return (
+            <p role={'alert'} className={'gb-badge gb-badge-danger'}>
+                This template could not be loaded.
+            </p>
+        );
+    }
     const data = details.data;
+    const shownName = name ?? data.proposed_name;
 
     return (
         <form
@@ -173,97 +221,99 @@ function Confirm({
                 // An empty owner means "me": the server fills in the signed in administrator.
                 create.mutate();
             }}
-            className={'gb:flex gb:max-h-[60vh] gb:flex-col gb:gap-4 gb:overflow-y-auto gb:pr-1'}
         >
-            <div className={'gb:rounded-lg gb:border gb:border-border gb:p-3 gb:text-sm'}>
-                <p className={'gb:font-medium'}>
-                    {data.name} · revision {data.revision}
-                </p>
-                <p className={'gb:text-xs gb:text-muted-foreground'}>
-                    {data.software} · {formatBytes(data.memory * 1024 * 1024)} RAM ·{' '}
-                    {formatBytes(data.disk * 1024 * 1024)} disk · {data.placement}
-                    {data.files_count > 0 && ` · ${data.files_count} files (${formatBytes(data.files_size)}) deployed`}
-                </p>
-            </div>
-            <label className={'gb:flex gb:flex-col gb:gap-1 gb:text-sm'}>
-                Instance name
-                <input
-                    value={name ?? data.proposed_name}
-                    maxLength={191}
-                    onChange={(event) => setName(event.currentTarget.value)}
-                    className={input}
-                />
+            <Back label={'Templates'} onClick={onBack} />
+            <h3 className={'gb-card-title'} style={{ fontSize: 22 }}>
+                {data.name}
+            </h3>
+            <p className={'gb-card-sub'} style={{ marginBottom: 16 }}>
+                Revision {data.revision}. Only the values below can be changed; everything else comes from the
+                template.
+            </p>
+            <label className={'gb-label'} htmlFor={'gb-ci-name'}>
+                Name
             </label>
-            <label className={'gb:flex gb:flex-col gb:gap-1 gb:text-sm'}>
-                Description (optional)
-                <input
-                    value={description}
-                    maxLength={500}
-                    onChange={(event) => setDescription(event.currentTarget.value)}
-                    className={input}
-                />
+            <input
+                id={'gb-ci-name'}
+                className={'gb-input'}
+                value={shownName}
+                maxLength={191}
+                onChange={(event) => setName(event.currentTarget.value)}
+            />
+            <p className={'gb-hint'}>Proposed from the template. You can edit it before creating.</p>
+
+            <label className={'gb-label'} htmlFor={'gb-ci-owner'} style={{ marginTop: 10 }}>
+                Owner
             </label>
-            <div className={'gb:flex gb:flex-col gb:gap-1 gb:text-sm'}>
-                <label htmlFor={'gobia-owner'}>
-                    Owner {owner ? `: ${owner.username}` : '(you, unless you pick someone else)'}
-                </label>
-                <input
-                    id={'gobia-owner'}
-                    placeholder={'Search users'}
-                    value={ownerQuery}
-                    onChange={(event) => setOwnerQuery(event.currentTarget.value)}
-                    className={input}
-                />
-                {owners.data && owners.data.length > 0 && (
-                    <ul className={'gb:max-h-32 gb:overflow-y-auto gb:rounded-md gb:border gb:border-border'}>
-                        {owners.data.map((user) => (
-                            <li key={user.id}>
-                                <button
-                                    type={'button'}
-                                    onClick={() => {
-                                        setOwner(user);
-                                        setOwnerQuery('');
-                                    }}
-                                    className={
-                                        'gb:w-full gb:px-3 gb:py-1.5 gb:text-left gb:text-sm gb:hover:bg-secondary'
-                                    }
-                                >
-                                    {user.username}{' '}
-                                    <span className={'gb:text-xs gb:text-muted-foreground'}>{user.email}</span>
-                                </button>
-                            </li>
-                        ))}
-                    </ul>
-                )}
-            </div>
-            {data.overridable.length > 0 && (
-                <fieldset className={'gb:flex gb:flex-col gb:gap-3'}>
-                    <legend className={'gb:mb-1 gb:text-sm gb:font-medium'}>Options</legend>
-                    {data.overridable.map((variable) => (
-                        <label key={variable.env} className={'gb:flex gb:flex-col gb:gap-1 gb:text-sm'}>
-                            {variable.name}
-                            <input
-                                value={environment[variable.env] ?? variable.value ?? ''}
-                                onChange={(event) =>
-                                    setEnvironment({ ...environment, [variable.env]: event.currentTarget.value })
-                                }
-                                className={input}
-                            />
-                            {variable.description && (
-                                <span className={'gb:text-xs gb:text-muted-foreground'}>{variable.description}</span>
-                            )}
-                        </label>
+            <input
+                id={'gb-ci-owner'}
+                className={'gb-input'}
+                placeholder={owner ? owner.username : 'You, unless you pick someone else'}
+                value={ownerQuery}
+                onChange={(event) => setOwnerQuery(event.currentTarget.value)}
+            />
+            {owners.data && owners.data.length > 0 && (
+                <ul className={'gb-menu'} style={{ marginTop: 6, maxHeight: 160, overflowY: 'auto', width: '100%' }}>
+                    {owners.data.map((user) => (
+                        <li key={user.id} style={{ listStyle: 'none' }}>
+                            <button
+                                type={'button'}
+                                className={'gb-menu-item'}
+                                onClick={() => {
+                                    setOwner(user);
+                                    setOwnerQuery('');
+                                }}
+                            >
+                                {user.username} <span className={'gb-muted'}>{user.email}</span>
+                            </button>
+                        </li>
                     ))}
-                </fieldset>
+                </ul>
             )}
-            <Dialog.Footer>
-                <Button.Text type={'button'} onClick={onBack} disabled={create.isPending}>
-                    Back
-                </Button.Text>
-                <Button type={'submit'} color={'primary'} isLoading={create.isPending} disabled={create.isPending}>
-                    Create instance
-                </Button>
-            </Dialog.Footer>
+            <p className={'gb-hint'}>Owner: {owner ? owner.username : 'you'}. Type to search for someone else.</p>
+
+            <label className={'gb-label'} htmlFor={'gb-ci-desc'} style={{ marginTop: 10 }}>
+                Description
+            </label>
+            <input
+                id={'gb-ci-desc'}
+                className={'gb-input'}
+                value={description}
+                maxLength={500}
+                onChange={(event) => setDescription(event.currentTarget.value)}
+            />
+
+            {data.overridable.map((variable) => (
+                <div key={variable.env} style={{ marginTop: 10 }}>
+                    <label className={'gb-label'} htmlFor={`gb-ci-${variable.env}`}>
+                        {variable.name}
+                    </label>
+                    <input
+                        id={`gb-ci-${variable.env}`}
+                        className={'gb-input'}
+                        value={environment[variable.env] ?? variable.value ?? ''}
+                        onChange={(event) =>
+                            setEnvironment({ ...environment, [variable.env]: event.currentTarget.value })
+                        }
+                    />
+                    {variable.description && <p className={'gb-hint'}>{variable.description}</p>}
+                </div>
+            ))}
+
+            <Facts data={data} />
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 18 }}>
+                <button type={'button'} className={'gb-btn'} onClick={onClose}>
+                    Cancel
+                </button>
+                <button
+                    type={'submit'}
+                    className={'gb-btn gb-btn-primary'}
+                    disabled={create.isPending || !shownName.trim()}
+                >
+                    Create Instance
+                </button>
+            </div>
         </form>
     );
 }
@@ -278,64 +328,45 @@ function Progress({ template, instance, onDone }: { template: BrowserTemplate; i
     const stages = stageStatuses(state, status.data?.failed_stage ?? null);
 
     return (
-        <div className={'gb:flex gb:flex-col gb:gap-4'} aria-live={'polite'}>
-            <p className={'gb:text-sm'}>
-                Creating <span className={'gb:font-medium'}>{status.data?.name ?? 'your instance'}</span> from{' '}
-                {template.name}.
+        <div aria-live={'polite'}>
+            <h3 className={'gb-card-title'} style={{ fontSize: 22 }}>
+                {state === 'ready' ? 'Instance ready' : state === 'failed' ? 'Creation failed' : 'Creating instance'}
+            </h3>
+            <p className={'gb-card-sub'} style={{ marginBottom: 16 }}>
+                {status.data?.name ?? template.name}
             </p>
-            <progress
-                max={100}
-                value={progressPercent(state)}
-                aria-label={'Provisioning progress'}
-                className={'gb:w-full'}
-            />
-            <ol className={'gb:flex gb:flex-col gb:gap-1 gb:text-sm'}>
-                {stages.map((stage) => (
-                    <li
-                        key={stage.id}
-                        className={
-                            stage.status === 'failed'
-                                ? 'gb:text-destructive'
-                                : stage.status === 'pending'
-                                  ? 'gb:text-muted-foreground'
-                                  : ''
-                        }
-                    >
-                        <span aria-hidden>
-                            {stage.status === 'done'
-                                ? '✓'
-                                : stage.status === 'active'
-                                  ? '…'
-                                  : stage.status === 'failed'
-                                    ? '✕'
-                                    : '·'}{' '}
-                        </span>
-                        {stage.label}
-                    </li>
-                ))}
-            </ol>
-            {state === 'failed' && (
-                <p className={'gb:rounded-md gb:border gb:border-destructive gb:p-3 gb:text-sm gb:text-destructive'}>
-                    {status.data?.error ?? 'Provisioning failed.'}
+            {state === 'failed' ? (
+                <p role={'alert'} className={'gb-badge gb-badge-danger'} style={{ height: 'auto', padding: '10px 12px' }}>
+                    Failed while {status.data?.failed_stage ? status.data.failed_stage.replace('_', ' ') : 'provisioning'}
+                    : {status.data?.error ?? 'Provisioning failed.'}
                 </p>
+            ) : (
+                <ol className={'gb-steps'}>
+                    {stages.map((stage) => (
+                        <li
+                            key={stage.id}
+                            className={stage.status === 'done' ? 'done' : stage.status === 'active' ? 'active' : ''}
+                        >
+                            <span>{stage.status === 'done' ? <Check aria-hidden /> : <Layers aria-hidden />}</span>
+                            {stage.label}
+                        </li>
+                    ))}
+                </ol>
             )}
-            <Dialog.Footer>
-                {state === 'ready' && status.data?.server ? (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 18 }}>
+                <button type={'button'} className={'gb-btn'} onClick={onDone}>
+                    {status.data?.finished ? 'Close' : 'Continue in the background'}
+                </button>
+                {state === 'ready' && status.data?.server && (
                     <PanelLink
                         destination={{ to: '/server/$id', params: { id: status.data.server } }}
                         onClick={onDone}
-                        className={
-                            'gb:rounded-md gb:bg-primary gb:px-3 gb:py-2 gb:text-sm gb:font-medium gb:text-primary-foreground gb:no-underline'
-                        }
+                        className={'gb-btn gb-btn-primary'}
                     >
                         Open instance
                     </PanelLink>
-                ) : (
-                    <Button.Text type={'button'} onClick={onDone}>
-                        {status.data?.finished ? 'Close' : 'Continue in the background'}
-                    </Button.Text>
                 )}
-            </Dialog.Footer>
+            </div>
         </div>
     );
 }
@@ -346,69 +377,70 @@ export default function CreateInstanceDialog({ onClose }: { onClose: () => void 
     const templates = useQuery({ queryKey: ['gobia-core', 'templates'], queryFn: fetchTemplates, staleTime: 30_000 });
     const available = templates.data !== null && templates.data !== undefined && templates.data.length > 0;
 
-    const title =
-        step.kind === 'choose'
-            ? 'Create instance'
-            : step.kind === 'browse'
-              ? 'Choose a template'
-              : step.kind === 'confirm'
-                ? `New instance from ${step.template.name}`
-                : 'Creating your instance';
-
     return (
         <Dialog
             open
-            onClose={step.kind === 'progress' ? onClose : onClose}
-            title={title}
-            description={step.kind === 'choose' ? 'Start from nothing or from a ready made template.' : undefined}
+            onClose={onClose}
+            title={
+                step.kind === 'choose' ? 'Create Instance' : step.kind === 'browse' ? 'Choose a template' : undefined
+            }
+            description={
+                step.kind === 'choose'
+                    ? 'How would you like to create this instance?'
+                    : step.kind === 'browse'
+                      ? 'Each template fixes the software, resources, placement and files of the new instance.'
+                      : undefined
+            }
         >
             {step.kind === 'choose' && (
-                <div className={'gb:flex gb:flex-col gb:gap-3 gb:sm:flex-row'}>
+                <div style={{ paddingBottom: 4 }}>
                     <PanelLink
                         destination={{ to: '/panel/servers/new' }}
                         onClick={onClose}
-                        className={'gb:flex gb:flex-1 gb:no-underline'}
+                        className={'gb-option'}
+                        style={{ textDecoration: 'none' }}
                     >
-                        <span
-                            className={
-                                'gb:flex gb:w-full gb:flex-col gb:gap-1 gb:rounded-lg gb:border gb:border-border gb:bg-card gb:p-4 gb:hover:bg-secondary'
-                            }
-                        >
-                            <span className={'gb:font-semibold gb:text-foreground'}>Custom</span>
-                            <span className={'gb:text-sm gb:text-muted-foreground'}>
-                                Choose the software, resources and node yourself.
-                            </span>
+                        <span className={'gb-file-icon'}>
+                            <SlidersHorizontal aria-hidden />
+                        </span>
+                        <span>
+                            <strong>Custom</strong>
+                            <span>Configure everything manually.</span>
                         </span>
                     </PanelLink>
-                    <Choice
-                        title={'Template'}
-                        description={'Deploy a prepared setup with its files in one step.'}
+                    <button
+                        type={'button'}
+                        className={'gb-option'}
                         disabled={!available}
-                        hint={
-                            templates.isPending
-                                ? 'Checking templates'
-                                : available
-                                  ? undefined
-                                  : 'No enabled templates yet'
-                        }
                         onClick={() => setStep({ kind: 'browse' })}
-                    />
+                    >
+                        <span className={'gb-file-icon'}>
+                            <LayoutTemplate aria-hidden />
+                        </span>
+                        <span>
+                            <strong>Template</strong>
+                            <span>
+                                {templates.isPending
+                                    ? 'Checking templates.'
+                                    : available
+                                      ? 'Deploy using a reusable template.'
+                                      : 'No enabled templates yet.'}
+                            </span>
+                        </span>
+                    </button>
                 </div>
             )}
             {step.kind === 'browse' && templates.data && (
-                <>
+                <div style={{ paddingBottom: 4 }}>
+                    <Back label={'Back'} onClick={() => setStep({ kind: 'choose' })} />
                     <Browser templates={templates.data} onPick={(template) => setStep({ kind: 'confirm', template })} />
-                    <Dialog.Footer>
-                        <Button.Text type={'button'} onClick={() => setStep({ kind: 'choose' })}>
-                            Back
-                        </Button.Text>
-                    </Dialog.Footer>
-                </>
+                </div>
             )}
             {step.kind === 'confirm' && (
                 <Confirm
                     template={step.template}
                     onBack={() => setStep({ kind: 'browse' })}
+                    onClose={onClose}
                     onCreated={(instance) => setStep({ kind: 'progress', template: step.template, instance })}
                 />
             )}

@@ -12,13 +12,13 @@ interface Props {
 }
 
 const buttonStyle = cva(
-    'relative inline-block rounded-sm border p-2 text-sm uppercase tracking-wide transition-colors duration-150 disabled:cursor-default disabled:opacity-50',
+    'relative inline-flex items-center justify-center rounded-md border text-sm font-semibold leading-none whitespace-nowrap no-underline transition-colors duration-100 disabled:cursor-not-allowed disabled:opacity-50',
     {
         variants: {
             color: {
                 primary:
                     'bg-primary border-primary text-primary-foreground [&:hover:not(:disabled)]:bg-primary/80 [&:hover:not(:disabled)]:border-primary',
-                grey: 'border-border bg-popover text-foreground [&:hover:not(:disabled)]:bg-secondary [&:hover:not(:disabled)]:border-secondary',
+                grey: 'border-input bg-card text-foreground [&:hover:not(:disabled)]:bg-secondary',
                 green: 'border-success bg-success text-success-foreground [&:hover:not(:disabled)]:bg-success/80 [&:hover:not(:disabled)]:border-success',
                 red: 'border-destructive bg-destructive text-destructive-foreground [&:hover:not(:disabled)]:bg-destructive/80 [&:hover:not(:disabled)]:border-destructive',
                 orange: 'border-caution bg-caution text-caution-foreground [&:hover:not(:disabled)]:bg-caution/80 [&:hover:not(:disabled)]:border-caution',
@@ -30,7 +30,7 @@ const buttonStyle = cva(
                 xlarge: 'p-4 w-full',
             },
             isSecondary: {
-                true: 'border-border bg-transparent text-foreground [&:hover:not(:disabled)]:border-popover [&:hover:not(:disabled)]:bg-popover [&:hover:not(:disabled)]:text-foreground',
+                true: 'border-input bg-transparent text-foreground [&:hover:not(:disabled)]:bg-secondary [&:hover:not(:disabled)]:text-foreground',
                 false: '',
             },
         },

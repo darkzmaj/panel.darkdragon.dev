@@ -10,10 +10,10 @@ interface ThemeProps {
 
 const controlBaseClass = [
     'resize-none appearance-none outline-hidden w-full min-w-0',
-    'p-3 border-2 rounded-sm text-sm transition-[background-color,border-color,color,box-shadow] duration-150',
-    'bg-input border-input hover:border-input text-foreground shadow-none focus:ring-0',
-    'focus:shadow-md focus:border-primary focus:ring-2 focus:ring-ring/50',
-    'disabled:opacity-75 read-only:cursor-text read-only:bg-muted/40',
+    'h-10 px-3 border rounded-md text-sm transition-[border-color,box-shadow] duration-100',
+    'bg-background border-input text-foreground shadow-none placeholder:text-muted-foreground',
+    'focus:border-primary focus:ring-[3px] focus:ring-primary/20',
+    'disabled:opacity-60 read-only:cursor-text read-only:bg-muted/40',
     'required:shadow-none invalid:shadow-none',
 ].join(' ');
 
@@ -62,7 +62,7 @@ export const TextArea = ({
     className,
     ...props
 }: ThemeProps & React.ComponentProps<'textarea'>) => (
-    <textarea className={controlClass({ $isLight, $hasError }, className)} {...props} />
+    <textarea className={controlClass({ $isLight, $hasError }, cn('h-auto min-h-24 py-2.5', className))} {...props} />
 );
 
 export const NumberInput = ({

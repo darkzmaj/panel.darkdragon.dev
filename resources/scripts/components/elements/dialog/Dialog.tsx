@@ -11,16 +11,17 @@ import { cn } from '@/lib/cn';
 const focusableSelector =
     ':is(input, select, textarea, button, a[href], [tabindex]):not([disabled]):not([tabindex="-1"])';
 const dialogContainerClass = 'flex min-h-full items-center justify-center p-4 text-center';
-const closeIconClass = 'w-5 h-5 group-hover:rotate-90 transition-transform duration-100';
+const closeIconClass = 'w-4 h-4';
 const backdropClass = [
-    'fixed inset-0 bg-background/50 z-40 transition-opacity duration-150 ease-out',
+    'fixed inset-0 z-40 bg-[var(--gb-overlay)] backdrop-blur-[6px] transition-opacity duration-100 ease-out',
     'data-[starting-style]:opacity-0 data-[ending-style]:opacity-0 data-[ending-style]:ease-in',
 ].join(' ');
 const panelClass = [
-    'relative flex flex-col overflow-hidden bg-card rounded-sm max-w-xl w-full mx-auto shadow-lg text-left',
-    'max-h-[calc(100dvh-2rem)] ring-4 ring-border/80 transition duration-150 ease-out',
-    'data-[starting-style]:opacity-0 data-[starting-style]:scale-75',
-    'data-[ending-style]:opacity-0 data-[ending-style]:scale-75 data-[ending-style]:ease-in',
+    'relative flex flex-col overflow-hidden bg-card rounded-[var(--gb-radius-xl)] max-w-[520px] w-full mx-auto text-left',
+    'border border-border/55 shadow-[var(--gb-shadow-modal)]',
+    'max-h-[calc(100dvh-2rem)] transition duration-100 ease-out',
+    'data-[starting-style]:opacity-0 data-[starting-style]:scale-95',
+    'data-[ending-style]:opacity-0 data-[ending-style]:scale-95 data-[ending-style]:ease-in',
 ].join(' ');
 
 export default function DialogComponent({
@@ -70,7 +71,7 @@ export default function DialogComponent({
                     <div className={'fixed inset-0 overflow-y-auto z-50'}>
                         <div className={dialogContainerClass}>
                             <BaseDialog.Popup ref={popupRef} className={panelClass} initialFocus={initialFocus}>
-                                <div className={'flex min-h-0 flex-1 overflow-y-auto p-6 pb-0'}>
+                                <div className={'flex min-h-0 flex-1 overflow-y-auto px-6 pt-5 pb-0'}>
                                     {iconPosition === 'container' && icon}
                                     <div className={'flex-1 min-w-0'}>
                                         <div className={'flex items-center'}>
@@ -103,12 +104,12 @@ export default function DialogComponent({
                                 {footer}
                                 {/* Rendered after the other buttons so it is not the default focus. */}
                                 {!hideCloseIcon && (
-                                    <div className={'absolute right-0 top-0 m-4'}>
+                                    <div className={'absolute right-0 top-0 m-3.5'}>
                                         <Button.Text
                                             type={'button'}
                                             size={'xsmall'}
                                             onClick={onClose}
-                                            className={'group w-8 h-8 p-0 inline-flex items-center justify-center'}
+                                            className={'group w-8 h-8 p-0 inline-flex items-center justify-center rounded-lg'}
                                         >
                                             <X className={closeIconClass} />
                                         </Button.Text>

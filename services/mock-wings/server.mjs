@@ -17,6 +17,9 @@ const remoteToken = `${pick('token_id')}.${token}`; // Wings to Panel requests c
 const port = Number((config.match(/^api:[\s\S]*?port:\s*(\d+)/m) ?? [])[1] ?? 8085);
 const panel = (pick('remote') ?? 'http://localhost:8000').replace(/^['"]|['"]$/g, '');
 
+process.on('uncaughtException', (error) => console.error('uncaught', error.message)); // a failed callback must never take the mock down
+process.on('unhandledRejection', (error) => console.error('unhandled', error));
+
 const servers = new Map(); // uuid -> { state, logs: string[], sockets: Set }
 const root = (uuid) => join(data, 'servers', uuid);
 const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
@@ -54,6 +57,7 @@ async function remote(path, method, body) {
     const res = await fetch(`${panel}/api/remote${path}`, {
         method, headers: { Authorization: `Bearer ${remoteToken}`, Accept: 'application/json', 'Content-Type': 'application/json' }, body: body && JSON.stringify(body),
     });
+    await res.arrayBuffer(); // always drain the body: an unread response can abort the process when the socket closes
     return res;
 }
 async function install(uuid) {

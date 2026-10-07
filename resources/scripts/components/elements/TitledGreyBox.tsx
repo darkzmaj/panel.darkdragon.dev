@@ -1,9 +1,6 @@
 import type React from 'react';
 import type { LucideIcon } from 'lucide-react';
-import Icon from '@/components/elements/Icon';
 import { cn } from '@/lib/cn';
-import { cardTitleClass } from '@/components/ui/typography';
-import { isString } from '@/lib/objects';
 
 interface Props {
     icon?: LucideIcon;
@@ -13,19 +10,30 @@ interface Props {
     children: React.ReactNode;
 }
 
-const TitledGreyBox = ({ icon, title, children, className, contentClassName }: Props) => (
-    <div className={cn('rounded-sm shadow-md bg-card', className)}>
-        <div className={'bg-muted rounded-t-sm p-3 border-b border-border'}>
-            {isString(title) ? (
-                <h2 className={cardTitleClass}>
-                    {icon && <Icon icon={icon} className={'mr-2 text-muted-foreground'} />}
-                    {title}
-                </h2>
+/** A card with a header row (icon and title) and a body. */
+const TitledGreyBox = ({ icon: Icon, title, children, className, contentClassName }: Props) => (
+    <div className={cn('gb-card', className)} style={{ padding: 0 }}>
+        <div
+            style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '14px 18px',
+                borderBottom: '1px solid var(--gb-border-muted)',
+            }}
+        >
+            {typeof title === 'string' ? (
+                <>
+                    {Icon && <Icon aria-hidden width={16} height={16} style={{ color: 'var(--gb-text-2)' }} />}
+                    <span className={'gb-eyebrow'}>{title}</span>
+                </>
             ) : (
                 title
             )}
         </div>
-        <div className={cn('p-3', contentClassName)}>{children}</div>
+        <div className={contentClassName} style={{ padding: 18 }}>
+            {children}
+        </div>
     </div>
 );
 

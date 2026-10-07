@@ -116,7 +116,7 @@ export default function DashboardPage({ model }: ReplacementProps<'dashboard.pag
         <PageContentBlock title={'Instances'}>
             <div className={'gb-page-head'}>
                 <div style={{ minWidth: 0 }}>
-                    <h2>Instances</h2>
+                    <h1>Instances</h1>
                     <p>Everything you own or have been given access to.</p>
                 </div>
                 {model.rootAdmin && (

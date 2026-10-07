@@ -1,20 +1,25 @@
 import React from 'react';
 import SpinnerOverlay from '@/components/elements/SpinnerOverlay';
-import { cn } from '@/lib/cn';
-import { sectionTitleClass } from '@/components/ui/typography';
 
 type Props = Readonly<
     React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
         title?: string;
+        description?: string;
         borderColor?: string;
         showLoadingOverlay?: boolean;
     }
 >;
 
-const ContentBox = ({ title, borderColor, showLoadingOverlay, children, ...props }: Props) => (
+/** The standard Gobia card: title, optional description, then the content. */
+const ContentBox = ({ title, description, borderColor: _borderColor, showLoadingOverlay, children, ...props }: Props) => (
     <div {...props}>
-        {title && <h2 className={cn(sectionTitleClass, 'mb-4 px-4')}>{title}</h2>}
-        <div className={cn('bg-card p-4 rounded-sm shadow-lg relative', !!borderColor && 'border-t-4')}>
+        <div className={'gb-card'} style={{ position: 'relative' }}>
+            {(title || description) && (
+                <div style={{ marginBottom: 16 }}>
+                    {title && <h3 className={'gb-card-title'}>{title}</h3>}
+                    {description && <p className={'gb-card-sub'}>{description}</p>}
+                </div>
+            )}
             <SpinnerOverlay visible={showLoadingOverlay || false} />
             {children}
         </div>

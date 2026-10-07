@@ -308,7 +308,7 @@ h1, h2, h3, h4,
 .gb-main-inner { max-width: var(--gb-container); margin: 0 auto; }
 
 .gb-page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin: 4px 0 18px; }
-.gb-page-head h2 { margin: 0; font-size: 28px; line-height: 1.15; font-weight: 700; }
+.gb-page-head h1, .gb-page-head h2 { margin: 0; font-size: 28px; line-height: 1.15; font-weight: 700; }
 .gb-page-head p { margin: 4px 0 0; color: var(--gb-text-2); font-size: 14px; }
 .gb-page-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
@@ -336,7 +336,7 @@ h1, h2, h3, h4,
     .gb-drawer-open .gb-sidebar-wrap { transform: none; visibility: visible; }
     .gb-drawer-open .gb-drawer-backdrop { display: block; position: fixed; inset: 0; z-index: 55; background: var(--gb-overlay); }
     .gb-main { padding: 14px 14px 28px; }
-    .gb-page-head h2 { font-size: 24px; }
+    .gb-page-head h1, .gb-page-head h2 { font-size: 24px; }
 }
 
 @media (max-width: 640px) {
@@ -594,7 +594,7 @@ textarea.gb-input { height: auto; padding: 10px 12px; min-height: 96px; resize: 
 .gb-subnav a svg { width: 18px; height: 18px; flex: none; }
 .gb-subnav a .gb-chevron { margin-left: auto; width: 16px; height: 16px; opacity: 0.7; }
 .gb-subnav a:hover { background: var(--gb-surface-2); color: var(--gb-text-strong); }
-.gb-subnav a.active { background: var(--gb-primary); color: var(--gb-primary-fg); }
+.gb-subnav a.active, .gb-subnav a[data-status='active'] { background: var(--gb-primary); color: var(--gb-primary-fg); }
 .gb-subcard { background: var(--gb-bg); border: 1px solid var(--gb-border-muted); border-radius: var(--gb-radius-md); }
 .gb-soon { display: inline-block; padding: 2px 8px; border: 1px solid var(--gb-border-muted); border-radius: 6px; font-size: 10px; font-weight: 700; letter-spacing: 0.1em; color: var(--gb-text-3); }
 
@@ -917,3 +917,11 @@ span.gb-tree-chevron { display: inline-block; }
 
 .gb-auth-logo-phone { display: none; }
 @media (max-width: 900px) { .gb-auth-logo-phone { display: flex; } }
+
+/* ------------------------------------------------------------------ sign-in: logo above the form card (right half) */
+.gb-auth-main { padding-top: 48px; }
+.gb-auth-column { width: 100%; max-width: 440px; display: flex; flex-direction: column; gap: 28px; }
+.gb-auth-column .gb-auth-box { max-width: none; }
+.gb-auth-column .gb-auth-logo { position: static; padding: 0; }
+.gb-auth-pitch { padding-top: 48px; }
+@media (max-width: 900px) { .gb-auth-main { padding-top: 48px; } }

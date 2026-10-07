@@ -1,41 +1,54 @@
 import React from 'react';
 import Form from '@/components/form/Form';
+import { useSiteSettings } from '@/api/settings/queries';
+import AuthPreview from '@/gobia/auth/AuthPreview';
+import { DEFAULT_LOGO, DEFAULT_LOGO_2X, useBranding } from '@/gobia/branding';
 
 interface Props {
     form: { handleSubmit: () => unknown };
     title?: string;
+    subtitle?: string;
     className?: string;
     children: React.ReactNode;
 }
 
-export default function LoginFormContainer({ form, title, className, children }: Props) {
+/**
+ * The sign-in screen of every auth page: a pitch with a live looking preview of the instance list on the left, the
+ * logo and the form card on the right. There is no footer here, and the pitch is hidden on phones.
+ */
+export default function LoginFormContainer({ form, title, subtitle, className, children }: Props) {
+    const name = useSiteSettings().name;
+    const logo = useBranding('logo');
+
     return (
-        <div className={'sm:mx-auto sm:w-4/5 md:p-10 lg:w-3/5 xl:w-full xl:max-w-auth'}>
-            {title && <h2 className={'text-3xl text-center text-foreground font-medium py-4'}>{title}</h2>}
-            <Form form={form} className={className}>
-                <div className={'md:flex w-full bg-card text-card-foreground shadow-lg rounded-lg p-6 md:pl-0 mx-1'}>
-                    <div className={'flex-none select-none mb-6 md:mb-0 self-center'}>
-                        <img
-                            src={'/assets/svgs/pterodactyl.svg'}
-                            alt={'Pterodactyl'}
-                            className={'block w-48 md:w-64 mx-auto'}
-                        />
+        <div className={'gb-auth'}>
+            <div className={'gb-auth-split'}>
+                <section className={'gb-auth-pitch'}>
+                    <div>
+                        <h2>Your servers, wherever you are.</h2>
+                        <p>Start, watch and manage every instance from one place.</p>
+                        <AuthPreview />
                     </div>
-                    <div className={'flex-1'}>{children}</div>
-                </div>
-            </Form>
-            <p className={'text-center text-muted-foreground text-xs mt-4'}>
-                &copy; 2015 - <span suppressHydrationWarning>{new Date().getFullYear()}</span>
-                &nbsp;
-                <a
-                    rel={'noopener nofollow noreferrer'}
-                    href={'https://pterodactyl.io'}
-                    target={'_blank'}
-                    className={'no-underline text-muted-foreground hover:text-muted-foreground'}
-                >
-                    Pterodactyl Software
-                </a>
-            </p>
+                </section>
+                <main className={'gb-auth-main'}>
+                    <div className={'gb-auth-column'}>
+                        <div className={'gb-auth-logo'}>
+                            <img
+                                src={logo || DEFAULT_LOGO}
+                                srcSet={logo ? undefined : `${DEFAULT_LOGO} 1x, ${DEFAULT_LOGO_2X} 2x`}
+                                alt={name}
+                            />
+                        </div>
+                        <div className={'gb-auth-box'}>
+                            {title && <h1>{title}</h1>}
+                            {subtitle && <p>{subtitle}</p>}
+                            <Form form={form} className={className}>
+                                <div className={'w-full'}>{children}</div>
+                            </Form>
+                        </div>
+                    </div>
+                </main>
+            </div>
         </div>
     );
 }
