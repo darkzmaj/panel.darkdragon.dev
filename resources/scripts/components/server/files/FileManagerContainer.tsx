@@ -61,7 +61,7 @@ function FileManagerContainerContent() {
 
     return (
         <FileManagerExtensionContext.Provider value={extensionData}>
-            <ServerContentBlock title={'File Manager'}>
+            <ServerContentBlock title={'File Manager'} heading={false}>
                 <Slot name={'server.files.before'} />
                 <FileManagerContext.Provider value={session}>
                     <ComponentView

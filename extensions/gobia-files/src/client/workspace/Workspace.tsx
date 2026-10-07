@@ -693,7 +693,7 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
                     aria-expanded={drawer}
                     onClick={() => setDrawer((open) => !open)}
                     className={'gb-icon-btn gb-icon-btn-sm'}
-                    style={mobile ? undefined : { visibility: 'hidden' }}
+                    style={mobile ? undefined : { display: 'none' }}
                     tabIndex={mobile ? 0 : -1}
                 >
                     <Menu aria-hidden />

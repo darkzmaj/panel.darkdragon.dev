@@ -17,10 +17,11 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const baseUrl = (process.env.GOBIA_URL ?? 'http://localhost:8000').replace(/\/$/, '');
 const user = process.env.GOBIA_VISUAL_USER ?? 'maj';
 const password = process.env.GOBIA_VISUAL_PASSWORD;
+const scheme = process.env.GOBIA_SCHEME === 'light' ? 'light' : 'dark';
 const update = process.argv.includes('--update');
 const parts = process.argv.slice(2).filter((arg) => !arg.startsWith('--'));
 const run = (part) => parts.length === 0 || parts.includes(part);
-const baselineDir = join(root, 'tests/visual/baseline');
+const baselineDir = join(root, 'tests/visual', scheme === 'light' ? 'baseline-light' : 'baseline');
 const actualDir = join(root, 'tests/visual/actual');
 const MAX_DIFF = 0.008;
 const WIDTHS = [390, 430, 768, 1024, 1366, 1440, 1920, 2560];
@@ -114,7 +115,7 @@ const browser = await chromium.launch({ executablePath: browserPath, headless: t
 try {
     if (run('visual')) {
         // Signed out: the sign in screen.
-        const guest = await browser.newContext({ viewport: { width: 1440, height: 900 }, colorScheme: 'dark' });
+        const guest = await browser.newContext({ viewport: { width: 1440, height: 900 }, colorScheme: scheme });
         const loginPage = await guest.newPage();
         await loginPage.goto(`${baseUrl}/auth/login`);
         await settle(loginPage);
@@ -122,7 +123,7 @@ try {
         await guest.close();
     }
 
-    const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, colorScheme: 'dark' });
+    const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, colorScheme: scheme });
     await login(context);
     const server = await discoverServer(context);
     const pages = [
@@ -160,7 +161,7 @@ try {
 
     if (run('responsive')) {
         for (const width of WIDTHS) {
-            const narrow = await browser.newContext({ viewport: { width, height: 900 }, colorScheme: 'dark' });
+            const narrow = await browser.newContext({ viewport: { width, height: 900 }, colorScheme: scheme });
             await login(narrow);
             for (const [name, path] of pages.filter(([page]) =>
                 ['dashboard', 'admin-overview', 'account-security', 'server-files'].includes(page)
@@ -176,6 +177,92 @@ try {
             }
             await narrow.close();
         }
+    }
+
+    if (run('smoke')) {
+        const check = async (label, work) => {
+            try {
+                await work();
+                note(`ok smoke ${label}`);
+            } catch (error) {
+                fail(`smoke ${label}: ${String(error.message).split(/\r?\n/)[0]}`);
+            }
+        };
+        const page = await context.newPage();
+        await page.goto(baseUrl + '/');
+        await page.waitForSelector('.gb-app', { timeout: 30000 });
+
+        await check('profile menu opens with theme choices and log out', async () => {
+            await page.locator('.gb-user-btn').click();
+            await page.getByRole('menuitem', { name: 'Account' }).waitFor();
+            await page.getByRole('group', { name: 'Theme' }).waitFor();
+            await page.getByRole('menuitem', { name: 'Log out' }).waitFor();
+            await page.keyboard.press('Escape');
+        });
+        await check('instance view menu switches the list', async () => {
+            await page.getByRole('button', { name: /^All/ }).click();
+            await page.getByRole('option', { name: /^You/ }).click();
+            await page.getByRole('button', { name: /^You/ }).waitFor();
+            await page.getByRole('button', { name: /^You/ }).click();
+            await page.getByRole('option', { name: /^All/ }).click();
+        });
+        await check('create instance dialog offers Custom and Template', async () => {
+            await page.getByRole('button', { name: /create instance/i }).click();
+            await page.getByText('Configure everything manually.').waitFor();
+            await page.getByText('Deploy using a reusable template.').or(page.getByText('No enabled templates yet.')).waitFor();
+            await page.keyboard.press('Escape');
+        });
+        await check('row menu offers Open, colour and category', async () => {
+            await page.getByRole('button', { name: /^Actions for /i }).first().click({ force: true });
+            await page.getByRole('menuitem', { name: /Change icon colour/ }).waitFor();
+            await page.keyboard.press('Escape');
+        });
+        await check('instance opens in the shell with the instance sidebar', async () => {
+            await page.locator('a.gb-server-row').first().click();
+            await page.getByRole('link', { name: 'Console' }).waitFor();
+            await page.getByRole('link', { name: 'All instances' }).waitFor();
+        });
+        await check('file workspace creates, renames and deletes live', async () => {
+            const url = page.url().replace(/\/$/, '');
+            await page.goto(url + '/files');
+            await page.getByRole('button', { name: 'New file' }).first().click();
+            const name = `smoke-${Date.now()}.txt`;
+            await page.getByLabel('File name').fill(name);
+            await page.getByRole('button', { name: 'Create', exact: true }).click();
+            await page.locator('.gb-tree-name', { hasText: name }).waitFor();
+            await page.locator('.gb-tab-name', { hasText: name }).waitFor();
+            await page.locator('.gb-tree-row', { hasText: name }).first().locator('button.gb-tree-more').click({ force: true });
+            await page.getByRole('menuitem', { name: 'Rename' }).click();
+            const renamed = name.replace('smoke', 'renamed');
+            await page.getByLabel('New name').fill(renamed);
+            await page.getByRole('button', { name: 'Rename', exact: true }).click();
+            await page.locator('.gb-tree-name', { hasText: renamed }).waitFor();
+            await page.locator('.gb-tab-name', { hasText: renamed }).waitFor();
+            await page.locator('.gb-tree-row', { hasText: renamed }).first().locator('button.gb-tree-more').click({ force: true });
+            await page.getByRole('menuitem', { name: 'Delete' }).click();
+            await page.getByRole('button', { name: 'Delete', exact: true }).click();
+            await page.locator('.gb-tree-name', { hasText: renamed }).waitFor({ state: 'detached' });
+        });
+        await check('admin sidebar groups and templates tabs', async () => {
+            await page.goto(baseUrl + '/panel');
+            await page.getByRole('link', { name: 'Overview' }).waitFor();
+            await page.goto(baseUrl + '/panel/templates');
+            await page.getByRole('heading', { name: 'Templates' }).waitFor();
+        });
+        await page.close();
+
+        const phone = await browser.newContext({ viewport: { width: 390, height: 844 }, colorScheme: scheme });
+        await login(phone);
+        const small = await phone.newPage();
+        await small.goto(baseUrl + '/');
+        await small.waitForSelector('.gb-app', { timeout: 30000 });
+        await check('mobile drawer opens and closes', async () => {
+            await small.getByRole('button', { name: 'Open navigation' }).click();
+            await small.getByRole('link', { name: 'Account' }).waitFor({ state: 'visible' });
+            await small.keyboard.press('Escape');
+            await small.getByRole('button', { name: 'Open navigation' }).waitFor();
+        });
+        await phone.close();
     }
 
     if (run('a11y')) {
