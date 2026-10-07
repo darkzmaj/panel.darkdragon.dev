@@ -1,6 +1,18 @@
 import { EMPTY_TABS, type Tab, type TabsState } from './tabs';
 
 const key = (uuid: string) => `gobia-files:${uuid}`;
+/** A path another page asks the workspace to open on arrival (once). */
+export const OPEN_KEY = (uuid: string) => `gobia-files:open:${uuid}`;
+
+export function takePendingOpen(uuid: string): string | null {
+    try {
+        const path = sessionStorage.getItem(OPEN_KEY(uuid));
+        sessionStorage.removeItem(OPEN_KEY(uuid));
+        return path;
+    } catch {
+        return null;
+    }
+}
 /** sessionStorage holds a few MB; unsaved work beyond this is not kept across navigation. */
 const MAX_STORED_CHARS = 2_000_000;
 

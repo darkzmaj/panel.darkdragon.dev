@@ -42,7 +42,7 @@ import {
 } from './api';
 import ContextMenu, { type MenuItem, type MenuState } from './ContextMenu';
 import { MAX_EDIT_BYTES, basename, dirname, join } from './paths';
-import { loadTabs, saveTabs } from './session';
+import { loadTabs, saveTabs, takePendingOpen } from './session';
 import { isDirty, tabsReducer } from './tabs';
 import type { FileResult } from './search';
 import SearchPanel, { type ReplaceResult } from './SearchPanel';
@@ -166,6 +166,12 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
     const permissions = model.permissions;
 
     useEffect(() => mark('workspace-mounted', true), []);
+    useEffect(() => {
+        const pending = takePendingOpen(uuid);
+        if (pending) void openAt(pending, 1, 1);
+        // Only on arrival: later navigation inside the workspace opens files itself.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [uuid]);
     useEffect(() => {
         if (tree.listings['/'] && tree.listings['/'] !== 'loading') mark('explorer-visible', true);
     }, [tree.listings]);

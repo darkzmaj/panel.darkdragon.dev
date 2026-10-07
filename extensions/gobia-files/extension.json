@@ -2,7 +2,7 @@
     "id": "gobia-files",
     "name": "Gobia Files",
     "version": "1.0.0",
-    "description": "File workspace: persistent explorer, multi file editor tabs, conflict detection and structured validation.",
+    "description": "File workspace: persistent explorer, Monaco editor tabs, workspace search and replace, conflict detection and structured validation.",
     "author": "Gobia",
     "requires": {
         "panel": "^2.0.0-dev",
@@ -14,7 +14,8 @@
         "mode": "native",
         "prefix": "gf",
         "components": [
-            "server.files.manager"
+            "server.files.manager",
+            "server.files.editor"
         ]
     }
 }
