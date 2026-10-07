@@ -63,7 +63,7 @@ export default function DataTable<TData extends RowData>({
                     )}
                 </div>
             ) : (
-                <div className={'overflow-x-auto scrollbar-thin scrollbar-thumb-(--scrollbar-thumb)'}>
+                <div className={'relative overflow-x-auto scrollbar-thin scrollbar-thumb-(--scrollbar-thumb)'}>
                     <table className={cn('w-full border-collapse text-left text-sm', tableClassName)}>
                         <thead className={'bg-secondary'}>
                             {table.getHeaderGroups().map((headerGroup) => (

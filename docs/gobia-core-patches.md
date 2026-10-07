@@ -45,3 +45,15 @@ These are presentation patches. The extension API can replace five components (`
 | `components/server/files/FileManagerContainer.tsx`, `components/server/settings/SettingsContainer.tsx` | No duplicate page head above the Gobia workspace; labelled SFTP fields (accessibility) | Core pages | Low | axe in `npm run test:gobia:browser` | Keep |
 | `components/auth/*Container.tsx`, `dashboard/AccountOverviewContainer.tsx` | Gobia copy and layout of the sign in screens and the Security page | Core pages | Low | Browser comparison | Keep |
 | `package.json`, `package-lock.json`, `packages/sdk/types/**` | `dev:gobia` and `test:gobia:browser` scripts, dev dependencies of the browser checks (`playwright-core`, `axe-core`, `pixelmatch`, `pngjs`), regenerated SDK declarations | Tooling | Low | `npm run sdk:check` | Keep |
+
+## Motion, loading and table patches (final frontend pass)
+
+| File | Purpose | Why the extension API cannot do it | Upstream conflict risk | Tests | Removal path |
+| --- | --- | --- | --- | --- | --- |
+| `resources/scripts/router/router.tsx` | No view transitions, pending time 0, `PageSkeleton` as the pending component | Router options are core | Low | `npm run test:gobia:browser` | Upstream router option for the pending component |
+| `resources/scripts/components/elements/Spinner.tsx` | A large centred spinner renders `PageSkeleton` | Shared element | Low | Browser comparison | Keep |
+| `resources/scripts/index.tsx`, `resources/scripts/**/view-transitions` | View transition import removed (the shell stays still, only the content fades) | Entry file | Low | Browser comparison | Keep |
+| `resources/scripts/components/elements/table/DataTable.tsx` | The scroll container is `relative`, so visually hidden text in action buttons cannot widen the page on phones | Shared table | Low | responsive check at 390 and 430 px | Keep |
+| `resources/scripts/gobia/shell/Sidebars.tsx` | Admin groups Dashboard, Network, Services, System in the 1.x order (new Gobia file, not an upstream path) | Sidebar is Gobia code | None | Browser comparison | None |
+
+Extension level changes that are not core patches: `gobia-files` replaces `server.files.manager` (workspace) and `server.files.editor` (redirect into the workspace); `gobia-templates` gained `GET /api/admin/extensions/gobia-templates/templates/{id}/revisions` and a nullable `created_by` column on its revision table; `gobia-core` gained view counts and search in the instance list API.

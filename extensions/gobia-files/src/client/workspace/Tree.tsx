@@ -24,7 +24,9 @@ export const validTarget = (dragged: string, directory: string, taken?: Readonly
     !dragged.split('/').includes('..') &&
     !(taken?.has(basename(dragged)) ?? false);
 
-export type Inline = { kind: 'create'; what: 'file' | 'folder'; directory: string } | { kind: 'rename'; entry: TreeEntry };
+export type Inline =
+    | { kind: 'create'; what: 'file' | 'folder'; directory: string }
+    | { kind: 'rename'; entry: TreeEntry };
 
 function InlineName({
     depth,
@@ -270,7 +272,9 @@ export default function Tree(props: TreeProps) {
 
     const namesIn = (path: string): ReadonlySet<string> => {
         const listing = tree.listings[path];
-        return new Set(listing && listing !== 'loading' && 'items' in listing ? listing.items.map((item) => item.name) : []);
+        return new Set(
+            listing && listing !== 'loading' && 'items' in listing ? listing.items.map((item) => item.name) : []
+        );
     };
     const creating = (path: string) => inline?.kind === 'create' && inline.directory === path;
     const newRow = (path: string, depth: number) =>
@@ -299,59 +303,62 @@ export default function Tree(props: TreeProps) {
         if (listing.items.length === 0) return creating(path) ? newRow(path, depth) : note('Empty');
         const taken = namesIn(path);
 
-        return [newRow(path, depth), ...listing.items.map((entry) => {
-            const open = entry.directory && tree.expanded.has(entry.path);
-            if (inline?.kind === 'rename' && inline.entry.path === entry.path) {
-                return (
-                    <InlineName
-                        key={entry.path}
-                        depth={depth}
-                        initial={entry.name}
-                        label={'New name'}
-                        folder={entry.directory}
-                        taken={taken}
-                        onSubmit={props.onInlineSubmit}
-                        onCancel={props.onInlineCancel}
-                    />
-                );
-            }
+        return [
+            newRow(path, depth),
+            ...listing.items.map((entry) => {
+                const open = entry.directory && tree.expanded.has(entry.path);
+                if (inline?.kind === 'rename' && inline.entry.path === entry.path) {
+                    return (
+                        <InlineName
+                            key={entry.path}
+                            depth={depth}
+                            initial={entry.name}
+                            label={'New name'}
+                            folder={entry.directory}
+                            taken={taken}
+                            onSubmit={props.onInlineSubmit}
+                            onCancel={props.onInlineCancel}
+                        />
+                    );
+                }
 
-            return (
-                <div
-                    key={entry.path}
-                    className={'gb-tree-group'}
-                    style={{ ['--guide' as string]: `${depth * 14 + 15}px` }}
-                >
-                    <Row
-                        entry={entry}
-                        depth={depth}
-                        open={open}
-                        selected={selection === entry.path || activePath === entry.path}
-                        openFile={openPaths.has(entry.path)}
-                        dirty={dirtyPaths.has(entry.path)}
-                        canMove={canMove}
-                        canUpload={canUpload}
-                        onClick={() => {
-                            props.onSelect(entry.path);
-                            if (entry.directory) tree.toggle(entry.path);
-                            else props.onOpen(entry);
-                        }}
-                        onMenu={(x, y) => {
-                            props.onSelect(entry.path);
-                            props.onMenu(entry, x, y);
-                        }}
-                        onMove={props.onMove}
-                        onDropFiles={props.onDropFiles}
-                        onHoverOpen={() => tree.expand(entry.path)}
-                        dragging={dragging}
-                        onDragging={setDragging}
-                        taken={entry.directory ? namesIn(entry.path) : taken}
-                        settled={props.settled === entry.path}
-                    />
-                    {open && directory(entry.path, depth + 1)}
-                </div>
-            );
-        })];
+                return (
+                    <div
+                        key={entry.path}
+                        className={'gb-tree-group'}
+                        style={{ ['--guide' as string]: `${depth * 14 + 15}px` }}
+                    >
+                        <Row
+                            entry={entry}
+                            depth={depth}
+                            open={open}
+                            selected={selection === entry.path || activePath === entry.path}
+                            openFile={openPaths.has(entry.path)}
+                            dirty={dirtyPaths.has(entry.path)}
+                            canMove={canMove}
+                            canUpload={canUpload}
+                            onClick={() => {
+                                props.onSelect(entry.path);
+                                if (entry.directory) tree.toggle(entry.path);
+                                else props.onOpen(entry);
+                            }}
+                            onMenu={(x, y) => {
+                                props.onSelect(entry.path);
+                                props.onMenu(entry, x, y);
+                            }}
+                            onMove={props.onMove}
+                            onDropFiles={props.onDropFiles}
+                            onHoverOpen={() => tree.expand(entry.path)}
+                            dragging={dragging}
+                            onDragging={setDragging}
+                            taken={entry.directory ? namesIn(entry.path) : taken}
+                            settled={props.settled === entry.path}
+                        />
+                        {open && directory(entry.path, depth + 1)}
+                    </div>
+                );
+            }),
+        ];
     };
 
     return (

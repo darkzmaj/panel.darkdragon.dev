@@ -76,6 +76,9 @@ const LIVE = new Map([
     ['server-console', 0.05],
     ['server-files', 0.03],
     ['server-settings', 0.03],
+    ['server-files-editor', 0.03],
+    ['admin-overview', 0.03],
+    ['admin-nodes', 0.03],
 ]);
 
 function compare(name, buffer) {
@@ -134,6 +137,9 @@ try {
         ['account-security', '/account'],
         ['admin-overview', '/panel'],
         ['admin-users', '/panel/users'],
+        ['admin-nodes', '/panel/nodes'],
+        ['account-access', '/account/access'],
+        ['account-appearance', '/account/appearance'],
         ['admin-templates', '/panel/templates'],
         ['admin-updates', '/panel/updates'],
     ];
@@ -149,6 +155,30 @@ try {
             compare(name, await page.screenshot());
             await page.close();
         }
+        // The editor with a fixed document, so its colours, gutter and absent minimap are guarded.
+        const editor = await context.newPage();
+        await editor.goto(`${baseUrl}/server/${server}/files`);
+        await editor.waitForSelector('.gb-tree-name', { timeout: 30000 });
+        await editor.getByRole('button', { name: 'New file' }).first().click();
+        await editor.getByLabel('File name').fill('visual-sample.json');
+        await editor.getByLabel('File name').press('Enter');
+        await editor.waitForSelector('.monaco-editor .view-line', { timeout: 30000 });
+        await editor.locator('.monaco-editor').first().click();
+        await editor.keyboard.type('{"name": "gobia", "ports": [25565, 25566], "enabled": true, "motd": null}');
+        await settle(editor);
+        compare('server-files-editor', await editor.screenshot());
+        // Leave nothing behind: remove the sample file again.
+        await editor.locator('.gb-tab-close').first().click();
+        await editor.getByRole('button', { name: 'Discard changes' }).click();
+        await editor
+            .locator('.gb-tree-row', { hasText: 'visual-sample.json' })
+            .first()
+            .locator('button.gb-tree-more')
+            .click({ force: true });
+        await editor.getByRole('menuitem', { name: 'Delete' }).click();
+        await editor.getByRole('button', { name: 'Delete', exact: true }).click();
+        await editor.close();
+
         const dialog = await context.newPage();
         await dialog.goto(baseUrl + '/');
         await dialog.waitForSelector('.gb-app', { timeout: 30000 });
@@ -164,7 +194,18 @@ try {
             const narrow = await browser.newContext({ viewport: { width, height: 900 }, colorScheme: scheme });
             await login(narrow);
             for (const [name, path] of pages.filter(([page]) =>
-                ['dashboard', 'admin-overview', 'account-security', 'server-files'].includes(page)
+                [
+                    'dashboard',
+                    'server-console',
+                    'server-files',
+                    'account-security',
+                    'account-access',
+                    'account-appearance',
+                    'admin-overview',
+                    'admin-nodes',
+                    'admin-templates',
+                    'admin-updates',
+                ].includes(page)
             )) {
                 const page = await narrow.newPage();
                 await page.goto(baseUrl + path.replace(`/${server}`, `/${server}`));

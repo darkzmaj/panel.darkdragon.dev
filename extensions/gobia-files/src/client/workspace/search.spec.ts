@@ -20,7 +20,9 @@ describe('workspace search', () => {
     });
 
     it('reports an invalid regex instead of throwing', () => {
-        expect(buildPattern({ query: '(', caseSensitive: false, wholeWord: false, regex: true })).toHaveProperty('error');
+        expect(buildPattern({ query: '(', caseSensitive: false, wholeWord: false, regex: true })).toHaveProperty(
+            'error'
+        );
         expect(buildPattern({ query: '', caseSensitive: false, wholeWord: false, regex: false })).toBeNull();
     });
 

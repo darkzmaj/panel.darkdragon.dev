@@ -4,11 +4,12 @@ import { listDirectory, type TreeEntry } from './api';
 import { dirname } from './paths';
 
 export type Listing = { items: TreeEntry[] } | { error: string } | 'loading';
+export type Listings = Record<string, Listing>;
 
 const REFRESH_MS = 20_000;
 
 export interface TreeState {
-    listings: Record<string, Listing>;
+    listings: Listings;
     expanded: ReadonlySet<string>;
     toggle: (path: string) => void;
     expand: (path: string) => void;
@@ -26,16 +27,58 @@ export interface TreeState {
 }
 
 const under = (path: string, root: string) => path === root || path.startsWith(`${root}/`);
-const reroot = (path: string, from: string, to: string) => (under(path, from) ? `${to}${path.slice(from.length)}` : path);
+const reroot = (path: string, from: string, to: string) =>
+    under(path, from) ? `${to}${path.slice(from.length)}` : path;
 const order = (a: TreeEntry, b: TreeEntry) =>
     a.directory === b.directory ? a.name.localeCompare(b.name, undefined, { numeric: true }) : a.directory ? -1 : 1;
+
+const isLoaded = (listing: Listing | undefined): listing is { items: TreeEntry[] } =>
+    listing !== undefined && listing !== 'loading' && 'items' in listing;
+
+/**
+ * The listings after `from` moved to `to`: a moved folder keeps every listing it had under its new path, the old
+ * parent loses the entry and the new parent gains it (when those directories are loaded), in listing order.
+ */
+export function moveListings(current: Listings, from: string, to: string): Listings {
+    const source = dirname(from);
+    const target = dirname(to);
+    const found = isLoaded(current[source]) ? current[source].items.find((item) => item.path === from) : undefined;
+    const next: Listings = {};
+    for (const [directory, listing] of Object.entries(current)) {
+        const key = reroot(directory, from, to);
+        next[key] =
+            isLoaded(listing) && key !== directory
+                ? { items: listing.items.map((item) => ({ ...item, path: reroot(item.path, from, to) })) }
+                : listing;
+    }
+    const sourceListing = next[source];
+    if (isLoaded(sourceListing)) next[source] = { items: sourceListing.items.filter((item) => item.path !== from) };
+    const targetListing = next[target];
+    if (found && isLoaded(targetListing)) {
+        const moved: TreeEntry = { ...found, name: to.slice(to.lastIndexOf('/') + 1), path: to };
+        next[target] = { items: [...targetListing.items.filter((item) => item.path !== to), moved].sort(order) };
+    }
+    return next;
+}
+
+/** The listings without `paths`: entries are removed, and so are the listings of removed folders. */
+export function removeFromListings(current: Listings, paths: readonly string[]): Listings {
+    const next: Listings = {};
+    for (const [directory, listing] of Object.entries(current)) {
+        if (paths.some((path) => under(directory, path))) continue;
+        next[directory] = isLoaded(listing)
+            ? { items: listing.items.filter((item) => !paths.includes(item.path)) }
+            : listing;
+    }
+    return next;
+}
 
 /**
  * The explorer's data: every directory that has been opened, kept up to date. Mutations patch the listing
  * immediately and then reload it; visible directories also reload when the tab regains focus and now and then.
  */
 export function useTree(uuid: string): TreeState {
-    const [listings, setListings] = useState<Record<string, Listing>>({});
+    const [listings, setListings] = useState<Listings>({});
     const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set(['/']));
     const latest = useRef({ listings, expanded });
     useEffect(() => {
@@ -103,36 +146,7 @@ export function useTree(uuid: string): TreeState {
 
     const move = useCallback((from: string, to: string) => {
         const before = { listings: latest.current.listings, expanded: latest.current.expanded };
-        const source = dirname(from);
-        const target = dirname(to);
-        const name = to.slice(to.lastIndexOf('/') + 1);
-        const found = (() => {
-            const listing = before.listings[source];
-            return listing && listing !== 'loading' && 'items' in listing
-                ? listing.items.find((item) => item.path === from)
-                : undefined;
-        })();
-        setListings((current) => {
-            const next: Record<string, Listing> = {};
-            for (const [directory, listing] of Object.entries(current)) {
-                // A moved folder keeps every listing it had, under its new path.
-                const key = reroot(directory, from, to);
-                next[key] =
-                    listing !== 'loading' && 'items' in listing && key !== directory
-                        ? { items: listing.items.map((item) => ({ ...item, path: reroot(item.path, from, to) })) }
-                        : listing;
-            }
-            const sourceListing = next[source];
-            if (sourceListing && sourceListing !== 'loading' && 'items' in sourceListing) {
-                next[source] = { items: sourceListing.items.filter((item) => item.path !== from) };
-            }
-            const targetListing = next[target];
-            if (found && targetListing && targetListing !== 'loading' && 'items' in targetListing) {
-                const moved: TreeEntry = { ...found, name, path: to };
-                next[target] = { items: [...targetListing.items.filter((item) => item.path !== to), moved].sort(order) };
-            }
-            return next;
-        });
+        setListings((current) => moveListings(current, from, to));
         setExpanded((current) => new Set([...current].map((path) => reroot(path, from, to))));
         return () => {
             setListings(before.listings);
@@ -142,17 +156,7 @@ export function useTree(uuid: string): TreeState {
 
     const remove = useCallback((paths: readonly string[]) => {
         const before = latest.current.listings;
-        setListings((current) => {
-            const next: Record<string, Listing> = {};
-            for (const [directory, listing] of Object.entries(current)) {
-                if (paths.some((path) => under(directory, path))) continue;
-                next[directory] =
-                    listing !== 'loading' && 'items' in listing
-                        ? { items: listing.items.filter((item) => !paths.includes(item.path)) }
-                        : listing;
-            }
-            return next;
-        });
+        setListings((current) => removeFromListings(current, paths));
         return () => setListings(before);
     }, []);
 

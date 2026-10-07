@@ -16,17 +16,7 @@ import {
     Upload,
     X,
 } from 'lucide-react';
-import {
-    lazy,
-    Suspense,
-    useCallback,
-    useEffect,
-    useMemo,
-    useReducer,
-    useRef,
-    useState,
-    type ReactNode,
-} from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react';
 import {
     compressEntries,
     copyEntry,
@@ -194,7 +184,11 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
         touched.current.add(directory);
         tree.patch(directory, (items) =>
             [...items.filter((item) => item.path !== entry.path), entry].sort((a, b) =>
-                a.directory === b.directory ? a.name.localeCompare(b.name, undefined, { numeric: true }) : a.directory ? -1 : 1
+                a.directory === b.directory
+                    ? a.name.localeCompare(b.name, undefined, { numeric: true })
+                    : a.directory
+                      ? -1
+                      : 1
             )
         );
     };
@@ -737,126 +731,128 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
     });
     const explorer = (
         <>
-        <div style={pane(searching)}>
-            <div className={'gb-explorer-tools'}>
-                <ToolButton label={'Back to files'} onClick={() => setExplorerView('files')}>
-                    <X aria-hidden />
-                </ToolButton>
-                <span className={'gb-eyebrow'} style={{ alignSelf: 'center', marginLeft: 6 }}>
-                    Search
-                </span>
-            </div>
-            <SearchPanel
-                uuid={uuid}
-                buffers={() =>
-                    new Map(
-                        latest.current.state.tabs.filter((tab) => tab.status === 'ready').map((tab) => [tab.path, tab.content])
-                    )
-                }
-                canReplace={permissions.update}
-                onOpen={(path, line, column) => void openAt(path, line, column)}
-                onReplace={replaceInFile}
-            />
-        </div>
-        <div style={pane(!searching)}>
-            <div className={'gb-explorer-tools'}>
-                {permissions.create && (
-                    <>
-                        <ToolButton
-                            label={'New file'}
-                            disabled={busy}
-                            onClick={() => startCreate('file', targetDirectory())}
-                        >
-                            <FilePlus aria-hidden />
-                        </ToolButton>
-                        <ToolButton
-                            label={'New folder'}
-                            disabled={busy}
-                            onClick={() => startCreate('folder', targetDirectory())}
-                        >
-                            <FolderPlus aria-hidden />
-                        </ToolButton>
-                        <ToolButton
-                            label={'Upload files'}
-                            disabled={busy}
-                            onClick={() => {
-                                uploadTarget.current = targetDirectory();
-                                filePicker.current?.click();
-                            }}
-                        >
-                            <Upload aria-hidden />
-                        </ToolButton>
-                        <ToolButton
-                            label={'Upload folder'}
-                            disabled={busy}
-                            onClick={() => {
-                                uploadTarget.current = targetDirectory();
-                                folderPicker.current?.click();
-                            }}
-                        >
-                            <FolderUp aria-hidden />
-                        </ToolButton>
-                    </>
-                )}
-                <ToolButton label={'Search all files'} onClick={() => setExplorerView('search')}>
-                    <Search aria-hidden />
-                </ToolButton>
-                <ToolButton
-                    label={'Refresh'}
-                    disabled={busy}
-                    onClick={() => void tree.reload([...tree.expanded], true)}
-                >
-                    <RefreshCw aria-hidden />
-                </ToolButton>
-                <input
-                    ref={filePicker}
-                    type={'file'}
-                    multiple
-                    hidden
-                    onChange={(event) => chooseFiles(event.currentTarget)}
-                />
-                <input
-                    ref={folderPicker}
-                    type={'file'}
-                    hidden
-                    {...DIRECTORY_PICKER}
-                    onChange={(event) => chooseFiles(event.currentTarget)}
-                />
-            </div>
-            <div
-                style={{ flex: 1, overflow: 'auto', padding: '4px 0', minHeight: 0 }}
-                onKeyDown={(event) => {
-                    const entry = selectedEntry();
-                    if (!entry) return;
-                    if (event.key === 'F2' && permissions.update) {
-                        event.preventDefault();
-                        setInline({ kind: 'rename', entry });
-                    } else if (event.key === 'Delete' && permissions.delete) {
-                        event.preventDefault();
-                        setPrompt({ kind: 'delete', entries: [entry] });
+            <div style={pane(searching)}>
+                <div className={'gb-explorer-tools'}>
+                    <ToolButton label={'Back to files'} onClick={() => setExplorerView('files')}>
+                        <X aria-hidden />
+                    </ToolButton>
+                    <span className={'gb-eyebrow'} style={{ alignSelf: 'center', marginLeft: 6 }}>
+                        Search
+                    </span>
+                </div>
+                <SearchPanel
+                    uuid={uuid}
+                    buffers={() =>
+                        new Map(
+                            latest.current.state.tabs
+                                .filter((tab) => tab.status === 'ready')
+                                .map((tab) => [tab.path, tab.content])
+                        )
                     }
-                }}
-            >
-                <Tree
-                    tree={tree}
-                    selection={selection}
-                    activePath={state.active}
-                    openPaths={openPaths}
-                    dirtyPaths={dirtyPaths}
-                    canMove={permissions.update}
-                    canUpload={permissions.create}
-                    onSelect={setSelection}
-                    onOpen={openFile}
-                    onMenu={openMenu}
-                    onMove={moveInto}
-                    onDropFiles={(data, directory) => void dropFiles(data, directory)}
-                    inline={inline}
-                    onInlineSubmit={submitInline}
-                    onInlineCancel={() => setInline(null)}
-                    settled={settled}
+                    canReplace={permissions.update}
+                    onOpen={(path, line, column) => void openAt(path, line, column)}
+                    onReplace={replaceInFile}
                 />
             </div>
-        </div>
+            <div style={pane(!searching)}>
+                <div className={'gb-explorer-tools'}>
+                    {permissions.create && (
+                        <>
+                            <ToolButton
+                                label={'New file'}
+                                disabled={busy}
+                                onClick={() => startCreate('file', targetDirectory())}
+                            >
+                                <FilePlus aria-hidden />
+                            </ToolButton>
+                            <ToolButton
+                                label={'New folder'}
+                                disabled={busy}
+                                onClick={() => startCreate('folder', targetDirectory())}
+                            >
+                                <FolderPlus aria-hidden />
+                            </ToolButton>
+                            <ToolButton
+                                label={'Upload files'}
+                                disabled={busy}
+                                onClick={() => {
+                                    uploadTarget.current = targetDirectory();
+                                    filePicker.current?.click();
+                                }}
+                            >
+                                <Upload aria-hidden />
+                            </ToolButton>
+                            <ToolButton
+                                label={'Upload folder'}
+                                disabled={busy}
+                                onClick={() => {
+                                    uploadTarget.current = targetDirectory();
+                                    folderPicker.current?.click();
+                                }}
+                            >
+                                <FolderUp aria-hidden />
+                            </ToolButton>
+                        </>
+                    )}
+                    <ToolButton label={'Search all files'} onClick={() => setExplorerView('search')}>
+                        <Search aria-hidden />
+                    </ToolButton>
+                    <ToolButton
+                        label={'Refresh'}
+                        disabled={busy}
+                        onClick={() => void tree.reload([...tree.expanded], true)}
+                    >
+                        <RefreshCw aria-hidden />
+                    </ToolButton>
+                    <input
+                        ref={filePicker}
+                        type={'file'}
+                        multiple
+                        hidden
+                        onChange={(event) => chooseFiles(event.currentTarget)}
+                    />
+                    <input
+                        ref={folderPicker}
+                        type={'file'}
+                        hidden
+                        {...DIRECTORY_PICKER}
+                        onChange={(event) => chooseFiles(event.currentTarget)}
+                    />
+                </div>
+                <div
+                    style={{ flex: 1, overflow: 'auto', padding: '4px 0', minHeight: 0 }}
+                    onKeyDown={(event) => {
+                        const entry = selectedEntry();
+                        if (!entry) return;
+                        if (event.key === 'F2' && permissions.update) {
+                            event.preventDefault();
+                            setInline({ kind: 'rename', entry });
+                        } else if (event.key === 'Delete' && permissions.delete) {
+                            event.preventDefault();
+                            setPrompt({ kind: 'delete', entries: [entry] });
+                        }
+                    }}
+                >
+                    <Tree
+                        tree={tree}
+                        selection={selection}
+                        activePath={state.active}
+                        openPaths={openPaths}
+                        dirtyPaths={dirtyPaths}
+                        canMove={permissions.update}
+                        canUpload={permissions.create}
+                        onSelect={setSelection}
+                        onOpen={openFile}
+                        onMenu={openMenu}
+                        onMove={moveInto}
+                        onDropFiles={(data, directory) => void dropFiles(data, directory)}
+                        inline={inline}
+                        onInlineSubmit={submitInline}
+                        onInlineCancel={() => setInline(null)}
+                        settled={settled}
+                    />
+                </div>
+            </div>
         </>
     );
 
@@ -944,7 +940,11 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
                                     const from = state.tabs.findIndex((candidate) => candidate.path === tabDrag.path);
                                     const index = state.tabs.findIndex((candidate) => candidate.path === tab.path);
                                     const slot = index + (tabDrag.after ? 1 : 0);
-                                    dispatch({ type: 'reorder', path: tabDrag.path, to: from < slot ? slot - 1 : slot });
+                                    dispatch({
+                                        type: 'reorder',
+                                        path: tabDrag.path,
+                                        to: from < slot ? slot - 1 : slot,
+                                    });
                                     setTabDrag(null);
                                 }}
                                 onDragEnd={() => setTabDrag(null)}
@@ -1107,7 +1107,7 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
                                 }
                             >
                                 <CodeEditor
-                                                                        path={active.path}
+                                    path={active.path}
                                     content={active.content}
                                     readOnly={!permissions.update}
                                     wordWrap={wrap}

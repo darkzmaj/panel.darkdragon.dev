@@ -48,8 +48,9 @@ Upstream base SHA at migration start: `0d8cd97d00852aa7b251ea39d05a6df168874db1`
 ## Performance policy
 
 * Measure before optimizing; never claim "faster" from one feel. Record numbers in docs.
-* Do not ship Monaco or other large dependencies globally. Use Vite chunking and lazy loading. (Upstream 2.0 ships
-  CodeMirror; Monaco only if it demonstrably justifies itself and is lazy loaded, never on the dashboard.)
+* Do not ship Monaco or other large dependencies globally. Use Vite chunking and lazy loading. Monaco lives only in the
+  `gobia-files` extension, loads as a lazy chunk when the file workspace opens (never on the dashboard, admin or server
+  overview) and has no minimap. Upstream CodeMirror remains for the admin egg editors only.
 * TanStack Query for server data (use the SDK's shared query options and `invalidateServerData`). No duplicate caches.
 * Zustand 5 only for suitable local UI state.
 * Structural budgets (bundle size, no editor on dashboard, query count ceilings), not flaky wall clock CI thresholds.

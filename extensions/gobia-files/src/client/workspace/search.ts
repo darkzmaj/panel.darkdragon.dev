@@ -37,7 +37,8 @@ export interface SearchOutcome {
 }
 
 const SKIPPED_DIRECTORIES = new Set(['node_modules', '.git']);
-const BINARY_TYPE = /^(image|audio|video|font)\/|zip|gzip|tar|octet-stream|java-archive|x-7z|rar|pdf|executable|sharedlib/i;
+const BINARY_TYPE =
+    /^(image|audio|video|font)\/|zip|gzip|tar|octet-stream|java-archive|x-7z|rar|pdf|executable|sharedlib/i;
 const MAX_FILES = 4000;
 const MAX_MATCHES = 5000;
 const CONTEXT = 60;
@@ -49,7 +50,9 @@ export function buildPattern(options: SearchOptions): Built {
     if (options.query === '') return null;
     const source = options.regex ? options.query : options.query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     try {
-        return { pattern: new RegExp(options.wholeWord ? `\\b(?:${source})\\b` : source, options.caseSensitive ? 'g' : 'gi') };
+        return {
+            pattern: new RegExp(options.wholeWord ? `\\b(?:${source})\\b` : source, options.caseSensitive ? 'g' : 'gi'),
+        };
     } catch (error) {
         return { error: error instanceof Error ? error.message : 'Invalid pattern' };
     }

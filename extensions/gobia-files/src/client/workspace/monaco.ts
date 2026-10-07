@@ -171,7 +171,7 @@ export function applyTheme(dark: boolean) {
             'editorSuggestWidget.background': surface,
             'input.background': background,
             'input.border': border,
-            'focusBorder': primary,
+            focusBorder: primary,
             'editor.selectionBackground': primary + '44',
             'editor.findMatchBackground': primary + '66',
             'editor.findMatchHighlightBackground': primary + '33',

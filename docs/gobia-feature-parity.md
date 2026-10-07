@@ -45,7 +45,7 @@ Legend for "Core or Extension": `Ext` extension API only, `Theme` design tokens,
 | 28 | File manager (context menu, three dot, rename/move/duplicate/download/copy path/delete) | `fileOps.ts`, `useMoveEntries`, `FileActionsContext` | gobia-files over 2.0 file hooks/mutations | Ext | no | yes | no | yes | Done | |
 | 29 | Drag and drop, OS drag upload, folder upload, queue, progress, cancel, retry | `dragDrop.ts`, `uploadQueue.ts`, `UploadPanel` | gobia-files | Ext | no | yes | no | yes | Done | |
 | 30 | Multi file editor (tabs, dirty, save, Ctrl/Cmd S, unsaved protection, conflict detection, explorer) | `FileWorkspace`, `FileTree` | gobia-files, `useNavigationBlocker` | Ext | no | yes | no | yes | Done | |
-| 31 | Monaco, lazy | `MonacoEditor.tsx` | evaluate 2.0 CodeMirror first; Monaco only if required and lazy | Ext | no | yes | no | bundle budget | Done (CodeMirror, lazy; Monaco not justified) | Never on dashboard |
+| 31 | Monaco, lazy | `MonacoEditor.tsx` | Monaco in `gobia-files` only, lazy chunk, no minimap, one model per tab | Ext | no | yes | no | bundle budget | Done (Monaco, lazy; CodeMirror stays only in upstream admin egg editors) | Never on dashboard |
 | 32 | Structured validation (JSON, YAML, TOML, XML) | `validation.ts` | gobia-files | Ext | no | yes | no | yes | Done | Only deterministic errors block save |
 | 33 | Mobile files (drawer, tabs, bottom sheets) | `FileWorkspace` mobile CSS | gobia-files | Ext | no | yes | no | responsive | Done | |
 | 34 | Server timing telemetry, query log, perf budgets | `ServerTiming`, `PerfTimings`, `check-bundle-budget.js` | gobia-core dev tooling + CI structural budgets | Ext | no | no | yes | yes | Todo | |

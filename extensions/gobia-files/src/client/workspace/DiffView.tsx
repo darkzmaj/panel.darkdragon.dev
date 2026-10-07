@@ -36,5 +36,7 @@ export default function DiffView({ path, remote, mine }: Props) {
         };
     }, [path, remote, mine]);
 
-    return <div ref={host} className={'gb-diff'} data-testid={'diff-view'} aria-label={'Server version against yours'} />;
+    return (
+        <div ref={host} className={'gb-diff'} data-testid={'diff-view'} aria-label={'Server version against yours'} />
+    );
 }

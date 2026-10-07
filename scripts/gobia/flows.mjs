@@ -36,7 +36,11 @@ const rows = (page) => page.locator('a.gb-server-row');
 
 async function settleList(page) {
     await page.waitForTimeout(500);
-    await page.locator('.gb-skeleton').first().waitFor({ state: 'detached' }).catch(() => undefined);
+    await page
+        .locator('.gb-skeleton')
+        .first()
+        .waitFor({ state: 'detached' })
+        .catch(() => undefined);
 }
 
 export async function dashboardFlows({ context, baseUrl, check: plain }) {
@@ -68,7 +72,8 @@ export async function dashboardFlows({ context, baseUrl, check: plain }) {
             const texts = await rows(page).allInnerTexts();
             if (label === 'All' && texts.length === 0) throw new Error('search found nothing for a visible name');
             for (const text of texts) {
-                if (!text.toLowerCase().includes(term)) throw new Error(`"${term}" is not in a listed row: ${text.slice(0, 60)}`);
+                if (!text.toLowerCase().includes(term))
+                    throw new Error(`"${term}" is not in a listed row: ${text.slice(0, 60)}`);
             }
         }
         await page.getByLabel('Search instances').fill('zzz-no-such-instance');
@@ -166,7 +171,13 @@ export async function fileFlows({ context, baseUrl, check: plain }) {
         await page.getByLabel('File name').press('Enter');
         await page.locator('.gb-tree-name', { hasText: note }).waitFor();
         await page.locator('.monaco-editor .view-line').first().waitFor({ timeout: 30000 });
-        if (await page.locator('.minimap.slider-mouseover, .minimap canvas').first().isVisible().catch(() => false)) {
+        if (
+            await page
+                .locator('.minimap.slider-mouseover, .minimap canvas')
+                .first()
+                .isVisible()
+                .catch(() => false)
+        ) {
             throw new Error('the minimap is visible');
         }
     });
@@ -234,7 +245,10 @@ export async function fileFlows({ context, baseUrl, check: plain }) {
         await page.getByRole('button', { name: 'Back to files' }).click();
     });
     // A failed search step must not leave the explorer hidden for the steps after it.
-    await page.getByRole('button', { name: 'Back to files' }).click({ timeout: 2000 }).catch(() => undefined);
+    await page
+        .getByRole('button', { name: 'Back to files' })
+        .click({ timeout: 2000 })
+        .catch(() => undefined);
     await check('files: rename inline keeps the open tab', async () => {
         const row = page.locator('.gb-tree-row', { hasText: note }).first();
         await row.locator('button.gb-tree-more').click({ force: true });

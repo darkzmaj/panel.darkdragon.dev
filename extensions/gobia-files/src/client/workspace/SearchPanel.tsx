@@ -26,7 +26,14 @@ interface Props {
 
 function Flag({ label, title, on, onToggle }: { label: string; title: string; on: boolean; onToggle: () => void }) {
     return (
-        <button type={'button'} className={'gb-search-flag'} aria-pressed={on} title={title} aria-label={title} onClick={onToggle}>
+        <button
+            type={'button'}
+            className={'gb-search-flag'}
+            aria-pressed={on}
+            title={title}
+            aria-label={title}
+            onClick={onToggle}
+        >
             {label}
         </button>
     );
@@ -107,7 +114,8 @@ export default function SearchPanel({ uuid, buffers, canReplace, onOpen, onRepla
         }
         setNotes(problems);
         if (changed > 0) toast.success(`Replaced ${changed} ${changed === 1 ? 'match' : 'matches'}.`);
-        if (problems.length > 0) toast.error(`${problems.length} ${problems.length === 1 ? 'file was' : 'files were'} not changed.`);
+        if (problems.length > 0)
+            toast.error(`${problems.length} ${problems.length === 1 ? 'file was' : 'files were'} not changed.`);
         void search();
     };
 
@@ -152,7 +160,12 @@ export default function SearchPanel({ uuid, buffers, canReplace, onOpen, onRepla
                         spellCheck={false}
                         onChange={(event) => setQuery(event.currentTarget.value)}
                     />
-                    <Flag label={'Aa'} title={'Match case'} on={caseSensitive} onToggle={() => setCaseSensitive((on) => !on)} />
+                    <Flag
+                        label={'Aa'}
+                        title={'Match case'}
+                        on={caseSensitive}
+                        onToggle={() => setCaseSensitive((on) => !on)}
+                    />
                     <Flag label={'ab'} title={'Whole word'} on={wholeWord} onToggle={() => setWholeWord((on) => !on)} />
                     <Flag label={'.*'} title={'Regular expression'} on={regex} onToggle={() => setRegex((on) => !on)} />
                 </div>
@@ -178,11 +191,19 @@ export default function SearchPanel({ uuid, buffers, canReplace, onOpen, onRepla
                     </div>
                 )}
                 <div className={'gb-search-row'}>
-                    <button type={'submit'} className={'gb-btn gb-btn-primary gb-btn-sm'} disabled={running || query === ''}>
+                    <button
+                        type={'submit'}
+                        className={'gb-btn gb-btn-primary gb-btn-sm'}
+                        disabled={running || query === ''}
+                    >
                         <Search aria-hidden /> {running ? 'Searching…' : 'Search'}
                     </button>
                     {running && (
-                        <button type={'button'} className={'gb-btn gb-btn-sm'} onClick={() => ((run.current += 1), setRunning(false))}>
+                        <button
+                            type={'button'}
+                            className={'gb-btn gb-btn-sm'}
+                            onClick={() => ((run.current += 1), setRunning(false))}
+                        >
                             Stop
                         </button>
                     )}
@@ -205,7 +226,12 @@ export default function SearchPanel({ uuid, buffers, canReplace, onOpen, onRepla
 
             <div className={'gb-search-results'}>
                 {notes.map((note) => (
-                    <p key={note} role={'alert'} className={'gb-badge gb-badge-danger'} style={{ height: 'auto', margin: '4px 6px', padding: '6px 10px', whiteSpace: 'normal' }}>
+                    <p
+                        key={note}
+                        role={'alert'}
+                        className={'gb-badge gb-badge-danger'}
+                        style={{ height: 'auto', margin: '4px 6px', padding: '6px 10px', whiteSpace: 'normal' }}
+                    >
                         {note}
                     </p>
                 ))}
@@ -227,9 +253,15 @@ export default function SearchPanel({ uuid, buffers, canReplace, onOpen, onRepla
                                         })
                                     }
                                 >
-                                    {closed ? <ChevronRight size={14} aria-hidden /> : <ChevronDown size={14} aria-hidden />}
+                                    {closed ? (
+                                        <ChevronRight size={14} aria-hidden />
+                                    ) : (
+                                        <ChevronDown size={14} aria-hidden />
+                                    )}
                                     <FileIcon size={14} aria-hidden />
-                                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    <span
+                                        style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                                    >
                                         {file.path.slice(1)}
                                     </span>
                                     <small>{file.hits.length}</small>
@@ -248,7 +280,10 @@ export default function SearchPanel({ uuid, buffers, canReplace, onOpen, onRepla
                             </div>
                             {!closed &&
                                 file.hits.map((hit) => (
-                                    <div key={`${hit.line}:${hit.column}`} style={{ display: 'flex', alignItems: 'center' }}>
+                                    <div
+                                        key={`${hit.line}:${hit.column}`}
+                                        style={{ display: 'flex', alignItems: 'center' }}
+                                    >
                                         <button
                                             type={'button'}
                                             className={'gb-search-hit'}
@@ -284,7 +319,17 @@ export default function SearchPanel({ uuid, buffers, canReplace, onOpen, onRepla
                     title={`Replace ${total} ${total === 1 ? 'match' : 'matches'} in ${results.length} ${results.length === 1 ? 'file' : 'files'}?`}
                     description={`“${query}” becomes “${replacement}”. Open files are changed in their tab and stay unsaved; other files are written now. Files that changed since the search, or that would become invalid JSON, YAML, TOML or XML, are left alone.`}
                 >
-                    <ul className={'gb-subcard'} style={{ listStyle: 'none', margin: 0, padding: 8, maxHeight: 200, overflowY: 'auto', fontSize: 13 }}>
+                    <ul
+                        className={'gb-subcard'}
+                        style={{
+                            listStyle: 'none',
+                            margin: 0,
+                            padding: 8,
+                            maxHeight: 200,
+                            overflowY: 'auto',
+                            fontSize: 13,
+                        }}
+                    >
                         {results.map((file) => (
                             <li key={file.path} style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
                                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{file.path}</span>

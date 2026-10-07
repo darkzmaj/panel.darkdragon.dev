@@ -7,7 +7,15 @@ const OUTPUT = 256;
 const KEY_STEP = 12;
 
 /** The exact circular result at a given size, redrawn live, so the user sees what the picture will look like. */
-function Preview({ image, rect, size }: { image: HTMLImageElement | null; rect: { x: number; y: number; size: number } | null; size: number }) {
+function Preview({
+    image,
+    rect,
+    size,
+}: {
+    image: HTMLImageElement | null;
+    rect: { x: number; y: number; size: number } | null;
+    size: number;
+}) {
     const canvas = useRef<HTMLCanvasElement>(null);
     useEffect(() => {
         const context = canvas.current?.getContext('2d');
