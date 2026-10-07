@@ -16,16 +16,16 @@ import Slot from '@/extensions/Slot';
 import NavigationLabel from '@/extensions/NavigationLabel';
 import { ScreenGate } from '@/extensions/screenNavigation';
 
-const icons: Record<string, LucideIcon> = {
-    '': User,
-    profile: User,
-    security: ShieldCheck,
-    access: Users,
-    activity: Activity,
-    api: KeyRound,
-    ssh: Terminal,
-    appearance: Palette,
-};
+const icons = new Map<string, LucideIcon>([
+    ['', User],
+    ['profile', User],
+    ['security', ShieldCheck],
+    ['access', Users],
+    ['activity', Activity],
+    ['api', KeyRound],
+    ['ssh', Terminal],
+    ['appearance', Palette],
+]);
 
 // Gobia order of the account menu; the stock overview page (password, email, two step) is Security there.
 const ORDER = ['profile', '', 'access', 'activity', 'api', 'ssh', 'appearance'];
@@ -44,7 +44,7 @@ export default function AccountLayout() {
                 {[...getAreaNav('account')]
                     .sort((a, b) => rank(a.segment) - rank(b.segment))
                     .map(({ segment, label, exact = false, ...meta }) => {
-                        const Icon = icons[segment] ?? User;
+                        const Icon = icons.get(segment) ?? User;
 
                         return (
                             <ScreenGate key={segment || '/'} screen={meta.screen}>

@@ -53,33 +53,36 @@ import { formatOf, validate, type Problem } from './validation';
 // CodeMirror and the language packs are only fetched once a file is actually opened.
 const CodeEditor = lazy(() => import('./CodeEditor'));
 
+// Not in the DOM typings; the folder picker needs both spellings.
+const DIRECTORY_PICKER = { webkitdirectory: '', directory: '' };
+
 const MIN_SIDEBAR = 200;
 const MAX_SIDEBAR = 520;
 const SIDEBAR_KEY = 'gobia-files:sidebar';
 const WRAP_KEY = 'gobia-files:wrap';
 
-const LANGUAGES: Record<string, string> = {
-    properties: 'Properties',
-    json: 'JSON',
-    yml: 'YAML',
-    yaml: 'YAML',
-    toml: 'TOML',
-    xml: 'XML',
-    html: 'HTML',
-    css: 'CSS',
-    js: 'JavaScript',
-    mjs: 'JavaScript',
-    ts: 'TypeScript',
-    py: 'Python',
-    php: 'PHP',
-    java: 'Java',
-    md: 'Markdown',
-    sql: 'SQL',
-    sh: 'Shell',
-};
+const LANGUAGES = new Map<string, string>([
+    ['properties', 'Properties'],
+    ['json', 'JSON'],
+    ['yml', 'YAML'],
+    ['yaml', 'YAML'],
+    ['toml', 'TOML'],
+    ['xml', 'XML'],
+    ['html', 'HTML'],
+    ['css', 'CSS'],
+    ['js', 'JavaScript'],
+    ['mjs', 'JavaScript'],
+    ['ts', 'TypeScript'],
+    ['py', 'Python'],
+    ['php', 'PHP'],
+    ['java', 'Java'],
+    ['md', 'Markdown'],
+    ['sql', 'SQL'],
+    ['sh', 'Shell'],
+]);
 
 const languageLabel = (name: string) =>
-    LANGUAGES[name.includes('.') ? name.slice(name.lastIndexOf('.') + 1).toLowerCase() : ''] ?? 'Plain text';
+    LANGUAGES.get(name.includes('.') ? name.slice(name.lastIndexOf('.') + 1).toLowerCase() : '') ?? 'Plain text';
 
 type Prompt =
     | { kind: 'invalid'; path: string; problem: Problem }
@@ -643,7 +646,7 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
                     ref={folderPicker}
                     type={'file'}
                     hidden
-                    {...({ webkitdirectory: '', directory: '' } as Record<string, string>)}
+                    {...DIRECTORY_PICKER}
                     onChange={(event) => chooseFiles(event.currentTarget)}
                 />
             </div>

@@ -30,7 +30,7 @@ These are presentation patches. The extension API can replace five components (`
 
 | File | Purpose | Why the extension API cannot do it | Upstream conflict risk | Tests | Removal path |
 | --- | --- | --- | --- | --- | --- |
-| `resources/scripts/index.tsx` | Imports `@/gobia/gobia.css` | No stylesheet slot loads before first paint for the shell | Low (one import) | Vite build | Move the import into a theme CSS file if upstream themes may ship component CSS |
+| `resources/scripts/index.tsx` | Imports `../gobia/gobia.css` (kept outside `resources/scripts` so the upstream custom CSS token spec, which allows only `var()` colours there, does not scan the Gobia component layer) | No stylesheet slot loads before first paint for the shell | Low (one import) | Vite build | Move the import into a theme CSS file if upstream themes may ship component CSS |
 | `router/layouts/AuthenticatedLayout.tsx`, `AdminLayout.tsx`, `AccountLayout.tsx`, `AuthLayout.tsx`, `ServerLayout.tsx` | Replace the horizontal navigation, sub navigation and auth wrapper with the Gobia shell, sidebar and local menu | Layouts are not replaceable components | Medium (layout files change upstream) | Browser comparison with 1.x, `gobia-core` vitest | Upstream "layout" replacement point |
 | `components/NavigationBar.tsx` | No longer rendered (kept so upstream merges stay trivial) | Same | Low | none | Delete after the next upstream sync |
 | `components/auth/LoginFormContainer.tsx` | Gobia sign in screen with the interactive preview | Auth screens have no slot that replaces the frame | Medium | Browser comparison | Upstream auth frame slot |

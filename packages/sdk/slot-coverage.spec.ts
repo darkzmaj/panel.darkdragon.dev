@@ -28,6 +28,8 @@ const anchorFiles = [
     '../../resources/scripts/router/layouts/AdminLayout.tsx',
     '../../resources/scripts/router/layouts/ServerLayout.tsx',
     '../../resources/scripts/components/NavigationBar.tsx',
+    '../../resources/scripts/gobia/shell/GobiaShell.tsx',
+    '../../resources/scripts/gobia/shell/Sidebars.tsx',
     '../../resources/scripts/components/admin/AdminSidebar.tsx',
     '../../resources/scripts/components/dashboard/DashboardContainer.tsx',
     '../../resources/scripts/components/dashboard/AccountOverviewContainer.tsx',

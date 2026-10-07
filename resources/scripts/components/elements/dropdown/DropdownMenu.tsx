@@ -8,7 +8,7 @@ import Icon from '@/components/elements/Icon';
 const positionerClass = 'z-[9999] outline-hidden';
 
 const popupClass =
-    'min-w-52 bg-card border border-border/55 rounded-md shadow-[var(--gb-shadow-pop)] p-1.5 text-sm text-foreground ' +
+    'min-w-52 bg-card border border-border/55 rounded-md shadow-lg p-1.5 text-sm text-foreground ' +
     'outline-hidden origin-[var(--transform-origin)] transition duration-100 ' +
     'data-[starting-style]:opacity-0 data-[starting-style]:scale-95 ' +
     'data-[ending-style]:opacity-0 data-[ending-style]:scale-95';

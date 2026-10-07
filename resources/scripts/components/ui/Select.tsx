@@ -73,7 +73,7 @@ const triggerClass =
     'absolute right-0 top-0 flex h-full w-10 items-center justify-center border-0 bg-transparent p-0 text-muted-foreground [&_svg]:h-4 [&_svg]:w-4 [&_svg]:shrink-0';
 const positionerClass = 'z-[99999] min-w-[var(--anchor-width)] outline-none';
 const popupClass = [
-    'bg-card border border-border/55 rounded-md shadow-[var(--gb-shadow-pop)] p-1.5 text-sm text-foreground',
+    'bg-card border border-border/55 rounded-md shadow-lg p-1.5 text-sm text-foreground',
     'w-[var(--anchor-width)] max-w-[var(--available-width)] max-h-[min(18rem,var(--available-height))]',
 ].join(' ');
 const listClass = 'max-h-72 overflow-y-auto overscroll-contain outline-none';

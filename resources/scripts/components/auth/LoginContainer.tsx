@@ -58,7 +58,12 @@ const LoginContainer = () => {
     const isSubmitting = useStore(form.store, (state) => state.isSubmitting) || loginMutation.isPending;
 
     return (
-        <LoginFormContainer form={form} title={'Login'} subtitle={'Sign in to your Gobia account.'} className={'w-full flex'}>
+        <LoginFormContainer
+            form={form}
+            title={'Login'}
+            subtitle={'Sign in to your Gobia account.'}
+            className={'w-full flex'}
+        >
             <form.AppField
                 name={'username'}
                 validators={{
@@ -88,9 +93,7 @@ const LoginContainer = () => {
             <div className={'mt-6 text-center'}>
                 <Link
                     to={'/auth/password'}
-                    className={
-                        'text-sm text-muted-foreground no-underline hover:text-foreground'
-                    }
+                    className={'text-sm text-muted-foreground no-underline hover:text-foreground'}
                 >
                     Forgot password?
                 </Link>

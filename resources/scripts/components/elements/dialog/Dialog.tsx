@@ -13,12 +13,12 @@ const focusableSelector =
 const dialogContainerClass = 'flex min-h-full items-center justify-center p-4 text-center';
 const closeIconClass = 'w-4 h-4';
 const backdropClass = [
-    'fixed inset-0 z-40 bg-[var(--gb-overlay)] backdrop-blur-[6px] transition-opacity duration-100 ease-out',
+    'fixed inset-0 z-40 bg-background/60 backdrop-blur-sm transition-opacity duration-100 ease-out',
     'data-[starting-style]:opacity-0 data-[ending-style]:opacity-0 data-[ending-style]:ease-in',
 ].join(' ');
 const panelClass = [
-    'relative flex flex-col overflow-hidden bg-card rounded-[var(--gb-radius-xl)] max-w-[520px] w-full mx-auto text-left',
-    'border border-border/55 shadow-[var(--gb-shadow-modal)]',
+    'relative flex flex-col overflow-hidden bg-card rounded-2xl max-w-xl w-full mx-auto text-left',
+    'border border-border/55 shadow-2xl',
     'max-h-[calc(100dvh-2rem)] transition duration-100 ease-out',
     'data-[starting-style]:opacity-0 data-[starting-style]:scale-95',
     'data-[ending-style]:opacity-0 data-[ending-style]:scale-95 data-[ending-style]:ease-in',

@@ -76,12 +76,7 @@ export default function LoginCheckpointContainer() {
                 </button>
             </div>
             <div className={'mt-6 text-center'}>
-                <Link
-                    to={'/auth/login'}
-                    className={
-                        'text-sm text-muted-foreground no-underline hover:text-foreground'
-                    }
-                >
+                <Link to={'/auth/login'} className={'text-sm text-muted-foreground no-underline hover:text-foreground'}>
                     Return to Login
                 </Link>
             </div>

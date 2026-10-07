@@ -1,6 +1,7 @@
 import type React from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { isString } from '@/lib/objects';
 
 interface Props {
     icon?: LucideIcon;
@@ -22,7 +23,7 @@ const TitledGreyBox = ({ icon: Icon, title, children, className, contentClassNam
                 borderBottom: '1px solid var(--gb-border-muted)',
             }}
         >
-            {typeof title === 'string' ? (
+            {isString(title) ? (
                 <>
                     {Icon && <Icon aria-hidden width={16} height={16} style={{ color: 'var(--gb-text-2)' }} />}
                     <span className={'gb-eyebrow'}>{title}</span>

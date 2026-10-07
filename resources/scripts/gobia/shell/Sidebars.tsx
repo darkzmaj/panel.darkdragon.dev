@@ -1,4 +1,4 @@
-import type { ClientServerResource } from '@/api/generated/types.gen';
+import type { AccountServer } from '@/api/account/servers/queries';
 import {
     Activity,
     Archive,
@@ -60,25 +60,25 @@ export function DefaultSidebar() {
     );
 }
 
-const serverIcons: Record<string, LucideIcon> = {
-    '': SquareTerminal,
-    files: Folder,
-    databases: Database,
-    schedules: Clock,
-    users: Users,
-    backups: Archive,
-    network: Network,
-    startup: Play,
-    settings: Settings,
-    activity: Activity,
-};
+const serverIcons = new Map<string, LucideIcon>([
+    ['', SquareTerminal],
+    ['files', Folder],
+    ['databases', Database],
+    ['schedules', Clock],
+    ['users', Users],
+    ['backups', Archive],
+    ['network', Network],
+    ['startup', Play],
+    ['settings', Settings],
+    ['activity', Activity],
+]);
 
 interface ServerSidebarProps {
     id: string;
     name: string;
     node: string;
     internalId: number;
-    server: ClientServerResource;
+    server: AccountServer;
 }
 
 /** Back link, instance card and the instance pages. */
@@ -125,8 +125,12 @@ export function ServerSidebar({ id, name, node, internalId, server }: ServerSide
             <Slot name={'server.navigation.before'} data={server} />
             {getAreaNav('server').map(({ segment, label, exact, permission, ...meta }) => {
                 const link = (
-                    <NavItem to={to(segment)} exact={exact} icon={serverIcons[segment]}>
-                        <NavigationLabel label={label} {...meta} icon={serverIcons[segment] ? undefined : meta.icon} />
+                    <NavItem to={to(segment)} exact={exact} icon={serverIcons.get(segment)}>
+                        <NavigationLabel
+                            label={label}
+                            {...meta}
+                            icon={serverIcons.get(segment) ? undefined : meta.icon}
+                        />
                     </NavItem>
                 );
 
@@ -155,23 +159,23 @@ export function ServerSidebar({ id, name, node, internalId, server }: ServerSide
     );
 }
 
-const adminIcons: Record<string, LucideIcon> = {
-    '': LayoutDashboard,
-    activity: Activity,
-    users: Users,
-    nodes: Network,
-    locations: MapPin,
-    servers: Server,
-    templates: Copy,
-    databases: Database,
-    mounts: FolderTree,
-    eggs: Egg,
-    tags: Tag,
-    extensions: Blocks,
-    api: KeyRound,
-    settings: Settings,
-    updates: RefreshCw,
-};
+const adminIcons = new Map<string, LucideIcon>([
+    ['', LayoutDashboard],
+    ['activity', Activity],
+    ['users', Users],
+    ['nodes', Network],
+    ['locations', MapPin],
+    ['servers', Server],
+    ['templates', Copy],
+    ['databases', Database],
+    ['mounts', FolderTree],
+    ['eggs', Egg],
+    ['tags', Tag],
+    ['extensions', Blocks],
+    ['api', KeyRound],
+    ['settings', Settings],
+    ['updates', RefreshCw],
+]);
 
 // The Gobia admin groups. Entries a group does not name (extension screens) land in System.
 const adminGroups: Array<{ label: string; segments: string[] }> = [
@@ -190,8 +194,12 @@ export function AdminSidebar() {
 
     const render = (entry: AreaNavEntry) => (
         <ScreenGate key={entry.segment || '/'} screen={entry.screen}>
-            <NavItem to={hrefFor(entry)} exact={entry.exact ?? entry.segment === ''} icon={adminIcons[entry.segment]}>
-                <NavigationLabel {...entry} icon={adminIcons[entry.segment] ? undefined : entry.icon} />
+            <NavItem
+                to={hrefFor(entry)}
+                exact={entry.exact ?? entry.segment === ''}
+                icon={adminIcons.get(entry.segment)}
+            >
+                <NavigationLabel {...entry} icon={adminIcons.get(entry.segment) ? undefined : entry.icon} />
             </NavItem>
         </ScreenGate>
     );

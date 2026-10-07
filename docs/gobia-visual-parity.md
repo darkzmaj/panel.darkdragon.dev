@@ -9,7 +9,7 @@ No screenshots were attached to the task, so the running 1.x application was the
 | Layer | Where | What it does |
 | --- | --- | --- |
 | Design tokens | `themes/gobia/tokens.css` (published by `php artisan p:theme:apply gobia`) | Colour roles, radius, fonts, layout widths for the 2.0 token system (`:root` light, `.dark` dark) |
-| Component classes | `resources/scripts/gobia/gobia.css` | The 1.x `gb-*` classes (shell, cards, buttons, lists, filter bar, tree, tabs, gauges, auth). Token driven: neutral and brand ramps (`--n-*`, `--p-*`) are defined once for light and `.dark` |
+| Component classes | `resources/gobia/gobia.css` | The 1.x `gb-*` classes (shell, cards, buttons, lists, filter bar, tree, tabs, gauges, auth). Token driven: neutral and brand ramps (`--n-*`, `--p-*`) are defined once for light and `.dark` |
 | Shell | `resources/scripts/gobia/shell/*` | Top bar, sidebar, drawer, footer, profile menu. Each area (dashboard, server, admin) fills the sidebar through `<SidebarContent>` |
 | Primitives restyled | `Button`, `Label`, form controls, `Select`, `Checkbox`, `Dialog`, `DropdownMenu`, `ContentBox`, `TitledGreyBox`, `PageHeading`, `ServerContentBlock`, `DataTable`, `AppToaster`, `Alert`, `Empty` | One change restyles every page that uses them |
 | Extensions | `extensions/gobia-core` (dashboard, create instance, overview, appearance, access, updates, profile), `gobia-files` (workspace), `gobia-templates` | Use the `gb-*` classes from core and the SDK components |

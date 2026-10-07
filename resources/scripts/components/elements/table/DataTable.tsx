@@ -50,10 +50,7 @@ export default function DataTable<TData extends RowData>({
     return (
         <div
             aria-busy={isFetching}
-            className={cn(
-                '@container overflow-hidden rounded-[var(--gb-radius-lg)] border border-border/55 bg-card',
-                className
-            )}
+            className={cn('@container overflow-hidden rounded-xl border border-border/55 bg-card', className)}
         >
             {rows.length === 0 ? (
                 <div className={cn('flex transition-opacity', isFetching && 'opacity-55')}>
@@ -77,7 +74,7 @@ export default function DataTable<TData extends RowData>({
                                             scope={'col'}
                                             aria-sort={ariaSort(table, header.column)}
                                             className={cn(
-                                                'h-11 whitespace-nowrap px-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground',
+                                                'h-11 whitespace-nowrap px-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground',
                                                 header.column.columnDef.meta?.headerClassName
                                             )}
                                         >
