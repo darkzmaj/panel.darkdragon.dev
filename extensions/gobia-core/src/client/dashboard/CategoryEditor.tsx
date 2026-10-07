@@ -20,7 +20,7 @@ async function fetchAll(category?: number): Promise<Named[]> {
     for (let page = 1; ; page++) {
         const result = (
             await http.get<InstancePage>(`${BASE}/servers`, {
-                params: { view: 'all', per_page: 50, page, ...(category ? { category } : {}) },
+                params: { view: 'all', per_page: 50, page, category },
             })
         ).data;
         found.push(...result.data.map(({ uuid, name }) => ({ uuid, name })));

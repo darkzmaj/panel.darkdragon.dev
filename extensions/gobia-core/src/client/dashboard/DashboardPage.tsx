@@ -127,7 +127,7 @@ export default function DashboardPage({ model }: ReplacementProps<'dashboard.pag
 
     // A category that was deleted (here or elsewhere) must never stay selected: its list would be empty for no visible reason.
     useEffect(() => {
-        if (typeof category === 'number' && summary && !summary.categories.some((item) => item.id === category)) {
+        if (category !== null && category !== 'none' && summary && !summary.categories.some((item) => item.id === category)) {
             setCategory(null);
             setPage(1);
         }
