@@ -26,15 +26,15 @@ const SettingsContainer = () => {
                     <Can action={'file.sftp'}>
                         <TitledGreyBox title={'SFTP Details'} className={'mb-6 md:mb-10'}>
                             <div>
-                                <Label>Server Address</Label>
+                                <Label htmlFor={'sftp-address'}>Server Address</Label>
                                 <CopyOnClick text={`sftp://${ip(sftp.ip)}:${sftp.port}`}>
-                                    <TextInput type={'text'} value={`sftp://${ip(sftp.ip)}:${sftp.port}`} readOnly />
+                                    <TextInput id={'sftp-address'} type={'text'} value={`sftp://${ip(sftp.ip)}:${sftp.port}`} readOnly />
                                 </CopyOnClick>
                             </div>
                             <div className={'mt-6'}>
-                                <Label>Username</Label>
+                                <Label htmlFor={'sftp-username'}>Username</Label>
                                 <CopyOnClick text={`${username}.${id}`}>
-                                    <TextInput type={'text'} value={`${username}.${id}`} readOnly />
+                                    <TextInput id={'sftp-username'} type={'text'} value={`${username}.${id}`} readOnly />
                                 </CopyOnClick>
                             </div>
                             <div className={'mt-6 flex items-center'}>

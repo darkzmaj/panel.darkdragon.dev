@@ -12,7 +12,12 @@ import { fileURLToPath } from 'node:url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const bin = (name) => join(root, 'node_modules', '.bin', process.platform === 'win32' ? `${name}.cmd` : name);
 const extensions = readdirSync(join(root, 'extensions'), { withFileTypes: true })
-    .filter((entry) => entry.isDirectory() && entry.name.startsWith('gobia-') && existsSync(join(root, 'extensions', entry.name, 'extension.json')))
+    .filter(
+        (entry) =>
+            entry.isDirectory() &&
+            entry.name.startsWith('gobia-') &&
+            existsSync(join(root, 'extensions', entry.name, 'extension.json'))
+    )
     .map((entry) => entry.name);
 
 function run(command, args, cwd = root) {
@@ -32,9 +37,19 @@ for (const name of extensions) {
 }
 
 const tasks = {
-    build: () => extensions.forEach((name) => existsSync(join(root, 'extensions', name, 'vite.config.mjs')) && run(bin('vite'), ['build'], join(root, 'extensions', name))),
+    build: () =>
+        extensions.forEach(
+            (name) =>
+                existsSync(join(root, 'extensions', name, 'vite.config.mjs')) &&
+                run(bin('vite'), ['build'], join(root, 'extensions', name))
+        ),
     test: () => run(bin('vitest'), ['run', '--config', 'vitest.gobia.config.ts']),
-    tsc: () => extensions.forEach((name) => existsSync(join(root, 'extensions', name, 'tsconfig.json')) && run(bin('tsc'), ['-p', join('extensions', name, 'tsconfig.json')])),
+    tsc: () =>
+        extensions.forEach(
+            (name) =>
+                existsSync(join(root, 'extensions', name, 'tsconfig.json')) &&
+                run(bin('tsc'), ['-p', join('extensions', name, 'tsconfig.json')])
+        ),
     lint: () => {
         const sources = extensions.map((name) => join('extensions', name, 'src', 'client'));
         run(bin('oxfmt'), ['--check', ...sources]);

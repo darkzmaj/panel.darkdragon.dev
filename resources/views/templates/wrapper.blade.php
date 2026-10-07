@@ -2,6 +2,16 @@
 {{-- Dark is the shipping theme; the React SPA's semantic tokens key off this class (assets/tailwind.css). --}}
 <html class="dark" lang="{{ str_replace('_', '-', app()->getLocale()) }}">
     <head>
+        {{-- Gobia: apply the saved colour scheme before first paint so neither theme flashes (gobia-core keeps the same key). --}}
+        <script>
+            (function () {
+                try {
+                    var s = localStorage.getItem('gobia:scheme');
+                    var d = s === 'dark' || (s !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
+                    document.documentElement.classList.toggle('dark', d);
+                } catch (e) {}
+            })();
+        </script>
         <title>{{ config('app.name', 'Pterodactyl') }}</title>
 
         @section('meta')

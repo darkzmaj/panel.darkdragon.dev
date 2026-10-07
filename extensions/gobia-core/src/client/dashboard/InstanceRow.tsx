@@ -230,7 +230,7 @@ function InstanceRow({ instance, dragging, drag, onColor, onCategories }: Props)
                         <GripVertical aria-hidden />
                     </button>
                 </div>
-                <PanelLink destination={destination} className={'gb-server-row'} aria-label={instance.name}>
+                <PanelLink destination={destination} className={'gb-server-row'}>
                     <span className={'gb-file-icon'} style={iconStyle} aria-hidden>
                         <ServerIcon />
                     </span>
