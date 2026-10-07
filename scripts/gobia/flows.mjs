@@ -13,6 +13,9 @@ function withScreenshot(page, check) {
             } catch (error) {
                 const name = label.replace(/[^a-z0-9]+/gi, '-').toLowerCase();
                 await page.screenshot({ path: `tests/visual/actual/flow-${name}.png` }).catch(() => undefined);
+                // A dialog left open by the failed step must not fail every step after it.
+                await page.keyboard.press('Escape').catch(() => undefined);
+                await page.keyboard.press('Escape').catch(() => undefined);
                 throw error;
             }
         });
@@ -124,7 +127,8 @@ export async function dashboardFlows({ context, baseUrl, check: plain }) {
     await check('icon colour: choose, apply, reset', async () => {
         await rows(page).first().click({ button: 'right' });
         await page.getByRole('menuitem', { name: /Change icon colour/ }).click();
-        await page.getByRole('button', { name: 'Purple' }).click();
+        // A colour the row does not have yet, so Apply has something to save.
+        await page.getByRole('button', { name: 'Orange' }).click();
         await page.getByRole('button', { name: 'Apply' }).click();
         await page.getByRole('dialog').waitFor({ state: 'detached' });
         await rows(page).first().click({ button: 'right' });
@@ -132,6 +136,35 @@ export async function dashboardFlows({ context, baseUrl, check: plain }) {
         await page.getByRole('button', { name: 'Default' }).click();
         await page.getByRole('button', { name: 'Apply' }).click();
         await page.getByRole('dialog').waitFor({ state: 'detached' });
+    });
+
+    const order = () =>
+        page.locator('.gb-server-item').evaluateAll((items) => items.map((item) => item.dataset.instance));
+    await check('reorder: a mouse drag moves the row, it survives a reload, the keyboard puts it back', async () => {
+        const before = await order();
+        if (before.length < 2) return;
+        const grip = page.locator('.gb-server-item').first().locator('.gb-grip button');
+        const box = await grip.boundingBox();
+        const row = await page.locator('.gb-server-item').first().boundingBox();
+        await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+        await page.mouse.down();
+        for (let step = 1; step <= 8; step++) {
+            await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2 + (row.height * 1.3 * step) / 8);
+            await page.waitForTimeout(20);
+        }
+        await page.mouse.up();
+        await page.waitForTimeout(500);
+        const dragged = await order();
+        if (dragged[0] !== before[1] || dragged[1] !== before[0]) throw new Error('the row did not move');
+        await page.reload();
+        await rows(page).first().waitFor();
+        const reloaded = await order();
+        if (reloaded[0] !== before[1]) throw new Error('the new order was not kept');
+        await page.locator('.gb-server-item').nth(1).locator('.gb-grip button').focus();
+        await page.keyboard.press('ArrowUp');
+        await page.waitForTimeout(600);
+        if (JSON.stringify(await order()) !== JSON.stringify(before))
+            throw new Error('the keyboard did not restore the order');
     });
 
     await check('context menu: Escape closes it and focus returns', async () => {
@@ -299,4 +332,81 @@ export async function fileFlows({ context, baseUrl, check: plain }) {
         }
     });
     await page.close();
+}
+
+/** Touch behaviour of the instance list: a swipe scrolls, a hold lifts, a held drag reorders, a long hold opens actions. */
+export async function mobileFlows({ browser, login, scheme, baseUrl, check: plain }) {
+    const phone = await browser.newContext({
+        viewport: { width: 390, height: 844 },
+        colorScheme: scheme,
+        hasTouch: true,
+        isMobile: true,
+    });
+    await login(phone);
+    const page = await phone.newPage();
+    const check = withScreenshot(page, plain);
+    await page.goto(baseUrl + '/');
+    await rows(page).first().waitFor({ timeout: 30000 });
+    const client = await phone.newCDPSession(page);
+    const touch = (type, x, y) =>
+        client.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] });
+    const names = () =>
+        page.locator('.gb-server-item').evaluateAll((items) => items.map((item) => item.dataset.instance));
+    const centre = async (index) => {
+        const box = await page.locator('.gb-server-item').nth(index).boundingBox();
+        return { x: box.x + box.width / 2, y: box.y + box.height / 2, height: box.height };
+    };
+
+    await check('touch: a quick swipe does not lift or reorder a row', async () => {
+        const before = await names();
+        const { x, y } = await centre(0);
+        await touch('touchStart', x, y);
+        await page.waitForTimeout(60);
+        await touch('touchMove', x, y + 40);
+        await page.waitForTimeout(60);
+        await touch('touchEnd');
+        await page.waitForTimeout(200);
+        if ((await page.locator('.gb-server-item.lifted, .gb-server-item.dragging').count()) !== 0)
+            throw new Error('a row lifted');
+        if (JSON.stringify(await names()) !== JSON.stringify(before)) throw new Error('the order changed');
+    });
+
+    await check('touch: holding arms then lifts, and dragging down reorders', async () => {
+        const before = await names();
+        if (before.length < 2) return;
+        const first = await centre(0);
+        await touch('touchStart', first.x, first.y);
+        await page.locator('.gb-server-item.arming').first().waitFor({ timeout: 2000 });
+        await page.locator('.gb-server-item.lifted').first().waitFor({ timeout: 3000 });
+        for (let step = 1; step <= 6; step++) {
+            await touch('touchMove', first.x, first.y + (first.height * 1.2 * step) / 6);
+            await page.waitForTimeout(30);
+        }
+        await touch('touchEnd');
+        await page.waitForTimeout(700);
+        const after = await names();
+        if (after[0] !== before[1] || after[1] !== before[0]) throw new Error(`not reordered: ${after.join(', ')}`);
+        // Put the order back for the next run.
+        const moved = await centre(0);
+        await touch('touchStart', moved.x, moved.y);
+        await page.locator('.gb-server-item.lifted').first().waitFor({ timeout: 3000 });
+        for (let step = 1; step <= 6; step++) {
+            await touch('touchMove', moved.x, moved.y + (moved.height * 1.2 * step) / 6);
+            await page.waitForTimeout(30);
+        }
+        await touch('touchEnd');
+        await page.waitForTimeout(700);
+        if (JSON.stringify(await names()) !== JSON.stringify(before)) throw new Error('could not restore the order');
+    });
+
+    await check('touch: holding without moving opens the actions', async () => {
+        const { x, y } = await centre(0);
+        await touch('touchStart', x, y);
+        await page.getByRole('menu').waitFor({ timeout: 5000 });
+        await touch('touchEnd');
+        await page.getByRole('menuitem', { name: /Change icon colour/ }).waitFor();
+        await page.keyboard.press('Escape');
+        await page.getByRole('menu').waitFor({ state: 'detached' });
+    });
+    await phone.close();
 }
