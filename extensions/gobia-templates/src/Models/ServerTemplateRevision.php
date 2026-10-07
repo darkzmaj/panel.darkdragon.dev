@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $template_id
  * @property int $revision
  * @property array $snapshot
+ * @property int|null $created_by
  * @property \Illuminate\Support\Carbon $created_at
  */
 class ServerTemplateRevision extends Model
@@ -21,5 +22,5 @@ class ServerTemplateRevision extends Model
 
     protected $guarded = ['id'];
 
-    protected $casts = ['id' => 'int', 'template_id' => 'int', 'revision' => 'int', 'snapshot' => 'array'];
+    protected $casts = ['id' => 'int', 'template_id' => 'int', 'revision' => 'int', 'snapshot' => 'array', 'created_by' => 'int'];
 }

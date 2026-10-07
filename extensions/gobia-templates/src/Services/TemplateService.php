@@ -11,6 +11,7 @@ use GobiaTemplates\Models\ServerTemplateVariable;
 use GobiaTemplates\Models\TemplateInstance;
 use Illuminate\Contracts\Validation\Factory as ValidationFactory;
 use Illuminate\Database\ConnectionInterface;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Pterodactyl\Exceptions\DisplayException;
@@ -435,6 +436,7 @@ class TemplateService
             'template_id' => $template->id,
             'revision' => $template->revision,
             'snapshot' => $this->snapshot($template->refresh()),
+            'created_by' => Auth::id(),
         ]);
     }
 

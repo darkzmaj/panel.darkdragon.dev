@@ -130,7 +130,26 @@ export interface FilesResponse {
     limits: { max_file_bytes: number; max_total_bytes: number; max_files: number; max_edit_bytes: number };
 }
 
+export interface RevisionRow {
+    revision: number;
+    created_at: string | null;
+    created_by: { id: number; username: string | null } | null;
+    current: boolean;
+    instances: number;
+    summary: {
+        memory: number | null;
+        disk: number | null;
+        cpu: number | null;
+        docker_image: string | null;
+        files: number;
+        bytes: number;
+        variables: number;
+    };
+    changes: string[];
+}
+
 export const keys = {
+    revisions: (id: number) => ['gobia-templates', 'revisions', id] as const,
     list: ['gobia-templates', 'list'] as const,
     options: ['gobia-templates', 'options'] as const,
     detail: (id: number) => ['gobia-templates', 'detail', id] as const,
@@ -153,6 +172,9 @@ export const toggleTemplate = async (id: number) =>
 export const deleteTemplate = async (id: number) => http.delete(`${ADMIN}/templates/${id}`);
 export const publishTemplate = async (id: number) =>
     (await http.post<{ revision: number; created_revision: boolean }>(`${ADMIN}/templates/${id}/publish`)).data;
+
+export const fetchRevisions = async (id: number) =>
+    (await http.get<{ data: RevisionRow[] }>(`${ADMIN}/templates/${id}/revisions`)).data.data;
 
 export const fetchFiles = async (id: number) => (await http.get<FilesResponse>(`${ADMIN}/templates/${id}/files`)).data;
 export const readFile = async (id: number, path: string) =>

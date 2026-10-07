@@ -182,7 +182,41 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
         return () => query.removeEventListener('change', change);
     }, []);
 
-    const uploads = useUploadQueue(uuid, () => void tree.reload([...latest.current.tree.expanded], true));
+    // Uploads appear in the explorer as they land; only the folders they touched are fetched again when the queue idles.
+    const touched = useRef(new Set<string>());
+    const insert = (directory: string, entry: TreeEntry) => {
+        touched.current.add(directory);
+        tree.patch(directory, (items) =>
+            [...items.filter((item) => item.path !== entry.path), entry].sort((a, b) =>
+                a.directory === b.directory ? a.name.localeCompare(b.name, undefined, { numeric: true }) : a.directory ? -1 : 1
+            )
+        );
+    };
+    const uploads = useUploadQueue(uuid, {
+        onFolder: (directory, name) =>
+            insert(directory, {
+                name,
+                path: join(directory, name),
+                directory: true,
+                size: 0,
+                mimetype: 'inode/directory',
+                modifiedAt: new Date().toISOString(),
+            }),
+        onFile: (directory, file) =>
+            insert(directory, {
+                name: file.name,
+                path: join(directory, file.name),
+                directory: false,
+                size: file.size,
+                mimetype: file.type || 'application/octet-stream',
+                modifiedAt: new Date().toISOString(),
+            }),
+        onSettled: () => {
+            const directories = [...touched.current];
+            touched.current.clear();
+            void tree.reload(directories);
+        },
+    });
     const addUploads = uploads.add;
 
     useEffect(() => saveTabs(uuid, state), [uuid, state]);

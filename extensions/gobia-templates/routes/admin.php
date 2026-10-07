@@ -16,6 +16,8 @@ Route::post('/templates/{template}/duplicate', [T::class, 'duplicate'])->whereNu
 Route::post('/templates/{template}/toggle', [T::class, 'toggle'])->whereNumber('template')->name('toggle');
 Route::post('/templates/{template}/publish', [T::class, 'publish'])->whereNumber('template')->name('publish');
 
+Route::get('/templates/{template}/revisions', [T::class, 'revisions'])->whereNumber('template')->name('revisions');
+
 Route::get('/templates/{template}/files', [T::class, 'files'])->whereNumber('template')->name('files');
 Route::get('/templates/{template}/files/content', [T::class, 'readFile'])->whereNumber('template')->name('files.read');
 // File content is exact; the provider exempts this request from TrimStrings.

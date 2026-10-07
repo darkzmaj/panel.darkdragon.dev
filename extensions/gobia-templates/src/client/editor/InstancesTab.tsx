@@ -16,7 +16,7 @@ export default function InstancesTab({ id, detail }: { id: number; detail: Detai
     });
 
     return (
-        <div className={'gt:grid gt:gap-6 gt:lg:grid-cols-[2fr_1fr]'}>
+        <div>
             <section aria-label={'Instances'}>
                 <h2 className={'gt:mb-2 gt:text-sm gt:font-semibold gt:uppercase gt:text-muted-foreground'}>
                     Latest instances
@@ -54,24 +54,6 @@ export default function InstancesTab({ id, detail }: { id: number; detail: Detai
                         </li>
                     )}
                 </ul>
-            </section>
-            <section aria-label={'Revisions'}>
-                <h2 className={'gt:mb-2 gt:text-sm gt:font-semibold gt:uppercase gt:text-muted-foreground'}>
-                    Revisions
-                </h2>
-                <ul className={'gt:flex gt:flex-col gt:gap-1 gt:text-sm'}>
-                    {detail.revisions.map((revision) => (
-                        <li key={revision.revision} className={'gt:flex gt:justify-between'}>
-                            <span>Revision {revision.revision}</span>
-                            <span className={'gt:text-xs gt:text-muted-foreground'}>
-                                {revision.created_at?.slice(0, 16).replace('T', ' ')}
-                            </span>
-                        </li>
-                    ))}
-                </ul>
-                <p className={'gt:mt-3 gt:text-xs gt:text-muted-foreground'}>
-                    Published revisions never change. Servers keep the revision they were created from.
-                </p>
             </section>
         </div>
     );

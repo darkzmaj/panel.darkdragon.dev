@@ -111,6 +111,89 @@ class AdminTemplateController
         return new JsonResponse(['status' => 'deleted']);
     }
 
+    #[Endpoint('List template revisions', 'Every published revision, newest first, with who made it, what it contains, what changed from the one before and how many servers were created from it.')]
+    public function revisions(ServerTemplate $template): JsonResponse
+    {
+        $revisions = $template->revisions()->limit(200)->get();
+        $pinned = TemplateInstance::query()
+            ->where('template_id', $template->id)
+            ->where('state', '!=', TemplateInstance::STATE_FAILED)
+            ->selectRaw('template_revision, count(*) as total')
+            ->groupBy('template_revision')
+            ->pluck('total', 'template_revision');
+        $authors = User::query()->whereIn('id', $revisions->pluck('created_by')->filter())->pluck('username', 'id');
+
+        $data = [];
+        foreach ($revisions as $index => $revision) {
+            $snapshot = $revision->snapshot;
+            $files = $snapshot['files'] ?? [];
+            $data[] = [
+                'revision' => $revision->revision,
+                'created_at' => $revision->created_at?->toIso8601String(),
+                'created_by' => $revision->created_by === null ? null : ['id' => $revision->created_by, 'username' => $authors[$revision->created_by] ?? null],
+                'current' => $revision->revision === $template->revision,
+                'instances' => (int) ($pinned[$revision->revision] ?? 0),
+                'summary' => [
+                    'memory' => $snapshot['settings']['memory'] ?? null,
+                    'disk' => $snapshot['settings']['disk'] ?? null,
+                    'cpu' => $snapshot['settings']['cpu'] ?? null,
+                    'docker_image' => $snapshot['settings']['docker_image'] ?? null,
+                    'files' => count($files),
+                    'bytes' => array_sum(array_column($files, 'size')),
+                    'variables' => count($snapshot['variables'] ?? []),
+                ],
+                'changes' => $this->describeChanges($revisions[$index + 1]->snapshot ?? null, $snapshot),
+            ];
+        }
+
+        return new JsonResponse(['data' => $data]);
+    }
+
+    /**
+     * One short line per kind of difference from the previous revision.
+     *
+     * @param  array<string, mixed>|null  $previous
+     * @param  array<string, mixed>  $snapshot
+     * @return string[]
+     */
+    private function describeChanges(?array $previous, array $snapshot): array
+    {
+        if ($previous === null) {
+            return ['First revision'];
+        }
+
+        $changes = [];
+        $labels = ['memory' => 'Memory', 'disk' => 'Disk', 'cpu' => 'CPU', 'swap' => 'Swap', 'docker_image' => 'Docker image', 'startup' => 'Startup command', 'egg_id' => 'Egg', 'placement_mode' => 'Placement'];
+        foreach ($labels as $key => $label) {
+            $before = $previous['settings'][$key] ?? null;
+            $after = $snapshot['settings'][$key] ?? null;
+            if ($before !== $after) {
+                $changes[] = in_array($key, ['startup', 'docker_image'], true) ? $label.' changed' : sprintf('%s %s to %s', $label, $before ?? 'unset', $after ?? 'unset');
+            }
+        }
+        $other = array_diff(array_keys(array_diff_assoc($snapshot['settings'] ?? [], $previous['settings'] ?? [])), array_keys($labels));
+        if ($other !== []) {
+            $changes[] = count($other).' other '.(count($other) === 1 ? 'setting' : 'settings').' changed';
+        }
+        if (($previous['variables'] ?? []) !== ($snapshot['variables'] ?? [])) {
+            $changes[] = 'Variables changed';
+        }
+        if (($previous['allowed_nodes'] ?? []) !== ($snapshot['allowed_nodes'] ?? [])) {
+            $changes[] = 'Allowed nodes changed';
+        }
+
+        $before = array_column($previous['files'] ?? [], 'sha256', 'path');
+        $after = array_column($snapshot['files'] ?? [], 'sha256', 'path');
+        $added = count(array_diff_key($after, $before));
+        $removed = count(array_diff_key($before, $after));
+        $modified = count(array_filter($after, fn ($hash, $path): bool => isset($before[$path]) && $before[$path] !== $hash, ARRAY_FILTER_USE_BOTH));
+        if ($added + $removed + $modified > 0) {
+            $changes[] = sprintf('Files: %d added, %d changed, %d removed', $added, $modified, $removed);
+        }
+
+        return $changes === [] ? ['No visible changes'] : $changes;
+    }
+
     /* ---- Files: the working tree. publish() turns it into a revision. ---- */
 
     #[Endpoint('List working files')]

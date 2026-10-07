@@ -91,12 +91,18 @@ export function foldersToCreate(picked: readonly PickedFile[]): string[] {
 
 const base = (uuid: string) => `/api/client/servers/${uuid}/files`;
 
-async function ensureFolders(uuid: string, root: string, folders: readonly string[]): Promise<void> {
+async function ensureFolders(
+    uuid: string,
+    root: string,
+    folders: readonly string[],
+    created: (directory: string, name: string) => void
+): Promise<void> {
     for (const folder of folders) {
         const slash = folder.lastIndexOf('/');
         const parent = slash < 0 ? root : join(root, folder.slice(0, slash));
         try {
             await http.post(`${base(uuid)}/create-folder`, { root: parent, name: folder.slice(slash + 1) });
+            created(parent, folder.slice(slash + 1));
         } catch {
             // An existing folder is fine; a real failure surfaces when the first file inside it is uploaded.
         }
@@ -126,17 +132,26 @@ function send(url: string, directory: string, file: File, onProgress: (loaded: n
 const CONCURRENCY = 3;
 let sequence = 0;
 
-/** Queue with progress, cancel and retry. `onSettled` runs once the queue goes idle, to refresh listings. */
-export function useUploadQueue(uuid: string, onSettled: () => void) {
+export interface UploadHandlers {
+    /** A folder was created for an upload; the explorer shows it at once. */
+    onFolder: (directory: string, name: string) => void;
+    /** One file finished; the explorer shows it at once. */
+    onFile: (directory: string, file: File) => void;
+    /** The queue went idle: a last, precise reconciliation with the server. */
+    onSettled: () => void;
+}
+
+/** Queue with progress, cancel and retry. */
+export function useUploadQueue(uuid: string, handlers: UploadHandlers) {
     const [items, dispatch] = useReducer(uploadReducer, []);
     const latest = useRef(items);
     const controllers = useRef(new Map<number, AbortController>());
     const active = useRef(0);
-    const settled = useRef(onSettled);
+    const callbacks = useRef(handlers);
 
     useEffect(() => {
         latest.current = items;
-        settled.current = onSettled;
+        callbacks.current = handlers;
     });
     useEffect(() => {
         const open = controllers.current;
@@ -166,6 +181,7 @@ export function useUploadQueue(uuid: string, onSettled: () => void) {
                         controller.signal
                     );
                     dispatch({ type: 'update', id: next.id, change: { status: 'done', loaded: next.file.size } });
+                    callbacks.current.onFile(next.directory, next.file);
                 } catch (error) {
                     const cancelled = controller.signal.aborted;
                     dispatch({
@@ -180,7 +196,7 @@ export function useUploadQueue(uuid: string, onSettled: () => void) {
                     controllers.current.delete(next.id);
                     active.current--;
                     if (active.current === 0 && !latest.current.some((item) => item.status === 'queued')) {
-                        settled.current();
+                        callbacks.current.onSettled();
                     }
                     pump();
                 }
@@ -190,7 +206,9 @@ export function useUploadQueue(uuid: string, onSettled: () => void) {
 
     const add = useCallback(
         async (root: string, picked: readonly PickedFile[]) => {
-            await ensureFolders(uuid, root, foldersToCreate(picked));
+            await ensureFolders(uuid, root, foldersToCreate(picked), (directory, name) =>
+                callbacks.current.onFolder(directory, name)
+            );
             const queued: UploadItem[] = picked.map(({ file, folder }) => ({
                 id: ++sequence,
                 file,

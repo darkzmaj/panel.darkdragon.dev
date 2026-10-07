@@ -50,6 +50,25 @@ class AdminTemplateApiTest extends IntegrationTestCase
         }
     }
 
+    public function test_the_revision_list_names_the_author_the_changes_and_the_servers_pinned_to_each_revision(): void
+    {
+        $this->actingAs($this->admin);
+        $id = $this->postJson(self::ADMIN.'/templates', $this->templateInput())->assertCreated()->json('template.id');
+        $this->patchJson(self::ADMIN."/templates/{$id}", $this->templateInput(['memory' => 2048]))->assertOk();
+
+        $list = $this->getJson(self::ADMIN."/templates/{$id}/revisions")->assertOk()->json('data');
+
+        $this->assertCount(2, $list);
+        $this->assertSame([2, 1], array_column($list, 'revision'));
+        $this->assertTrue($list[0]['current']);
+        $this->assertFalse($list[1]['current']);
+        $this->assertSame($this->admin->username, $list[0]['created_by']['username']);
+        $this->assertSame(2048, $list[0]['summary']['memory']);
+        $this->assertSame(['First revision'], $list[1]['changes']);
+        $this->assertStringContainsString('Memory', implode(' ', $list[0]['changes']));
+        $this->assertSame(0, $list[0]['instances']);
+    }
+
     public function test_an_administrator_creates_edits_duplicates_toggles_and_deletes_a_template(): void
     {
         $this->actingAs($this->admin);

@@ -14,6 +14,7 @@ import { Check, NumberField, SelectField, Section, TextField } from '../editor/f
 import FilesTab from '../editor/FilesTab';
 import { applyEgg, EMPTY_FORM, formFromDetail, payloadFromForm, type TemplateForm } from '../editor/form';
 import InstancesTab from '../editor/InstancesTab';
+import RevisionsTab from '../editor/RevisionsTab';
 import SftpTab from '../editor/SftpTab';
 
 type Tab =
@@ -25,7 +26,8 @@ type Tab =
     | 'lifecycle'
     | 'files'
     | 'sftp'
-    | 'instances';
+    | 'instances'
+    | 'revisions';
 const FORM_TABS: readonly Tab[] = ['general', 'software', 'resources', 'placement', 'variables', 'lifecycle'];
 
 export default function TemplateEditorScreen({ data }: ScreenComponentProps) {
@@ -94,6 +96,7 @@ export default function TemplateEditorScreen({ data }: ScreenComponentProps) {
         { id: 'files', label: 'Files', disabled: id === null },
         { id: 'sftp', label: 'SFTP', disabled: id === null },
         { id: 'instances', label: 'Instances', disabled: id === null },
+        { id: 'revisions', label: 'Revisions', disabled: id === null },
     ];
     const inForm = FORM_TABS.includes(tab);
 
@@ -391,6 +394,7 @@ export default function TemplateEditorScreen({ data }: ScreenComponentProps) {
             {tab === 'files' && id !== null && <FilesTab id={id} />}
             {tab === 'sftp' && id !== null && <SftpTab id={id} />}
             {tab === 'instances' && id !== null && detail.data && <InstancesTab id={id} detail={detail.data} />}
+            {tab === 'revisions' && id !== null && <RevisionsTab id={id} />}
         </PageContentBlock>
     );
 }
