@@ -234,7 +234,7 @@ try {
             await page.getByRole('button', { name: 'New file' }).first().click();
             const name = `smoke-${Date.now()}.txt`;
             await page.getByLabel('File name').fill(name);
-            await page.getByRole('button', { name: 'Create', exact: true }).click();
+            await page.getByLabel('File name').press('Enter');
             await page.locator('.gb-tree-name', { hasText: name }).waitFor();
             await page.locator('.gb-tab-name', { hasText: name }).waitFor();
             await page
@@ -245,7 +245,7 @@ try {
             await page.getByRole('menuitem', { name: 'Rename' }).click();
             const renamed = name.replace('smoke', 'renamed');
             await page.getByLabel('New name').fill(renamed);
-            await page.getByRole('button', { name: 'Rename', exact: true }).click();
+            await page.getByLabel('New name').press('Enter');
             await page.locator('.gb-tree-name', { hasText: renamed }).waitFor();
             await page.locator('.gb-tab-name', { hasText: renamed }).waitFor();
             await page

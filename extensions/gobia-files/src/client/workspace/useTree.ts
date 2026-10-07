@@ -16,7 +16,19 @@ export interface TreeState {
     reload: (directories: readonly string[], force?: boolean) => Promise<void>;
     /** Change a listing at once (before the server confirms), so the explorer never waits for a round trip. */
     patch: (directory: string, change: (items: TreeEntry[]) => TreeEntry[]) => void;
+    /**
+     * Move an entry in the local state at once (listings, expanded folders and the subtree of a moved folder follow it).
+     * Returns a function that puts everything back, for when the server refuses.
+     */
+    move: (from: string, to: string) => () => void;
+    /** Remove entries locally at once; returns the undo. */
+    remove: (paths: readonly string[]) => () => void;
 }
+
+const under = (path: string, root: string) => path === root || path.startsWith(`${root}/`);
+const reroot = (path: string, from: string, to: string) => (under(path, from) ? `${to}${path.slice(from.length)}` : path);
+const order = (a: TreeEntry, b: TreeEntry) =>
+    a.directory === b.directory ? a.name.localeCompare(b.name, undefined, { numeric: true }) : a.directory ? -1 : 1;
 
 /**
  * The explorer's data: every directory that has been opened, kept up to date. Mutations patch the listing
@@ -89,6 +101,61 @@ export function useTree(uuid: string): TreeState {
         });
     }, []);
 
+    const move = useCallback((from: string, to: string) => {
+        const before = { listings: latest.current.listings, expanded: latest.current.expanded };
+        const source = dirname(from);
+        const target = dirname(to);
+        const name = to.slice(to.lastIndexOf('/') + 1);
+        const found = (() => {
+            const listing = before.listings[source];
+            return listing && listing !== 'loading' && 'items' in listing
+                ? listing.items.find((item) => item.path === from)
+                : undefined;
+        })();
+        setListings((current) => {
+            const next: Record<string, Listing> = {};
+            for (const [directory, listing] of Object.entries(current)) {
+                // A moved folder keeps every listing it had, under its new path.
+                const key = reroot(directory, from, to);
+                next[key] =
+                    listing !== 'loading' && 'items' in listing && key !== directory
+                        ? { items: listing.items.map((item) => ({ ...item, path: reroot(item.path, from, to) })) }
+                        : listing;
+            }
+            const sourceListing = next[source];
+            if (sourceListing && sourceListing !== 'loading' && 'items' in sourceListing) {
+                next[source] = { items: sourceListing.items.filter((item) => item.path !== from) };
+            }
+            const targetListing = next[target];
+            if (found && targetListing && targetListing !== 'loading' && 'items' in targetListing) {
+                const moved: TreeEntry = { ...found, name, path: to };
+                next[target] = { items: [...targetListing.items.filter((item) => item.path !== to), moved].sort(order) };
+            }
+            return next;
+        });
+        setExpanded((current) => new Set([...current].map((path) => reroot(path, from, to))));
+        return () => {
+            setListings(before.listings);
+            setExpanded(before.expanded);
+        };
+    }, []);
+
+    const remove = useCallback((paths: readonly string[]) => {
+        const before = latest.current.listings;
+        setListings((current) => {
+            const next: Record<string, Listing> = {};
+            for (const [directory, listing] of Object.entries(current)) {
+                if (paths.some((path) => under(directory, path))) continue;
+                next[directory] =
+                    listing !== 'loading' && 'items' in listing
+                        ? { items: listing.items.filter((item) => !paths.includes(item.path)) }
+                        : listing;
+            }
+            return next;
+        });
+        return () => setListings(before);
+    }, []);
+
     useEffect(() => {
         setListings({});
         setExpanded(new Set(['/']));
@@ -110,7 +177,7 @@ export function useTree(uuid: string): TreeState {
         };
     }, [reload]);
 
-    return { listings, expanded, toggle, expand, reload, patch };
+    return { listings, expanded, toggle, expand, reload, patch, move, remove };
 }
 
 /** The directories whose listing changes when `paths` are created, renamed, moved or deleted. */

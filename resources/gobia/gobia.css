@@ -3891,3 +3891,211 @@ html {
 .gb-section-title {
     margin: 26px 0 12px;
 }
+
+/* ------------------------------------------------------------------ files workspace: inline editing, drag, search */
+.gb-tree-row.inline {
+    flex-wrap: wrap;
+    background: var(--gb-surface-2);
+}
+.gb-tree-inline {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    align-items: center;
+    gap: 6px;
+    height: 30px;
+    padding-right: 6px;
+}
+.gb-tree-input {
+    flex: 1;
+    min-width: 0;
+    height: 24px;
+    padding: 0 6px;
+    border: 1px solid rgb(var(--p-500));
+    border-radius: 6px;
+    background: var(--gb-bg);
+    color: var(--gb-text-strong);
+    font: inherit;
+    outline: none;
+}
+.gb-tree-row.invalid .gb-tree-input {
+    border-color: rgb(var(--gb-danger));
+}
+.gb-tree-problem {
+    flex-basis: 100%;
+    padding: 2px 10px 6px 36px;
+    color: rgb(var(--gb-danger));
+    font-size: 12px;
+}
+.gb-tree-row.drop-valid {
+    box-shadow: inset 0 0 0 1px rgb(var(--p-500) / 0.45);
+}
+.gb-tree-row.settled {
+    animation: gb-settle 520ms var(--gb-ease-out, ease-out);
+}
+@keyframes gb-settle {
+    from {
+        background: var(--gb-primary-soft);
+    }
+}
+.gb-drag-chip {
+    position: fixed;
+    top: -100px;
+    left: -100px;
+    max-width: 220px;
+    padding: 4px 10px;
+    border-radius: 8px;
+    background: rgb(var(--p-500));
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.gb-tab {
+    position: relative;
+    min-width: 6rem;
+}
+.gb-tab.dragging {
+    opacity: 0.5;
+}
+.gb-tab.drop-before::before,
+.gb-tab.drop-after::after {
+    content: '';
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    width: 2px;
+    background: rgb(var(--p-500));
+}
+.gb-tab.drop-before::before {
+    left: -1px;
+}
+.gb-tab.drop-after::after {
+    right: -1px;
+}
+.gb-tabs {
+    scrollbar-width: thin;
+    overscroll-behavior-x: contain;
+}
+
+.gb-search {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    flex: 1;
+}
+.gb-search-form {
+    display: grid;
+    gap: 6px;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--gb-border-muted);
+}
+.gb-search-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.gb-search-row .gb-input {
+    height: 30px;
+    min-width: 0;
+    flex: 1;
+    font-size: 13px;
+}
+.gb-search-flag {
+    flex: none;
+    min-width: 30px;
+    height: 30px;
+    padding: 0 6px;
+    border: 1px solid var(--gb-border-muted);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--gb-text-3);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.gb-search-flag[aria-pressed='true'] {
+    border-color: rgb(var(--p-500));
+    background: var(--gb-primary-soft);
+    color: var(--gb-text-strong);
+}
+.gb-search-summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 10px;
+    padding: 6px 12px;
+    color: var(--gb-text-3);
+    font-size: 12px;
+}
+.gb-search-results {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: 0 6px 8px;
+    font-size: 12.5px;
+}
+.gb-search-file {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 5px 6px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--gb-text-strong);
+    font: inherit;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+}
+.gb-search-file:hover,
+.gb-search-hit:hover {
+    background: var(--gb-surface-2);
+}
+.gb-search-file small {
+    margin-left: auto;
+    color: var(--gb-text-3);
+    font-weight: 500;
+}
+.gb-search-hit {
+    display: block;
+    width: 100%;
+    padding: 3px 6px 3px 24px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--gb-text);
+    font: inherit;
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 12px;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+}
+.gb-search-hit mark {
+    background: rgb(var(--p-500) / 0.3);
+    color: inherit;
+    border-radius: 2px;
+}
+.gb-search-hit del {
+    background: rgb(var(--gb-danger) / 0.22);
+    text-decoration: line-through;
+    border-radius: 2px;
+}
+.gb-search-hit ins {
+    background: rgb(var(--gb-success, 34 197 94) / 0.25);
+    text-decoration: none;
+    border-radius: 2px;
+}
+.gb-diff {
+    height: min(60vh, 460px);
+    border: 1px solid var(--gb-border-muted);
+    border-radius: 10px;
+    overflow: hidden;
+}

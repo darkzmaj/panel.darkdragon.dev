@@ -130,6 +130,7 @@ rebuildOnChange(
     'frontend',
     [
         join(root, 'resources/scripts'),
+        join(root, 'resources/gobia'),
         join(root, 'packages/sdk/components'),
         join(root, 'packages/sdk/theme.css'),
     ].filter(existsSync),

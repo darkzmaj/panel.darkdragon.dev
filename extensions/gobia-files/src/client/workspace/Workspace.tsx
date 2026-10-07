@@ -11,6 +11,7 @@ import {
     Menu,
     Pencil,
     RefreshCw,
+    Search,
     Trash2,
     Upload,
     X,
@@ -24,7 +25,6 @@ import {
     useReducer,
     useRef,
     useState,
-    type FormEvent,
     type ReactNode,
 } from 'react';
 import {
@@ -43,11 +43,13 @@ import {
 import ContextMenu, { type MenuItem, type MenuState } from './ContextMenu';
 import { MAX_EDIT_BYTES, basename, dirname, join } from './paths';
 import { loadTabs, saveTabs } from './session';
-import { isDirty, tabsReducer, type Tab } from './tabs';
-import Tree, { ROOT } from './Tree';
+import { isDirty, tabsReducer } from './tabs';
+import type { FileResult } from './search';
+import SearchPanel, { type ReplaceResult } from './SearchPanel';
+import Tree, { ROOT, validTarget, type Inline } from './Tree';
 import UploadPanel from './UploadPanel';
 import { pickedFromDrop, pickedFromInput, useUploadQueue } from './uploads';
-import { parentsOf, useTree } from './useTree';
+import { useTree } from './useTree';
 import { formatOf, validate, type Problem } from './validation';
 
 // CodeMirror and the language packs are only fetched once a file is actually opened.
@@ -88,8 +90,6 @@ type Prompt =
     | { kind: 'invalid'; path: string; problem: Problem }
     | { kind: 'conflict'; path: string; missing: boolean }
     | { kind: 'close'; path: string }
-    | { kind: 'create'; what: 'file' | 'folder'; directory: string }
-    | { kind: 'rename'; entry: TreeEntry }
     | { kind: 'delete'; entries: readonly TreeEntry[] };
 
 const readStored = (key: string, fallback: number) => {
@@ -100,54 +100,6 @@ const readStored = (key: string, fallback: number) => {
         return fallback;
     }
 };
-
-function NameDialog({
-    title,
-    description,
-    label,
-    initial,
-    action,
-    onSubmit,
-    onClose,
-}: {
-    title: string;
-    description: string;
-    label: string;
-    initial: string;
-    action: string;
-    onSubmit: (name: string) => void;
-    onClose: () => void;
-}) {
-    const [name, setName] = useState(initial);
-    const submit = (event: FormEvent) => {
-        event.preventDefault();
-        if (name.trim() !== '') onSubmit(name.trim());
-    };
-    return (
-        <Dialog open onClose={onClose} title={title} description={description}>
-            <form onSubmit={submit}>
-                <label className={'gb-label'} htmlFor={'gf-name'}>
-                    {label}
-                </label>
-                <input
-                    id={'gf-name'}
-                    autoFocus
-                    className={'gb-input'}
-                    value={name}
-                    onChange={(event) => setName(event.currentTarget.value)}
-                />
-                <Dialog.Footer>
-                    <Button.Text type={'button'} onClick={onClose}>
-                        Cancel
-                    </Button.Text>
-                    <Button type={'submit'} color={'primary'} disabled={name.trim() === ''}>
-                        {action}
-                    </Button>
-                </Dialog.Footer>
-            </form>
-        </Dialog>
-    );
-}
 
 function ToolButton({
     label,
@@ -181,6 +133,9 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
     const [prompt, setPrompt] = useState<Prompt | null>(null);
     const [menu, setMenu] = useState<MenuState | null>(null);
     const [selection, setSelection] = useState<string | null>(null);
+    const [inline, setInline] = useState<Inline | null>(null);
+    const [explorerView, setExplorerView] = useState<'files' | 'search'>('files');
+    const [settled, setSettled] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
     const [drawer, setDrawer] = useState(false);
     const [mobile, setMobile] = useState(() => window.matchMedia('(max-width: 767px)').matches);
@@ -321,6 +276,43 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
         await load(path);
     };
 
+    /** Opens a file (reading it first when needed) and puts the cursor on a line, as a search result asks. */
+    const openAt = async (path: string, line: number, column: number) => {
+        const exists = latest.current.state.tabs.some((tab) => tab.path === path);
+        dispatch({ type: 'open', path, name: basename(path) });
+        setDrawer(false);
+        if (!exists) await load(path);
+        setReveal({ line, column, nonce: Date.now() });
+    };
+
+    /** Applies a search replacement to an open tab (left unsaved) or to the file on disk. */
+    const replaceInFile = async (result: FileResult, change: (text: string) => string): Promise<ReplaceResult> => {
+        const tab = latest.current.state.tabs.find((candidate) => candidate.path === result.path);
+        if (tab) {
+            if (tab.status !== 'ready') return { ok: false, reason: 'it is still loading' };
+            dispatch({ type: 'edit', path: tab.path, content: change(tab.content) });
+            return { ok: true };
+        }
+        try {
+            if ((await modifiedAt(uuid, result.path)) !== result.modifiedAt) {
+                return { ok: false, reason: 'it changed after the search, search again' };
+            }
+            const text = await readFile(uuid, result.path);
+            const next = change(text);
+            if (next === text) return { ok: true };
+            const name = basename(result.path);
+            if (formatOf(name)) {
+                const [before, after] = await Promise.all([validate(name, text), validate(name, next)]);
+                if (!before && after) return { ok: false, reason: `it would no longer be valid (${after.message})` };
+            }
+            await writeFile(uuid, result.path, next);
+            void tree.reload([dirname(result.path)]);
+            return { ok: true };
+        } catch (error) {
+            return { ok: false, reason: httpErrorToHuman(error as Error) };
+        }
+    };
+
     const requestClose = useCallback((path: string) => {
         const tab = latest.current.state.tabs.find((candidate) => candidate.path === path);
         if (tab && isDirty(tab)) setPrompt({ kind: 'close', path });
@@ -350,20 +342,24 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
         return ROOT;
     };
 
+    const startCreate = (what: 'file' | 'folder', directory: string) => {
+        tree.expand(directory);
+        setDrawer(false);
+        setInline({ kind: 'create', what, directory });
+    };
+
     const createEntry = (what: 'file' | 'folder', directory: string, name: string) =>
         guard(async () => {
             const path = join(directory, name);
-            const stamp = new Date().toISOString();
-            if (what === 'file') await writeFile(uuid, path, '');
-            else await createFolder(uuid, directory, name);
             const entry: TreeEntry = {
                 name,
                 path,
                 directory: what === 'folder',
                 size: 0,
                 mimetype: what === 'folder' ? 'inode/directory' : 'text/plain',
-                modifiedAt: stamp,
+                modifiedAt: new Date().toISOString(),
             };
+            const before = latest.current.tree.listings[directory];
             tree.patch(directory, (items) =>
                 [...items.filter((item) => item.path !== path), entry].sort((a, b) =>
                     a.directory === b.directory
@@ -373,9 +369,17 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
                           : 1
                 )
             );
-            tree.expand(directory);
             setSelection(path);
-            void tree.reload([directory], true);
+            setSettled(path);
+            try {
+                if (what === 'file') await writeFile(uuid, path, '');
+                else await createFolder(uuid, directory, name);
+            } catch (error) {
+                tree.patch(directory, (items) => items.filter((item) => item.path !== path));
+                if (before && before !== 'loading' && 'items' in before) tree.patch(directory, () => before.items);
+                throw error;
+            }
+            void tree.reload([directory]);
             if (what === 'file') {
                 dispatch({ type: 'open', path, name });
                 await load(path);
@@ -386,15 +390,21 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
 
     const rename = (from: string, to: string) =>
         guard(async () => {
-            const source = dirname(from);
-            const target = dirname(to);
-            // Relative to the root of the server, so a move into another folder is the same request as a rename.
-            await renameEntries(uuid, ROOT, [{ from: from.slice(1), to: to.slice(1) }]);
+            const undo = tree.move(from, to);
             dispatch({ type: 'rename', from, to });
-            tree.patch(source, (items) => items.filter((item) => item.path !== from));
             setSelection(to);
-            await tree.reload(parentsOf([from, to]).concat(source, target), true);
-            tree.expand(target);
+            setSettled(to);
+            try {
+                // Relative to the root of the server, so a move into another folder is the same request as a rename.
+                await renameEntries(uuid, ROOT, [{ from: from.slice(1), to: to.slice(1) }]);
+            } catch (error) {
+                undo();
+                dispatch({ type: 'rename', from: to, to: from });
+                setSelection(from);
+                throw error;
+            }
+            tree.expand(dirname(to));
+            void tree.reload([dirname(from), dirname(to)]);
         });
 
     const remove = (entries: readonly TreeEntry[]) =>
@@ -402,15 +412,20 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
             const byDirectory = new Map<string, TreeEntry[]>();
             for (const entry of entries)
                 byDirectory.set(dirname(entry.path), [...(byDirectory.get(dirname(entry.path)) ?? []), entry]);
-            for (const [directory, group] of byDirectory) {
-                await deleteEntries(
-                    uuid,
-                    directory,
-                    group.map((entry) => entry.name)
-                );
-                tree.patch(directory, (items) =>
-                    items.filter((item) => !group.some((entry) => entry.path === item.path))
-                );
+            const undo = tree.remove(entries.map((entry) => entry.path));
+            try {
+                for (const [directory, group] of byDirectory) {
+                    // eslint-disable-next-line no-await-in-loop
+                    await deleteEntries(
+                        uuid,
+                        directory,
+                        group.map((entry) => entry.name)
+                    );
+                }
+            } catch (error) {
+                undo();
+                void tree.reload([...byDirectory.keys()], true);
+                throw error;
             }
             // Clean tabs of deleted files close; one with unsaved work stays so nothing is lost.
             for (const tab of latest.current.state.tabs) {
@@ -418,7 +433,7 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
                 if (gone && !isDirty(tab)) dispatch({ type: 'close', path: tab.path });
             }
             setSelection(null);
-            await tree.reload([...byDirectory.keys()], true);
+            void tree.reload([...byDirectory.keys()]);
         });
 
     const duplicate = (entry: TreeEntry) =>
@@ -456,8 +471,24 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
     };
 
     const moveInto = (from: string, directory: string) => {
-        if (from === directory || dirname(from) === directory || directory.startsWith(`${from}/`)) return;
+        const listing = latest.current.tree.listings[directory];
+        const taken =
+            listing && listing !== 'loading' && 'items' in listing
+                ? new Set(listing.items.map((item) => item.name))
+                : undefined;
+        if (!validTarget(from, directory, taken)) {
+            if (taken?.has(basename(from))) toast.error(`${basename(from)} already exists in that folder.`);
+            return;
+        }
         void rename(from, join(directory, basename(from)));
+    };
+
+    const submitInline = (name: string) => {
+        const current = inline;
+        setInline(null);
+        if (!current) return;
+        if (current.kind === 'create') void createEntry(current.what, current.directory, name);
+        else void rename(current.entry.path, join(dirname(current.entry.path), name));
     };
 
     const uploadInto = (picked: Parameters<typeof addUploads>[1], directory: string) => {
@@ -485,13 +516,13 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
                 key: 'new-file',
                 label: 'New file',
                 icon: FilePlus,
-                onSelect: () => setPrompt({ kind: 'create', what: 'file', directory }),
+                onSelect: () => startCreate('file', directory),
             });
             items.push({
                 key: 'new-folder',
                 label: 'New folder',
                 icon: FolderPlus,
-                onSelect: () => setPrompt({ kind: 'create', what: 'folder', directory }),
+                onSelect: () => startCreate('folder', directory),
             });
             items.push({
                 key: 'upload',
@@ -508,7 +539,7 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
                 key: 'rename',
                 label: 'Rename',
                 icon: Pencil,
-                onSelect: () => setPrompt({ kind: 'rename', entry }),
+                onSelect: () => setInline({ kind: 'rename', entry }),
             });
         }
         if (entry && permissions.create) {
@@ -586,22 +617,51 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
     const editorPaths = useMemo(() => state.tabs.map((tab) => tab.path), [state.tabs]);
     const dirtyPaths = useMemo(() => new Set(state.tabs.filter(isDirty).map((tab) => tab.path)), [state.tabs]);
 
+    const searching = explorerView === 'search';
+    const pane = (shown: boolean): React.CSSProperties => ({
+        display: shown ? 'flex' : 'none',
+        flexDirection: 'column',
+        flex: 1,
+        minHeight: 0,
+    });
     const explorer = (
         <>
+        <div style={pane(searching)}>
+            <div className={'gb-explorer-tools'}>
+                <ToolButton label={'Back to files'} onClick={() => setExplorerView('files')}>
+                    <X aria-hidden />
+                </ToolButton>
+                <span className={'gb-eyebrow'} style={{ alignSelf: 'center', marginLeft: 6 }}>
+                    Search
+                </span>
+            </div>
+            <SearchPanel
+                uuid={uuid}
+                buffers={() =>
+                    new Map(
+                        latest.current.state.tabs.filter((tab) => tab.status === 'ready').map((tab) => [tab.path, tab.content])
+                    )
+                }
+                canReplace={permissions.update}
+                onOpen={(path, line, column) => void openAt(path, line, column)}
+                onReplace={replaceInFile}
+            />
+        </div>
+        <div style={pane(!searching)}>
             <div className={'gb-explorer-tools'}>
                 {permissions.create && (
                     <>
                         <ToolButton
                             label={'New file'}
                             disabled={busy}
-                            onClick={() => setPrompt({ kind: 'create', what: 'file', directory: targetDirectory() })}
+                            onClick={() => startCreate('file', targetDirectory())}
                         >
                             <FilePlus aria-hidden />
                         </ToolButton>
                         <ToolButton
                             label={'New folder'}
                             disabled={busy}
-                            onClick={() => setPrompt({ kind: 'create', what: 'folder', directory: targetDirectory() })}
+                            onClick={() => startCreate('folder', targetDirectory())}
                         >
                             <FolderPlus aria-hidden />
                         </ToolButton>
@@ -627,6 +687,9 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
                         </ToolButton>
                     </>
                 )}
+                <ToolButton label={'Search all files'} onClick={() => setExplorerView('search')}>
+                    <Search aria-hidden />
+                </ToolButton>
                 <ToolButton
                     label={'Refresh'}
                     disabled={busy}
@@ -656,7 +719,7 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
                     if (!entry) return;
                     if (event.key === 'F2' && permissions.update) {
                         event.preventDefault();
-                        setPrompt({ kind: 'rename', entry });
+                        setInline({ kind: 'rename', entry });
                     } else if (event.key === 'Delete' && permissions.delete) {
                         event.preventDefault();
                         setPrompt({ kind: 'delete', entries: [entry] });
@@ -676,8 +739,13 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
                     onMenu={openMenu}
                     onMove={moveInto}
                     onDropFiles={(data, directory) => void dropFiles(data, directory)}
+                    inline={inline}
+                    onInlineSubmit={submitInline}
+                    onInlineCancel={() => setInline(null)}
+                    settled={settled}
                 />
             </div>
+        </div>
         </>
     );
 
@@ -929,36 +997,6 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
 
             <ContextMenu menu={menu} onClose={() => setMenu(null)} />
 
-            {prompt?.kind === 'create' && (
-                <NameDialog
-                    title={prompt.what === 'file' ? 'New file' : 'New folder'}
-                    description={`Created in ${prompt.directory === ROOT ? '/home/container' : prompt.directory}`}
-                    label={prompt.what === 'file' ? 'File name' : 'Folder name'}
-                    initial={''}
-                    action={'Create'}
-                    onClose={() => setPrompt(null)}
-                    onSubmit={(name) => {
-                        const { what, directory } = prompt;
-                        setPrompt(null);
-                        void createEntry(what, directory, name);
-                    }}
-                />
-            )}
-            {prompt?.kind === 'rename' && (
-                <NameDialog
-                    title={'Rename'}
-                    description={prompt.entry.path}
-                    label={'New name'}
-                    initial={prompt.entry.name}
-                    action={'Rename'}
-                    onClose={() => setPrompt(null)}
-                    onSubmit={(name) => {
-                        const { entry } = prompt;
-                        setPrompt(null);
-                        if (name !== entry.name) void rename(entry.path, join(dirname(entry.path), name));
-                    }}
-                />
-            )}
             {prompt?.kind === 'delete' && (
                 <Dialog
                     open

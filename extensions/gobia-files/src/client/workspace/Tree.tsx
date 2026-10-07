@@ -1,10 +1,95 @@
 import { ChevronDown, ChevronRight, Ellipsis, File as FileIcon, Folder, FolderOpen } from 'lucide-react';
-import { useState, type DragEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type DragEvent, type ReactNode } from 'react';
 import type { TreeEntry } from './api';
+import { basename, dirname } from './paths';
 import type { TreeState } from './useTree';
 
 export const MOVE_TYPE = 'application/x-gobia-file';
 export const ROOT = '/';
+
+/** Why `name` cannot be used for an entry in a folder that already holds `taken`, or null when it can. */
+export function nameProblem(name: string, taken: ReadonlySet<string>): string | null {
+    const value = name.trim();
+    if (value === '') return 'Enter a name.';
+    if (value === '.' || value === '..' || value.includes('/')) return 'That name is not allowed.';
+    if (taken.has(value)) return 'Something with that name already exists here.';
+    return null;
+}
+
+/** A folder that is not the dragged entry, its parent (nothing would change) or inside it (it would swallow itself). */
+export const validTarget = (dragged: string, directory: string, taken?: ReadonlySet<string>) =>
+    dragged !== directory &&
+    dirname(dragged) !== directory &&
+    !directory.startsWith(`${dragged}/`) &&
+    !dragged.split('/').includes('..') &&
+    !(taken?.has(basename(dragged)) ?? false);
+
+export type Inline = { kind: 'create'; what: 'file' | 'folder'; directory: string } | { kind: 'rename'; entry: TreeEntry };
+
+function InlineName({
+    depth,
+    initial,
+    label,
+    folder,
+    taken,
+    onSubmit,
+    onCancel,
+}: {
+    depth: number;
+    initial: string;
+    label: string;
+    folder: boolean;
+    taken: ReadonlySet<string>;
+    onSubmit: (name: string) => void;
+    onCancel: () => void;
+}) {
+    const [value, setValue] = useState(initial);
+    const input = useRef<HTMLInputElement>(null);
+    const problem = value === initial ? null : nameProblem(value, taken);
+    useEffect(() => {
+        const element = input.current;
+        if (!element) return;
+        element.focus();
+        // Renaming selects the stem, so typing keeps the extension like in an editor.
+        const dot = initial.lastIndexOf('.');
+        element.setSelectionRange(0, dot > 0 ? dot : initial.length);
+    }, [initial]);
+    const Icon = folder ? Folder : FileIcon;
+    return (
+        <div className={'gb-tree-row inline' + (problem && value !== '' ? ' invalid' : '')}>
+            <div className={'gb-tree-inline'} style={{ paddingLeft: depth * 14 + 8 }}>
+                <span className={'gb-tree-chevron'} />
+                <Icon className={folder ? 'gb-tree-folder' : 'gb-tree-file'} aria-hidden />
+                <input
+                    ref={input}
+                    className={'gb-tree-input'}
+                    value={value}
+                    aria-label={label}
+                    aria-invalid={problem !== null && value !== ''}
+                    title={problem ?? undefined}
+                    spellCheck={false}
+                    autoComplete={'off'}
+                    onChange={(event) => setValue(event.currentTarget.value)}
+                    onKeyDown={(event) => {
+                        event.stopPropagation();
+                        if (event.key === 'Escape') onCancel();
+                        else if (event.key === 'Enter') {
+                            event.preventDefault();
+                            if (value.trim() === initial) onCancel();
+                            else if (!nameProblem(value, taken)) onSubmit(value.trim());
+                        }
+                    }}
+                    onBlur={onCancel}
+                />
+            </div>
+            {problem && value !== '' && (
+                <span role={'alert'} className={'gb-tree-problem'}>
+                    {problem}
+                </span>
+            )}
+        </div>
+    );
+}
 
 interface TreeProps {
     tree: TreeState;
@@ -20,6 +105,12 @@ interface TreeProps {
     onMenu: (entry: TreeEntry | null, x: number, y: number) => void;
     onMove: (from: string, toDirectory: string) => void;
     onDropFiles: (data: DataTransfer, directory: string) => void;
+    /** An entry being created or renamed in place. */
+    inline: Inline | null;
+    onInlineSubmit: (name: string) => void;
+    onInlineCancel: () => void;
+    /** The path that just landed after a move; it settles with a short highlight. */
+    settled: string | null;
 }
 
 interface RowProps {
@@ -36,6 +127,11 @@ interface RowProps {
     onMove: TreeProps['onMove'];
     onDropFiles: TreeProps['onDropFiles'];
     onHoverOpen: () => void;
+    /** The path being dragged anywhere in the tree, to light up the folders it may be dropped on. */
+    dragging: string | null;
+    onDragging: (path: string | null) => void;
+    taken: ReadonlySet<string>;
+    settled: boolean;
 }
 
 function Row({
@@ -52,6 +148,10 @@ function Row({
     onMove,
     onDropFiles,
     onHoverOpen,
+    dragging,
+    onDragging,
+    taken,
+    settled,
 }: RowProps) {
     const directory = entry === null || entry.directory;
     const path = entry?.path ?? ROOT;
@@ -61,7 +161,7 @@ function Row({
     const dragOver = (event: DragEvent) => {
         if (!directory) return;
         const internal = event.dataTransfer.types.includes(MOVE_TYPE);
-        const allowed = internal ? canMove : canUpload;
+        const allowed = internal ? canMove && (dragging === null || validTarget(dragging, path, taken)) : canUpload;
         event.preventDefault();
         event.dataTransfer.dropEffect = allowed ? (internal ? 'move' : 'copy') : 'none';
         setOver(allowed ? 'ok' : 'denied');
@@ -75,7 +175,7 @@ function Row({
         setOver(null);
         const moved = event.dataTransfer.getData(MOVE_TYPE);
         if (moved) {
-            if (canMove) onMove(moved, path);
+            if (canMove && validTarget(moved, path, taken)) onMove(moved, path);
         } else if (canUpload) {
             onDropFiles(event.dataTransfer, path);
         }
@@ -87,6 +187,8 @@ function Row({
                 'gb-tree-row' +
                 (entry === null ? ' root' : '') +
                 (selected ? ' selected' : '') +
+                (settled ? ' settled' : '') +
+                (dragging && directory && over === null && validTarget(dragging, path, taken) ? ' drop-valid' : '') +
                 (over === 'ok' ? ' drop-ok' : over === 'denied' ? ' drop-denied' : '')
             }
             onDragOver={dragOver}
@@ -102,7 +204,16 @@ function Row({
                     if (!entry) return;
                     event.dataTransfer.setData(MOVE_TYPE, entry.path);
                     event.dataTransfer.effectAllowed = 'move';
+                    // A compact chip instead of the browser's translucent copy of the whole row.
+                    const chip = document.createElement('div');
+                    chip.className = 'gb-drag-chip';
+                    chip.textContent = entry.name;
+                    document.body.append(chip);
+                    event.dataTransfer.setDragImage(chip, 12, 12);
+                    window.setTimeout(() => chip.remove(), 0);
+                    onDragging(entry.path);
                 }}
+                onDragEnd={() => onDragging(null)}
                 onClick={onClick}
                 onContextMenu={(event) => {
                     event.preventDefault();
@@ -154,7 +265,27 @@ function Row({
 }
 
 export default function Tree(props: TreeProps) {
-    const { tree, selection, activePath, openPaths, dirtyPaths, canMove, canUpload } = props;
+    const { tree, selection, activePath, openPaths, dirtyPaths, canMove, canUpload, inline } = props;
+    const [dragging, setDragging] = useState<string | null>(null);
+
+    const namesIn = (path: string): ReadonlySet<string> => {
+        const listing = tree.listings[path];
+        return new Set(listing && listing !== 'loading' && 'items' in listing ? listing.items.map((item) => item.name) : []);
+    };
+    const creating = (path: string) => inline?.kind === 'create' && inline.directory === path;
+    const newRow = (path: string, depth: number) =>
+        inline?.kind === 'create' && inline.directory === path ? (
+            <InlineName
+                key={'new'}
+                depth={depth}
+                initial={''}
+                label={inline.what === 'file' ? 'File name' : 'Folder name'}
+                folder={inline.what === 'folder'}
+                taken={namesIn(path)}
+                onSubmit={props.onInlineSubmit}
+                onCancel={props.onInlineCancel}
+            />
+        ) : null;
 
     const directory = (path: string, depth: number): ReactNode => {
         const listing = tree.listings[path];
@@ -165,10 +296,25 @@ export default function Tree(props: TreeProps) {
         );
         if (!listing || listing === 'loading') return note('Loading…');
         if ('error' in listing) return note(listing.error, true);
-        if (listing.items.length === 0) return note('Empty');
+        if (listing.items.length === 0) return creating(path) ? newRow(path, depth) : note('Empty');
+        const taken = namesIn(path);
 
-        return listing.items.map((entry) => {
+        return [newRow(path, depth), ...listing.items.map((entry) => {
             const open = entry.directory && tree.expanded.has(entry.path);
+            if (inline?.kind === 'rename' && inline.entry.path === entry.path) {
+                return (
+                    <InlineName
+                        key={entry.path}
+                        depth={depth}
+                        initial={entry.name}
+                        label={'New name'}
+                        folder={entry.directory}
+                        taken={taken}
+                        onSubmit={props.onInlineSubmit}
+                        onCancel={props.onInlineCancel}
+                    />
+                );
+            }
 
             return (
                 <div
@@ -197,11 +343,15 @@ export default function Tree(props: TreeProps) {
                         onMove={props.onMove}
                         onDropFiles={props.onDropFiles}
                         onHoverOpen={() => tree.expand(entry.path)}
+                        dragging={dragging}
+                        onDragging={setDragging}
+                        taken={entry.directory ? namesIn(entry.path) : taken}
+                        settled={props.settled === entry.path}
                     />
                     {open && directory(entry.path, depth + 1)}
                 </div>
             );
-        });
+        })];
     };
 
     return (
@@ -223,6 +373,10 @@ export default function Tree(props: TreeProps) {
                 onMove={props.onMove}
                 onDropFiles={props.onDropFiles}
                 onHoverOpen={() => undefined}
+                dragging={dragging}
+                onDragging={setDragging}
+                taken={namesIn(ROOT)}
+                settled={false}
             />
             {directory(ROOT, 1)}
         </nav>
