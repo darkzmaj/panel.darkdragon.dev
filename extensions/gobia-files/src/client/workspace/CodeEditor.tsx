@@ -1,60 +1,30 @@
-import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
-import { bracketMatching, foldGutter, indentOnInput, syntaxHighlighting, HighlightStyle } from '@codemirror/language';
-import { searchKeymap, highlightSelectionMatches } from '@codemirror/search';
-import { Compartment, EditorState } from '@codemirror/state';
-import {
-    EditorView,
-    drawSelection,
-    highlightActiveLine,
-    highlightActiveLineGutter,
-    keymap,
-    lineNumbers,
-} from '@codemirror/view';
-import { tags } from '@lezer/highlight';
 import { useEffect, useRef } from 'react';
-import { languageFor } from './language';
+import { applyTheme, languageOf, monaco } from './monaco';
+import type { Problem } from './validation';
 
 export interface CodeEditorProps {
-    /** Identifies the document; every path keeps its own undo history and cursor while its tab is open. */
+    /** Identifies the document; every open path keeps its own model (text, undo history) while its tab is open. */
     path: string;
     content: string;
     readOnly: boolean;
     onChange: (content: string) => void;
     onSave: () => void;
     wordWrap?: boolean;
+    /** Paths with an open tab. Models of any other path are disposed. */
+    openPaths: readonly string[];
+    /** Syntax problem of the file in front, drawn as an editor marker. */
+    problem?: Problem | null;
     /** Move the cursor to a position and scroll it into view; a new `nonce` repeats the request. */
     reveal?: { line: number; column: number; nonce: number } | null;
 }
 
-// Colours come from the theme tokens, so the editor stays readable in light and dark mode.
-const highlight = HighlightStyle.define([
-    { tag: [tags.keyword, tags.operator, tags.tagName, tags.modifier], color: 'var(--primary)' },
-    {
-        tag: [tags.string, tags.special(tags.string), tags.regexp],
-        color: 'color-mix(in srgb, var(--primary) 45%, var(--foreground))',
-    },
-    { tag: [tags.number, tags.bool, tags.null, tags.atom], color: 'color-mix(in srgb, var(--foreground) 75%, orange)' },
-    {
-        tag: [tags.propertyName, tags.definition(tags.variableName), tags.attributeName],
-        color: 'var(--foreground)',
-        fontWeight: '600',
-    },
-    { tag: [tags.comment, tags.meta], color: 'var(--muted-foreground)', fontStyle: 'italic' },
-    { tag: tags.invalid, color: 'var(--destructive)' },
-]);
+const uriOf = (path: string) => monaco.Uri.from({ scheme: 'gobia', path });
+const isDark = () => document.documentElement.classList.contains('dark');
 
-const theme = EditorView.theme({
-    '&': { height: '100%', color: 'var(--gb-text)', backgroundColor: 'var(--gb-bg)', fontSize: '13px' },
-    '.cm-scroller': { fontFamily: 'var(--font-mono, ui-monospace, monospace)', overflow: 'auto' },
-    '.cm-gutters': { backgroundColor: 'var(--gb-bg)', color: 'var(--gb-text-3)', border: 'none' },
-    '.cm-activeLine, .cm-activeLineGutter': { backgroundColor: 'var(--gb-hover)' },
-    '.cm-cursor': { borderLeftColor: 'var(--foreground)' },
-    '&.cm-focused': { outline: 'none' },
-    '.cm-selectionBackground, &.cm-focused .cm-selectionBackground': {
-        backgroundColor: 'color-mix(in srgb, var(--primary) 30%, transparent)',
-    },
-});
-
+/**
+ * One Monaco editor for the whole workspace: it is created once and switches models when the tab changes, so undo
+ * history, selection and scroll position survive switching. Minimap is off by design.
+ */
 export default function CodeEditor({
     path,
     content,
@@ -62,104 +32,119 @@ export default function CodeEditor({
     onChange,
     onSave,
     wordWrap = false,
+    openPaths,
+    problem = null,
     reveal = null,
 }: CodeEditorProps) {
     const host = useRef<HTMLDivElement>(null);
-    const view = useRef<EditorView | null>(null);
-    const states = useRef(new Map<string, EditorState>());
-    const language = useRef(new Compartment());
-    const wrapping = useRef(new Compartment());
-    const current = useRef(path);
+    const editor = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
+    const views = useRef(new Map<string, monaco.editor.ICodeEditorViewState | null>());
+    const current = useRef<string | null>(null);
     const callbacks = useRef({ onChange, onSave });
+    callbacks.current = { onChange, onSave };
 
     useEffect(() => {
-        callbacks.current = { onChange, onSave };
-    });
-
-    useEffect(() => {
-        const open = states.current;
-        const editor = new EditorView({ parent: host.current ?? undefined });
-        view.current = editor;
+        const instance = monaco.editor.create(host.current as HTMLElement, {
+            model: null,
+            automaticLayout: true,
+            minimap: { enabled: false },
+            fontSize: 13,
+            fontFamily: 'var(--font-mono, ui-monospace, monospace)',
+            scrollBeyondLastLine: false,
+            renderLineHighlight: 'line',
+            tabSize: 4,
+            fixedOverflowWidgets: true,
+            quickSuggestions: false,
+            suggestOnTriggerCharacters: false,
+            occurrencesHighlight: 'singleFile',
+            scrollbar: { alwaysConsumeMouseWheel: false },
+            padding: { top: 8, bottom: 8 },
+        });
+        editor.current = instance;
+        applyTheme(isDark());
+        instance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => callbacks.current.onSave());
+        const observer = new MutationObserver(() => applyTheme(isDark()));
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+        const open = views.current;
         return () => {
-            editor.destroy();
-            view.current = null;
+            observer.disconnect();
+            instance.dispose();
+            editor.current = null;
             open.clear();
+            current.current = null;
+            for (const model of monaco.editor.getModels()) if (model.uri.scheme === 'gobia') model.dispose();
         };
     }, []);
 
+    // Show the model of the active path, creating it from the tab's text the first time.
     useEffect(() => {
-        const editor = view.current;
-        if (!editor) return;
-        const previous = current.current;
-        if (previous !== path) states.current.set(previous, editor.state);
-        current.current = path;
-
-        let state = states.current.get(path);
-        if (!state || state.doc.toString() !== content) {
-            state = EditorState.create({
-                doc: content,
-                extensions: [
-                    lineNumbers(),
-                    foldGutter(),
-                    highlightActiveLineGutter(),
-                    highlightActiveLine(),
-                    history(),
-                    drawSelection(),
-                    indentOnInput(),
-                    bracketMatching(),
-                    highlightSelectionMatches(),
-                    syntaxHighlighting(highlight),
-                    language.current.of([]),
-                    wrapping.current.of(wordWrap ? EditorView.lineWrapping : []),
-                    keymap.of([
-                        {
-                            key: 'Mod-s',
-                            preventDefault: true,
-                            run: () => {
-                                callbacks.current.onSave();
-                                return true;
-                            },
-                        },
-                        indentWithTab,
-                        ...searchKeymap,
-                        ...historyKeymap,
-                        ...defaultKeymap,
-                    ]),
-                    EditorView.updateListener.of((update) => {
-                        if (update.docChanged) callbacks.current.onChange(update.state.doc.toString());
-                    }),
-                    EditorState.readOnly.of(readOnly),
-                    EditorView.editable.of(!readOnly),
-                    theme,
-                ],
-            });
+        const instance = editor.current;
+        if (!instance) return;
+        if (current.current !== null && current.current !== path) {
+            views.current.set(current.current, instance.saveViewState());
         }
-        editor.setState(state);
-
-        let stale = false;
-        void languageFor(path).then((extension) => {
-            if (!stale && current.current === path) {
-                editor.dispatch({ effects: language.current.reconfigure(extension ?? []) });
-            }
-        });
-        return () => {
-            stale = true;
-        };
-        // The document is created from `content` only when the path changes; later edits flow out through onChange.
+        current.current = path;
+        const uri = uriOf(path);
+        let model = monaco.editor.getModel(uri);
+        if (!model) model = monaco.editor.createModel(content, languageOf(path), uri);
+        // Text replaced from outside (reload from disk, overwrite) is pushed in as one undoable edit.
+        else if (model.getValue() !== content) model.setValue(content);
+        instance.setModel(model);
+        const saved = views.current.get(path);
+        if (saved) instance.restoreViewState(saved);
+        const subscription = model.onDidChangeContent(() => callbacks.current.onChange(model.getValue()));
+        return () => subscription.dispose();
+        // `content` only seeds a new model; later edits flow out through onChange and back in as the same string.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [path, readOnly]);
+    }, [path]);
+
+    // A change of text from outside while the path stays the same (reload, overwrite).
+    useEffect(() => {
+        const model = monaco.editor.getModel(uriOf(path));
+        if (model && model.getValue() !== content) model.setValue(content);
+    }, [path, content]);
 
     useEffect(() => {
-        view.current?.dispatch({ effects: wrapping.current.reconfigure(wordWrap ? EditorView.lineWrapping : []) });
-    }, [wordWrap, path]);
+        editor.current?.updateOptions({ readOnly, wordWrap: wordWrap ? 'on' : 'off' });
+    }, [readOnly, wordWrap]);
+
+    // Dispose the models, and forget the view state, of tabs that were closed.
+    useEffect(() => {
+        const keep = new Set(openPaths);
+        for (const model of monaco.editor.getModels()) {
+            if (model.uri.scheme === 'gobia' && !keep.has(model.uri.path)) model.dispose();
+        }
+        for (const known of [...views.current.keys()]) if (!keep.has(known)) views.current.delete(known);
+    }, [openPaths]);
 
     useEffect(() => {
-        const editor = view.current;
-        if (!editor || !reveal) return;
-        const line = editor.state.doc.line(Math.min(Math.max(reveal.line, 1), editor.state.doc.lines));
-        const at = line.from + Math.min(Math.max(reveal.column - 1, 0), line.length);
-        editor.dispatch({ selection: { anchor: at }, scrollIntoView: true });
-        editor.focus();
+        const model = monaco.editor.getModel(uriOf(path));
+        if (!model) return;
+        monaco.editor.setModelMarkers(
+            model,
+            'gobia',
+            problem
+                ? [
+                      {
+                          severity: monaco.MarkerSeverity.Error,
+                          message: problem.message,
+                          startLineNumber: problem.line ?? 1,
+                          startColumn: problem.column ?? 1,
+                          endLineNumber: problem.line ?? 1,
+                          endColumn: problem.line ? model.getLineMaxColumn(problem.line) : model.getLineMaxColumn(1),
+                      },
+                  ]
+                : []
+        );
+    }, [problem, path, content]);
+
+    useEffect(() => {
+        const instance = editor.current;
+        if (!instance || !reveal) return;
+        const position = { lineNumber: reveal.line, column: reveal.column };
+        instance.setPosition(position);
+        instance.revealPositionInCenterIfOutsideViewport(position);
+        instance.focus();
     }, [reveal]);
 
     return <div ref={host} className={'gf:h-full gf:min-h-0 gf:overflow-hidden'} data-testid={'code-editor'} />;

@@ -190,7 +190,6 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
     const [problem, setProblem] = useState<Problem | null>(null);
     const [reveal, setReveal] = useState<{ line: number; column: number; nonce: number } | null>(null);
     // Bumped when a tab's text is replaced from outside the editor (reload), so the editor is rebuilt for it.
-    const [reloads, setReloads] = useState<Record<string, number>>({});
     const filePicker = useRef<HTMLInputElement>(null);
     const folderPicker = useRef<HTMLInputElement>(null);
     const uploadTarget = useRef<string>(ROOT);
@@ -320,7 +319,6 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
     const reloadFromServer = async (path: string) => {
         dispatch({ type: 'open', path, name: basename(path) });
         await load(path);
-        setReloads((current) => ({ ...current, [path]: (current[path] ?? 0) + 1 }));
     };
 
     const requestClose = useCallback((path: string) => {
@@ -585,6 +583,7 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
     };
 
     const openPaths = useMemo(() => new Set(state.tabs.map((tab) => tab.path)), [state.tabs]);
+    const editorPaths = useMemo(() => state.tabs.map((tab) => tab.path), [state.tabs]);
     const dirtyPaths = useMemo(() => new Set(state.tabs.filter(isDirty).map((tab) => tab.path)), [state.tabs]);
 
     const explorer = (
@@ -894,11 +893,12 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
                                 }
                             >
                                 <CodeEditor
-                                    key={`${active.path}:${reloads[active.path] ?? 0}`}
-                                    path={active.path}
+                                                                        path={active.path}
                                     content={active.content}
                                     readOnly={!permissions.update}
                                     wordWrap={wrap}
+                                    openPaths={editorPaths}
+                                    problem={problem}
                                     reveal={reveal}
                                     onChange={(content) => dispatch({ type: 'edit', path: active.path, content })}
                                     onSave={() => void save(active.path)}
