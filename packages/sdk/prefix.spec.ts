@@ -17,7 +17,6 @@ const panelStylesheet = path('../../resources/scripts/assets/tailwind.css');
 const panelStylesheets = [
     panelStylesheet,
     path('./theme-tokens.css'),
-    path('../../resources/scripts/router/view-transitions.css'),
 ];
 
 const locate = (id: string, base: string) => (id.startsWith('.') ? resolve(base, id) : require.resolve(id));

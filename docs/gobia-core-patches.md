@@ -52,7 +52,7 @@ These are presentation patches. The extension API can replace five components (`
 | --- | --- | --- | --- | --- | --- |
 | `resources/scripts/router/router.tsx` | No view transitions, pending time 0, `PageSkeleton` as the pending component | Router options are core | Low | `npm run test:gobia:browser` | Upstream router option for the pending component |
 | `resources/scripts/components/elements/Spinner.tsx` | A large centred spinner renders `PageSkeleton` | Shared element | Low | Browser comparison | Keep |
-| `resources/scripts/index.tsx`, `resources/scripts/**/view-transitions` | View transition import removed (the shell stays still, only the content fades) | Entry file | Low | Browser comparison | Keep |
+| `resources/scripts/index.tsx`, `resources/scripts/router/view-transitions.css` (deleted), `packages/sdk/prefix.spec.ts` | View transition import and stylesheet removed (the shell stays still, only the content fades); the prefix spec no longer lists the deleted stylesheet | Entry file | Low | Browser comparison | Keep |
 | `resources/scripts/components/elements/table/DataTable.tsx` | The scroll container is `relative`, so visually hidden text in action buttons cannot widen the page on phones | Shared table | Low | responsive check at 390 and 430 px | Keep |
 | `resources/scripts/gobia/shell/Sidebars.tsx` | Admin groups Dashboard, Network, Services, System in the 1.x order (new Gobia file, not an upstream path) | Sidebar is Gobia code | None | Browser comparison | None |
 
