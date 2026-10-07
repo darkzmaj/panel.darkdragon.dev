@@ -41,6 +41,7 @@ class ServerListController
                 'identifier' => $server->uuidShort,
                 'name' => $server->name,
                 'description' => $server->description,
+                'node' => $server->gobia_node,
                 'address' => $server->gobia_ip === null ? null : ($server->gobia_alias ?? $server->gobia_ip).':'.$server->gobia_port,
                 'is_owner' => (int) $server->owner_id === $user->id,
                 'status' => $server->status,

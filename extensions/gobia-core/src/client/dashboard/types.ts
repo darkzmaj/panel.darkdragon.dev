@@ -5,6 +5,7 @@ export interface Instance {
     identifier: string;
     name: string;
     description: string | null;
+    node: string | null;
     address: string | null;
     is_owner: boolean;
     status: string | null;

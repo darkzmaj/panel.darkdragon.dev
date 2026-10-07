@@ -1,27 +1,19 @@
 import React, { useEffect } from 'react';
-import { Link, Outlet, useLocation, useParams } from '@tanstack/react-router';
-import { ExternalLink } from 'lucide-react';
+import { Outlet, useLocation, useParams } from '@tanstack/react-router';
 import { useServerQuery } from '@/api/server/queries';
 import { useServerStore } from '@/state/server';
 import { ServerContext } from '@/state/server/context';
 import { httpErrorToHuman } from '@/api/http';
-import SubNavigation from '@/components/elements/SubNavigation';
-import SubNavigationLayout from '@/components/elements/SubNavigationLayout';
-import NavLink from '@/router/NavLink';
-import Can from '@/components/elements/Can';
-import Icon from '@/components/elements/Icon';
+import { SidebarContent } from '@/gobia/shell/ShellContext';
+import { ServerSidebar } from '@/gobia/shell/Sidebars';
 import Spinner from '@/components/elements/Spinner';
 import { ServerError } from '@/components/elements/ScreenBlock';
 import InstallListener from '@/components/server/InstallListener';
 import TransferListener from '@/components/server/TransferListener';
 import WebsocketHandler from '@/components/server/WebsocketHandler';
 import ConflictStateRenderer from '@/components/server/ConflictStateRenderer';
-import { getAreaNav } from '@/router/nav';
 import { useIsRenderedRoute } from '@/router/renderedRoute';
 import { useCurrentUser } from '@/api/account/queries';
-import Slot from '@/extensions/Slot';
-import NavigationLabel from '@/extensions/NavigationLabel';
-import { ScreenGate } from '@/extensions/screenNavigation';
 
 const ServerConsoleContainer = React.lazy(() => import('@/components/server/console/ServerConsoleContainer'));
 
@@ -54,41 +46,16 @@ function ServerLayoutInner() {
     }
 
     return (
-        <SubNavigationLayout
-            navigation={
-                <SubNavigation>
-                    <div>
-                        <Slot name={'server.navigation.before'} data={server} />
-                        {getAreaNav('server').map(({ segment, label, exact, permission, ...meta }) => (
-                            <ScreenGate key={segment || '/'} screen={meta.screen}>
-                                {permission ? (
-                                    <Can action={permission} matchAny>
-                                        <NavLink to={to(segment)} exact={exact} hash={segment === 'files' ? '/' : ''}>
-                                            <NavigationLabel label={label} {...meta} />
-                                        </NavLink>
-                                    </Can>
-                                ) : (
-                                    <NavLink to={to(segment)} exact={exact} hash={segment === 'files' ? '/' : ''}>
-                                        <NavigationLabel label={label} {...meta} />
-                                    </NavLink>
-                                )}
-                            </ScreenGate>
-                        ))}
-                        {rootAdmin && (
-                            <Link
-                                to={'/panel/servers/$id'}
-                                params={{ id: server.attributes.internal_id }}
-                                aria-label={'Open server administration'}
-                                title={'Open server administration'}
-                            >
-                                <Icon icon={ExternalLink} />
-                            </Link>
-                        )}
-                        <Slot name={'server.navigation.after'} data={server} />
-                    </div>
-                </SubNavigation>
-            }
-        >
+        <>
+            <SidebarContent>
+                <ServerSidebar
+                    id={id}
+                    name={server.attributes.name}
+                    node={server.attributes.node}
+                    internalId={server.attributes.internal_id}
+                    server={server}
+                />
+            </SidebarContent>
             <InstallListener />
             <TransferListener />
             <WebsocketHandler />
@@ -106,7 +73,7 @@ function ServerLayoutInner() {
                     <Outlet />
                 </>
             )}
-        </SubNavigationLayout>
+        </>
     );
 }
 

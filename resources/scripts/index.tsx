@@ -5,6 +5,7 @@ import { queryClient } from '@/api/queryClient';
 import { syncThemeColorMeta } from '@/lib/theme';
 import '@/assets/tailwind.css';
 import '@/router/view-transitions.css';
+import '@/gobia/gobia.css';
 import { followCurrentUserLanguage } from './i18n';
 
 followCurrentUserLanguage(queryClient);

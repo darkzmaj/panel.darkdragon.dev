@@ -24,7 +24,7 @@ class GobiaCoreProvider extends ExtensionProvider
         $definition = new ExtensionSettingsDefinition($this->settings(), [
             ExtensionSettingDefinition::make('logo', 'logo', self::DEFAULT_LOGO)
                 ->label('Logo')
-                ->help('PNG shown beside the panel name. Leave empty to use the Gobia logo.')
+                ->help('PNG shown in the top bar instead of the Gobia wordmark. Leave empty to use the Gobia logo.')
                 ->tab('Branding')
                 ->file(['image/png'], 1024)
                 ->frontend()

@@ -1,17 +1,6 @@
-import {
-    Empty,
-    EmptyContent,
-    EmptyDescription,
-    EmptyHeader,
-    EmptyTitle,
-    PageContentBlock,
-    Pagination,
-    PanelLink,
-    Spinner,
-    type ReplacementProps,
-} from '@pterodactyl/sdk';
-import { Search, Settings2 } from 'lucide-react';
-import { useDeferredValue, useMemo, useState } from 'react';
+import { PageContentBlock, Pagination, type ReplacementProps } from '@pterodactyl/sdk';
+import { Check, ChevronDown, Pencil, Plus } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import CreateInstanceDialog from '../create/CreateInstanceDialog';
 import { AddToCategoryDialog, ManageCategoriesDialog } from './CategoryDialogs';
 import IconColorDialog from './IconColorDialog';
@@ -20,53 +9,89 @@ import { useInstances, useReorder, useSummary } from './queries';
 import type { CategoryFilter, Instance, View } from './types';
 import { useDragReorder } from './useDragReorder';
 
-const VIEWS: { id: View; label: string }[] = [
-    { id: 'all', label: 'All' },
-    { id: 'you', label: 'You' },
-    { id: 'other', label: 'Other' },
+const VIEWS: { id: View; label: string; hint: string }[] = [
+    { id: 'all', label: 'All', hint: 'Every instance you can access' },
+    { id: 'you', label: 'You', hint: 'Instances you own' },
+    { id: 'other', label: 'Other', hint: 'Instances shared with you by someone else' },
 ];
 
-function Pill({
-    active,
-    onClick,
-    children,
-    count,
-}: {
-    active: boolean;
-    onClick: () => void;
-    children: string;
-    count?: number;
-}) {
+/** The "All / You / Other" chip: opens a small menu to pick which instances are listed. */
+function ViewMenu({ view, onChange }: { view: View; onChange: (view: View) => void }) {
+    const [open, setOpen] = useState(false);
+    const root = useRef<HTMLDivElement>(null);
+    const current = VIEWS.find((item) => item.id === view) ?? VIEWS[0];
+
+    useEffect(() => {
+        if (!open) return;
+        const away = (event: MouseEvent) => !root.current?.contains(event.target as Node) && setOpen(false);
+        const key = (event: KeyboardEvent) => event.key === 'Escape' && setOpen(false);
+        document.addEventListener('mousedown', away);
+        document.addEventListener('keydown', key);
+        return () => {
+            document.removeEventListener('mousedown', away);
+            document.removeEventListener('keydown', key);
+        };
+    }, [open]);
+
     return (
-        <button
-            type={'button'}
-            aria-pressed={active}
-            onClick={onClick}
-            className={
-                'gb:inline-flex gb:items-center gb:gap-2 gb:rounded-full gb:border gb:px-3 gb:py-1 gb:text-sm gb:transition-colors gb:focus-visible:outline-2 gb:focus-visible:outline-ring ' +
-                (active
-                    ? 'gb:border-primary gb:bg-primary gb:text-primary-foreground'
-                    : 'gb:border-border gb:bg-card gb:text-muted-foreground gb:hover:text-foreground')
-            }
-        >
-            {children}
-            {count !== undefined && <span className={'gb:text-xs gb:opacity-75'}>{count}</span>}
-        </button>
+        <div ref={root} style={{ position: 'relative', flex: 'none' }}>
+            <button
+                type={'button'}
+                aria-haspopup={'listbox'}
+                aria-expanded={open}
+                onClick={() => setOpen((value) => !value)}
+                className={'gb-chip active'}
+            >
+                {current.label}
+                <ChevronDown aria-hidden />
+            </button>
+            {open && (
+                <div
+                    role={'listbox'}
+                    aria-label={'Instance view'}
+                    className={'gb-menu'}
+                    style={{ position: 'absolute', left: 0, top: 'calc(100% + 6px)', zIndex: 30 }}
+                >
+                    {VIEWS.map((item) => (
+                        <button
+                            key={item.id}
+                            type={'button'}
+                            role={'option'}
+                            aria-selected={view === item.id}
+                            onClick={() => {
+                                onChange(item.id);
+                                setOpen(false);
+                            }}
+                            className={'gb-menu-item'}
+                            style={{ height: 'auto', padding: '8px 10px', minWidth: 260 }}
+                        >
+                            <span style={{ flex: 1 }}>
+                                <span style={{ display: 'block', color: 'var(--gb-text-strong)', fontWeight: 600 }}>
+                                    {item.label}
+                                </span>
+                                <span className={'gb-secondary'} style={{ fontSize: 12 }}>
+                                    {item.hint}
+                                </span>
+                            </span>
+                            {view === item.id && <Check aria-hidden style={{ color: 'var(--gb-primary)' }} />}
+                        </button>
+                    ))}
+                </div>
+            )}
+        </div>
     );
 }
 
 export default function DashboardPage({ model }: ReplacementProps<'dashboard.page'>) {
     const [view, setView] = useState<View>('all');
     const [category, setCategory] = useState<CategoryFilter>(null);
-    const [search, setSearch] = useState('');
     const [page, setPage] = useState(1);
     const [colorFor, setColorFor] = useState<Instance | null>(null);
     const [categoriesFor, setCategoriesFor] = useState<Instance | null>(null);
     const [managing, setManaging] = useState(false);
     const [creating, setCreating] = useState(false);
-    const q = useDeferredValue(search);
 
-    const params = useMemo(() => ({ view, category, q, page }), [view, category, q, page]);
+    const params = useMemo(() => ({ view, category, q: '', page }), [view, category, page]);
     const { data, isPending, isError, refetch } = useInstances(params);
     const { data: summary } = useSummary();
     const reorder = useReorder();
@@ -89,147 +114,117 @@ export default function DashboardPage({ model }: ReplacementProps<'dashboard.pag
 
     return (
         <PageContentBlock title={'Instances'}>
-            <div className={'gb:mb-4 gb:flex gb:flex-wrap gb:items-center gb:justify-between gb:gap-3'}>
-                <h1 className={'gb:font-header gb:text-2xl gb:font-medium gb:text-foreground'}>Instances</h1>
-                <div className={'gb:flex gb:items-center gb:gap-2'}>
-                    <label className={'gb:relative gb:block'}>
-                        <span className={'gb:sr-only'}>Search instances</span>
-                        <Search
-                            size={16}
-                            aria-hidden
-                            className={
-                                'gb:pointer-events-none gb:absolute gb:left-3 gb:top-1/2 gb:-translate-y-1/2 gb:text-muted-foreground'
-                            }
-                        />
-                        <input
-                            type={'search'}
-                            value={search}
-                            placeholder={'Search'}
-                            onChange={(event) => {
-                                setSearch(event.currentTarget.value);
-                                setPage(1);
-                            }}
-                            className={
-                                'gb:w-56 gb:rounded-md gb:border gb:border-input gb:bg-background gb:py-2 gb:pl-9 gb:pr-3 gb:text-sm gb:text-foreground'
-                            }
-                        />
-                    </label>
-                    {model.rootAdmin && (
-                        <button
-                            type={'button'}
-                            onClick={() => setCreating(true)}
-                            className={
-                                'gb:rounded-md gb:bg-primary gb:px-3 gb:py-2 gb:text-sm gb:font-medium gb:text-primary-foreground'
-                            }
-                        >
-                            Create instance
+            <div className={'gb-page-head'}>
+                <div style={{ minWidth: 0 }}>
+                    <h2>Instances</h2>
+                    <p>Everything you own or have been given access to.</p>
+                </div>
+                {model.rootAdmin && (
+                    <div className={'gb-page-actions'}>
+                        <button type={'button'} className={'gb-btn gb-btn-primary'} onClick={() => setCreating(true)}>
+                            <Plus aria-hidden /> Create Instance
                         </button>
-                    )}
+                    </div>
+                )}
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+                <div className={'gb-filterbar'} role={'toolbar'} aria-label={'Instance views'}>
+                    <ViewMenu view={view} onChange={(next) => choose({ view: next })} />
+                    <div className={'gb-filterbar-scroll'}>
+                        {summary?.categories.map((item) => (
+                            <button
+                                key={item.id}
+                                type={'button'}
+                                aria-pressed={category === item.id}
+                                onClick={() => choose({ category: category === item.id ? null : item.id })}
+                                className={'gb-chip' + (category === item.id ? ' active' : '')}
+                            >
+                                {item.name}
+                            </button>
+                        ))}
+                        {summary && summary.categories.length > 0 && summary.uncategorized > 0 && (
+                            <button
+                                type={'button'}
+                                aria-pressed={category === 'none'}
+                                onClick={() => choose({ category: category === 'none' ? null : 'none' })}
+                                className={'gb-chip' + (category === 'none' ? ' active' : '')}
+                            >
+                                Uncategorized
+                            </button>
+                        )}
+                    </div>
+                    <button
+                        type={'button'}
+                        onClick={() => setManaging(true)}
+                        title={'Edit categories'}
+                        aria-label={'Edit categories'}
+                        className={'gb-chip gb-chip-icon'}
+                    >
+                        <Pencil aria-hidden />
+                        <span className={'gb-chip-label'}>Edit</span>
+                    </button>
                 </div>
             </div>
 
-            <div
-                className={'gb:mb-3 gb:flex gb:flex-wrap gb:items-center gb:gap-2'}
-                role={'group'}
-                aria-label={'Filter instances'}
-            >
-                {VIEWS.map((item) => (
-                    <Pill
-                        key={item.id}
-                        active={view === item.id}
-                        count={summary?.counts[item.id]}
-                        onClick={() => choose({ view: item.id })}
-                    >
-                        {item.label}
-                    </Pill>
-                ))}
-                <span className={'gb:mx-1 gb:h-5 gb:w-px gb:bg-border'} aria-hidden />
-                <Pill active={category === null} onClick={() => choose({ category: null })}>
-                    Every category
-                </Pill>
-                {summary?.categories.map((item) => (
-                    <Pill
-                        key={item.id}
-                        active={category === item.id}
-                        count={item.count}
-                        onClick={() => choose({ category: item.id })}
-                    >
-                        {item.name}
-                    </Pill>
-                ))}
-                {summary && summary.categories.length > 0 && (
-                    <Pill
-                        active={category === 'none'}
-                        count={summary.uncategorized}
-                        onClick={() => choose({ category: 'none' })}
-                    >
-                        Uncategorized
-                    </Pill>
-                )}
-                <button
-                    type={'button'}
-                    onClick={() => setManaging(true)}
-                    className={
-                        'gb:ml-auto gb:inline-flex gb:items-center gb:gap-2 gb:rounded-md gb:px-2 gb:py-1 gb:text-sm gb:text-muted-foreground gb:hover:text-foreground'
-                    }
-                >
-                    <Settings2 size={16} aria-hidden /> Categories
-                </button>
-            </div>
-
-            <div aria-live={'polite'} className={'gb:sr-only'}>
+            <div aria-live={'polite'} className={'sr-only'}>
                 {drag.announcement}
             </div>
 
             {isPending ? (
-                <Spinner centered size={'large'} />
+                <div className={'gb-list'}>
+                    {[0, 1, 2, 3].map((row) => (
+                        <div
+                            key={row}
+                            className={'gb-skeleton'}
+                            style={{
+                                height: 66,
+                                borderRadius: 0,
+                                borderTop: row ? '1px solid var(--gb-border-muted)' : 0,
+                            }}
+                        />
+                    ))}
+                </div>
             ) : isError ? (
-                <Empty className={'gb:border gb:bg-card'}>
-                    <EmptyHeader>
-                        <EmptyTitle>Instances could not be loaded</EmptyTitle>
-                        <EmptyDescription>Check your connection and try again.</EmptyDescription>
-                    </EmptyHeader>
-                    <EmptyContent>
-                        <button
-                            type={'button'}
-                            onClick={() => refetch()}
-                            className={'gb:rounded-md gb:border gb:border-border gb:px-3 gb:py-1.5 gb:text-sm'}
-                        >
-                            Retry
-                        </button>
-                    </EmptyContent>
-                </Empty>
+                <div className={'gb-list'} role={'alert'} style={{ padding: '40px 16px', textAlign: 'center' }}>
+                    <p className={'gb-secondary'} style={{ marginBottom: 12 }}>
+                        Instances could not be loaded. Check your connection and try again.
+                    </p>
+                    <button type={'button'} className={'gb-btn gb-btn-sm'} onClick={() => refetch()}>
+                        Retry
+                    </button>
+                </div>
             ) : data && ordered.length > 0 ? (
                 <Pagination data={data} onPageSelect={setPage}>
                     {() => (
-                        <ul className={'gb:flex gb:flex-col gb:gap-2'} aria-label={'Instances'}>
-                            {ordered.map((instance) => (
-                                <li key={instance.uuid}>
-                                    <InstanceRow
-                                        instance={instance}
-                                        dragging={drag.draggingId === instance.uuid}
-                                        drag={drag}
-                                        onColor={setColorFor}
-                                        onCategories={setCategoriesFor}
-                                    />
-                                </li>
-                            ))}
-                        </ul>
+                        <div className={'gb-list gb-server-list'}>
+                            <div className={'gb-list-head gb-server-head'} aria-hidden>
+                                <span>Instance</span>
+                                <span className={'gb-col-where'}>Node &amp; address</span>
+                                <span className={'gb-col-stats'}>CPU &middot; Memory &middot; Storage</span>
+                            </div>
+                            <ul style={{ listStyle: 'none', margin: 0, padding: 0 }} aria-label={'Instances'}>
+                                {ordered.map((instance) => (
+                                    <li key={instance.uuid} style={{ display: 'contents' }}>
+                                        <InstanceRow
+                                            instance={instance}
+                                            dragging={drag.draggingId === instance.uuid}
+                                            drag={drag}
+                                            onColor={setColorFor}
+                                            onCategories={setCategoriesFor}
+                                        />
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
                     )}
                 </Pagination>
             ) : (
-                <Empty className={'gb:border gb:bg-card'}>
-                    <EmptyHeader>
-                        <EmptyTitle>
-                            {q || category !== null || view !== 'all' ? 'No instances match' : 'No instances yet'}
-                        </EmptyTitle>
-                        <EmptyDescription>
-                            {q || category !== null || view !== 'all'
-                                ? 'Try a different filter or search.'
-                                : 'Instances you own or are invited to appear here.'}
-                        </EmptyDescription>
-                    </EmptyHeader>
-                </Empty>
+                <p className={'gb-list gb-secondary'} style={{ textAlign: 'center', padding: '40px 16px' }}>
+                    {category !== null || view !== 'all'
+                        ? 'No instances match this view.'
+                        : 'There are no instances associated with your account.'}
+                </p>
             )}
 
             {dragged && drag.pointer && (
@@ -242,9 +237,7 @@ export default function DashboardPage({ model }: ReplacementProps<'dashboard.pag
                         pointerEvents: 'none',
                         zIndex: 60,
                     }}
-                    className={
-                        'gb:rounded-lg gb:border gb:border-primary gb:bg-card gb:px-3 gb:py-2 gb:text-sm gb:font-medium gb:shadow-lg'
-                    }
+                    className={'gb-card'}
                 >
                     {dragged.name}
                 </div>

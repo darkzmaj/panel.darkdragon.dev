@@ -1,59 +1,35 @@
-const STYLE_ID = 'gobia-branding';
-
 /**
- * Only same origin paths made of URL safe characters are ever placed in a style rule. Every segment must start with a
- * letter, digit, underscore or hyphen, so `//host/x` (protocol relative), `.` and `..` segments never match.
+ * The core shell reads the admin uploaded logo and the user's avatar from data attributes on <html> and re-renders on
+ * the `gobia:branding` event (see resources/scripts/gobia/branding.ts). Only same origin paths made of URL safe
+ * characters are ever published: every segment must start with a letter, digit, underscore or hyphen, so `//host/x`
+ * (protocol relative), `.` and `..` segments never match.
  */
 const SAFE_PATH = /^\/(?:[A-Za-z0-9_-][A-Za-z0-9_.-]*\/)*[A-Za-z0-9_-][A-Za-z0-9_.-]*$/;
 
-/** The rule that puts the logo before the panel name in the navigation bar, or an empty string for an unsafe value. */
-export function logoRule(url: string): string {
-    if (url.length > 200 || !SAFE_PATH.test(url)) return '';
-    return [
-        '#logo > a { display: flex; align-items: center; gap: 0.625rem; }',
-        `#logo > a::before { content: ''; flex: none; width: 1.75rem; height: 1.75rem; background: url("${url}") center / contain no-repeat; }`,
-    ].join('\n');
+/** The setting's default value; it means "no custom logo", so the shell keeps showing the Gobia wordmark. */
+export const DEFAULT_LOGO = '/assets/theme/img/icon-256.png';
+
+const BRANDING_EVENT = 'gobia:branding';
+
+/** The url when it is a safe same origin path, otherwise an empty string. */
+export function safeUrl(url: string | null | undefined): string {
+    return url && url.length <= 200 && SAFE_PATH.test(url) ? url : '';
 }
 
-/** The navigation avatar link is the only anchor labelled "Account Settings"; its generated SVG is hidden behind the picture. */
-export function avatarRule(url: string): string {
-    if (url.length > 200 || !SAFE_PATH.test(url)) return '';
-    return [
-        `a[aria-label='Account Settings'] > span { background: url("${url}") center / cover no-repeat; border-radius: 9999px; }`,
-        "a[aria-label='Account Settings'] > span > svg { visibility: hidden; }",
-    ].join('\n');
+function publish(attribute: string, url: string | null | undefined): void {
+    const value = safeUrl(url);
+    const root = document.documentElement;
+    if (value) root.setAttribute(attribute, value);
+    else root.removeAttribute(attribute);
+    window.dispatchEvent(new Event(BRANDING_EVENT));
 }
 
-function writeStyle(id: string, rule: string): void {
-    let style = document.getElementById(id);
-    if (!rule) {
-        style?.remove();
-        return;
-    }
-    if (!style) {
-        style = document.createElement('style');
-        style.id = id;
-        document.head.appendChild(style);
-    }
-    style.textContent = rule;
-}
-
-/** Shows the user's uploaded avatar in the navigation bar, or restores the generated one for an empty value. */
+/** Shows the user's uploaded avatar in the top bar, or restores the generated one for an empty value. */
 export function applyAvatar(url: string | null): void {
-    writeStyle('gobia-avatar', url ? avatarRule(url) : '');
+    publish('data-gobia-avatar', url);
 }
 
+/** Shows the uploaded logo in the top bar; an empty or unsafe value restores the Gobia default. */
 export function applyLogo(url: string): void {
-    const rule = logoRule(url);
-    let style = document.getElementById(STYLE_ID);
-    if (!rule) {
-        style?.remove();
-        return;
-    }
-    if (!style) {
-        style = document.createElement('style');
-        style.id = STYLE_ID;
-        document.head.appendChild(style);
-    }
-    style.textContent = rule;
+    publish('data-gobia-logo', url === DEFAULT_LOGO ? '' : url);
 }

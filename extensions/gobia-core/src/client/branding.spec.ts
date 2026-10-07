@@ -1,11 +1,14 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { applyLogo, logoRule } from './branding';
+import { applyAvatar, applyLogo, DEFAULT_LOGO, safeUrl } from './branding';
 
 describe('branding', () => {
-    beforeEach(() => document.getElementById('gobia-branding')?.remove());
+    beforeEach(() => {
+        document.documentElement.removeAttribute('data-gobia-logo');
+        document.documentElement.removeAttribute('data-gobia-avatar');
+    });
 
-    it('builds a rule for a same origin path', () => {
-        expect(logoRule('/extension-files/gobia-core/abc.png')).toContain('url("/extension-files/gobia-core/abc.png")');
+    it('accepts a same origin path', () => {
+        expect(safeUrl('/extension-files/gobia-core/abc.png')).toBe('/extension-files/gobia-core/abc.png');
     });
 
     it.each([
@@ -18,14 +21,27 @@ describe('branding', () => {
         '/a") ; } body { display:none',
         "/a'b",
         'javascript:alert(1)',
-    ])('refuses %j', (value) => expect(logoRule(value)).toBe(''));
+    ])('refuses %j', (value) => expect(safeUrl(value)).toBe(''));
 
-    it('adds, updates and removes a single style element', () => {
-        applyLogo('/assets/theme/img/icon-256.png');
-        applyLogo('/assets/theme/img/icon-64.png');
-        expect(document.querySelectorAll('#gobia-branding')).toHaveLength(1);
-        expect(document.getElementById('gobia-branding')?.textContent).toContain('icon-64.png');
+    it('publishes, updates and clears the logo attribute and notifies the shell', () => {
+        let events = 0;
+        window.addEventListener('gobia:branding', () => events++);
+        applyLogo('/extension-files/gobia-core/logo.png');
+        expect(document.documentElement.getAttribute('data-gobia-logo')).toBe('/extension-files/gobia-core/logo.png');
         applyLogo('nope');
-        expect(document.getElementById('gobia-branding')).toBeNull();
+        expect(document.documentElement.hasAttribute('data-gobia-logo')).toBe(false);
+        expect(events).toBe(2);
+    });
+
+    it('treats the default logo setting as no custom logo', () => {
+        applyLogo(DEFAULT_LOGO);
+        expect(document.documentElement.hasAttribute('data-gobia-logo')).toBe(false);
+    });
+
+    it('publishes and clears the avatar attribute', () => {
+        applyAvatar('/extension-files/gobia-core/me.png');
+        expect(document.documentElement.getAttribute('data-gobia-avatar')).toBe('/extension-files/gobia-core/me.png');
+        applyAvatar(null);
+        expect(document.documentElement.hasAttribute('data-gobia-avatar')).toBe(false);
     });
 });
