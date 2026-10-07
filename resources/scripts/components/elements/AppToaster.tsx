@@ -25,7 +25,7 @@ const AppToaster = () => {
                 classNames: {
                     toast: 'relative flex w-full items-center gap-3 rounded-md border border-transparent bg-secondary py-2.5 pr-11 pl-4 text-secondary-foreground shadow-lg',
                     title: 'text-sm font-medium leading-tight tracking-normal',
-                    description: 'mt-1 text-sm leading-snug tracking-normal opacity-80',
+                    description: 'mt-1 text-sm leading-snug tracking-normal text-inherit! opacity-90',
                     closeButton:
                         'absolute! top-1/2! right-2! left-auto! flex! h-7! w-7! -translate-y-1/2! items-center justify-center rounded-md! border! border-transparent! bg-transparent! text-current! opacity-70 transition-opacity hover:opacity-100 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none [&>svg]:h-4 [&>svg]:w-4',
                     actionButton:

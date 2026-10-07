@@ -64,6 +64,20 @@ async function login(context) {
     await page.close();
 }
 
+/**
+ * Opens a page and waits for the application shell. The development server is a single PHP process, so a page that
+ * stalls once is loaded again before it counts as a failure.
+ */
+async function openShell(page, url) {
+    await page.goto(url);
+    try {
+        await page.waitForSelector('.gb-app', { timeout: 20000 });
+    } catch {
+        await page.reload();
+        await page.waitForSelector('.gb-app', { timeout: 30000 });
+    }
+}
+
 async function settle(page) {
     await page.addStyleTag({ content: FREEZE });
     await page.waitForLoadState('networkidle').catch(() => undefined);
@@ -147,8 +161,7 @@ try {
     if (run('visual')) {
         for (const [name, path] of pages) {
             const page = await context.newPage();
-            await page.goto(baseUrl + path);
-            await page.waitForSelector('.gb-app', { timeout: 30000 });
+            await openShell(page, baseUrl + path);
             if (name === 'server-files')
                 await page.waitForSelector('.gb-tree-name:not(.root)', { timeout: 30000 }).catch(() => undefined);
             await settle(page);
@@ -180,8 +193,7 @@ try {
         await editor.close();
 
         const dialog = await context.newPage();
-        await dialog.goto(baseUrl + '/');
-        await dialog.waitForSelector('.gb-app', { timeout: 30000 });
+        await openShell(dialog, baseUrl + '/');
         await dialog.getByRole('button', { name: /create instance/i }).click();
         await dialog.waitForSelector('[role=dialog]');
         await settle(dialog);
@@ -208,8 +220,22 @@ try {
                 ].includes(page)
             )) {
                 const page = await narrow.newPage();
-                await page.goto(baseUrl + path.replace(`/${server}`, `/${server}`));
-                await page.waitForSelector('.gb-app', { timeout: 30000 });
+                try {
+                    await openShell(page, baseUrl + path);
+                } catch (error) {
+                    // Say what the browser saw instead of an application shell (a throttled request, a sign in page).
+                    const text = (
+                        await page
+                            .locator('body')
+                            .innerText()
+                            .catch(() => '')
+                    )
+                        .slice(0, 200)
+                        .replace(/s+/g, ' ');
+                    fail(`responsive ${name} at ${width}px: no application shell at ${page.url()} (${text})`);
+                    await page.close();
+                    continue;
+                }
                 await settle(page);
                 const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
                 if (overflow > 1) fail(`responsive ${name} at ${width}px overflows horizontally by ${overflow}px`);
@@ -230,8 +256,7 @@ try {
             }
         };
         const page = await context.newPage();
-        await page.goto(baseUrl + '/');
-        await page.waitForSelector('.gb-app', { timeout: 30000 });
+        await openShell(page, baseUrl + '/');
 
         await check('profile menu opens with theme choices and log out', async () => {
             await page.locator('.gb-user-btn').click();
@@ -309,8 +334,7 @@ try {
         const phone = await browser.newContext({ viewport: { width: 390, height: 844 }, colorScheme: scheme });
         await login(phone);
         const small = await phone.newPage();
-        await small.goto(baseUrl + '/');
-        await small.waitForSelector('.gb-app', { timeout: 30000 });
+        await openShell(small, baseUrl + '/');
         await check('mobile drawer opens and closes', async () => {
             await small.getByRole('button', { name: 'Open navigation' }).click();
             await small.getByRole('link', { name: 'Account' }).waitFor({ state: 'visible' });
@@ -341,8 +365,7 @@ try {
         const axe = readFileSync(join(root, 'node_modules/axe-core/axe.min.js'), 'utf8');
         for (const [name, path] of pages) {
             const page = await context.newPage();
-            await page.goto(baseUrl + path);
-            await page.waitForSelector('.gb-app', { timeout: 30000 });
+            await openShell(page, baseUrl + path);
             await page.waitForLoadState('networkidle').catch(() => undefined);
             await page.evaluate(axe);
             const results = await page.evaluate(() => window.axe.run(document, { resultTypes: ['violations'] }));

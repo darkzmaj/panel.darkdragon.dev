@@ -18,7 +18,7 @@ No screenshots were attached to the task, so the running 1.x application was the
 
 ## Verification that exists in the repository
 
-`npm run test:gobia:browser` (needs the stack from `npm run dev:gobia` and `GOBIA_VISUAL_PASSWORD`, optionally `GOBIA_VISUAL_USER`, `GOBIA_SCHEME=light`):
+`npm run test:gobia:browser` (needs the stack from `npm run dev:gobia` and `GOBIA_VISUAL_PASSWORD`, optionally `GOBIA_VISUAL_USER`, `GOBIA_SCHEME=light`; set `APP_API_CLIENT_RATELIMIT=4096` in the local `.env`, the default 256 requests a minute is exceeded by a full run and the console then shows "Too Many Attempts"):
 
 * `visual`: 15 screenshots (login, instances, console, files, Monaco editor, settings, security, access, appearance, admin overview, users, nodes, templates, updates, create instance) compared with `tests/visual/baseline` (dark) and `baseline-light`
 * `responsive`: no horizontal overflow at 390, 430, 768, 1024, 1366, 1440, 1920 and 2560 px on ten pages (instances, console, files, security, access, appearance, admin overview, nodes, templates, updates)
