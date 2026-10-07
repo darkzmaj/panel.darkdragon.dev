@@ -101,7 +101,7 @@ const FileObjectRow = ({ file }: { file: FileObject }) => {
                         props={{ model, Default: DefaultFileDetails, parts: fileDetailsParts }}
                         loading={
                             <div
-                                className='h-5 w-full animate-pulse rounded-sm bg-muted'
+                                className='h-5 w-full animate-pulse rounded-md bg-muted'
                                 aria-label='Loading file details'
                             />
                         }
@@ -111,7 +111,7 @@ const FileObjectRow = ({ file }: { file: FileObject }) => {
             <DropdownMenu
                 className={'w-64'}
                 triggerClassName={
-                    'mr-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring'
+                    'mr-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring'
                 }
                 triggerContent={
                     <>

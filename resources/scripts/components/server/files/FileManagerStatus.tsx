@@ -45,7 +45,7 @@ const FileUploadList = ({ onClose }: { onClose: () => void }) => {
     return (
         <div className={'space-y-2 mt-6'}>
             {uploads.map(([id, file]) => (
-                <div key={id} className={'flex items-center space-x-3 bg-card p-3 rounded-sm'}>
+                <div key={id} className={'flex items-center space-x-3 bg-card p-3 rounded-md'}>
                     <Tooltip content={`${Math.floor(percent(file.loaded, file.total))}%`} placement={'left'}>
                         <div className={'shrink-0'}>
                             <Spinner progress={percent(file.loaded, file.total)} className={'w-6 h-6'} />

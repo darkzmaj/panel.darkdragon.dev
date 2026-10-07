@@ -161,7 +161,7 @@ function EggScriptForm({ egg }: Props) {
                                 to={'/panel/eggs/$eggId/script'}
                                 params={{ eggId: dependent.attributes.id }}
                                 className={
-                                    'block rounded-sm bg-muted px-3 py-2 text-sm text-foreground hover:text-accent'
+                                    'block rounded-md bg-muted px-3 py-2 text-sm text-foreground hover:text-accent'
                                 }
                             >
                                 {dependent.attributes.name}

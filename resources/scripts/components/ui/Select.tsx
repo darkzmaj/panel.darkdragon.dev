@@ -58,27 +58,27 @@ type ComboboxGroupItem = {
 type WithStringClassName<TProps> = Omit<TProps, 'className'> & { className?: string };
 
 const inputGroupClass = [
-    'relative flex items-center w-full rounded-sm border text-sm transition-colors duration-150',
-    'bg-input border-input text-foreground hover:border-input data-[popup-open]:border-input',
-    'focus-within:shadow-md focus-within:border-primary focus-within:ring-2 focus-within:ring-ring/50',
+    'relative flex items-center w-full min-h-10 rounded-md border text-sm transition-colors duration-100',
+    'bg-background border-input text-foreground hover:border-input data-[popup-open]:border-input',
+    'focus-within:border-primary focus-within:ring-[3px] focus-within:ring-primary/20',
     'data-[disabled]:opacity-75 data-[disabled]:cursor-default',
 ].join(' ');
 const inputErrorClass =
     'border-destructive text-destructive focus-within:border-destructive focus-within:ring-destructive';
 const inputClass = [
-    'w-full min-w-0 appearance-none border-0 bg-transparent p-3 pr-10 text-sm text-foreground outline-hidden',
+    'w-full min-w-0 appearance-none border-0 bg-transparent px-3 pr-10 text-sm text-foreground outline-hidden',
     'placeholder:text-muted-foreground focus:ring-0 focus:outline-hidden disabled:cursor-default',
 ].join(' ');
 const triggerClass =
     'absolute right-0 top-0 flex h-full w-10 items-center justify-center border-0 bg-transparent p-0 text-muted-foreground [&_svg]:h-4 [&_svg]:w-4 [&_svg]:shrink-0';
 const positionerClass = 'z-[99999] min-w-[var(--anchor-width)] outline-none';
 const popupClass = [
-    'bg-card border border-border rounded-sm shadow-lg py-1 text-sm text-foreground',
+    'bg-card border border-border/55 rounded-md shadow-[var(--gb-shadow-pop)] p-1.5 text-sm text-foreground',
     'w-[var(--anchor-width)] max-w-[var(--available-width)] max-h-[min(18rem,var(--available-height))]',
 ].join(' ');
 const listClass = 'max-h-72 overflow-y-auto overscroll-contain outline-none';
 const itemClass =
-    'flex items-center justify-between px-3 py-2 cursor-pointer select-none outline-hidden data-[highlighted]:bg-popover data-[highlighted]:text-foreground data-[selected]:text-accent data-[disabled]:opacity-50 data-[disabled]:cursor-default';
+    'flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer select-none outline-hidden data-[highlighted]:bg-secondary data-[highlighted]:text-foreground data-[selected]:text-accent data-[disabled]:opacity-50 data-[disabled]:cursor-default';
 const emptyClass = 'px-3 py-2 text-sm text-muted-foreground empty:p-0';
 const groupLabelClass = 'px-3 pt-2 pb-1 text-xs uppercase text-muted-foreground empty:hidden';
 const selectionSummaryClass = 'pointer-events-none whitespace-nowrap px-3 py-3 text-sm text-foreground';

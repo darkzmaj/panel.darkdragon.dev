@@ -16,7 +16,7 @@ interface StatBlockProps {
 export type StatBlockTone = 'warning' | 'destructive';
 
 const statBlockClass =
-    'flex items-center rounded-sm shadow-lg relative col-span-3 md:col-span-2 lg:col-span-6 px-3 py-2 md:p-3 lg:p-4';
+    'flex items-center rounded-md shadow-lg relative col-span-3 md:col-span-2 lg:col-span-6 px-3 py-2 md:p-3 lg:p-4';
 
 const statusBarClass = 'w-1 h-full absolute left-0 top-0 rounded-l-sm sm:hidden';
 

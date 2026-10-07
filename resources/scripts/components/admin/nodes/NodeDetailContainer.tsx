@@ -50,7 +50,7 @@ export default function NodeDetailContainer() {
                     Back to Nodes
                 </Link>
                 <Slot name='panel.nodes.detail.actions' data={resourceContext} />
-                <SubNavigation className={'mb-6 rounded-sm'}>
+                <SubNavigation className={'mb-6 rounded-md'}>
                     <div>
                         <Link
                             to={'/panel/nodes/$id'}

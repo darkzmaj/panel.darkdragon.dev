@@ -8,7 +8,7 @@ import Icon from '@/components/elements/Icon';
 const positionerClass = 'z-[9999] outline-hidden';
 
 const popupClass =
-    'min-w-56 bg-popover border border-border rounded-sm shadow-xl p-1.5 text-sm text-popover-foreground ' +
+    'min-w-52 bg-card border border-border/55 rounded-md shadow-[var(--gb-shadow-pop)] p-1.5 text-sm text-foreground ' +
     'outline-hidden origin-[var(--transform-origin)] transition duration-100 ' +
     'data-[starting-style]:opacity-0 data-[starting-style]:scale-95 ' +
     'data-[ending-style]:opacity-0 data-[ending-style]:scale-95';
@@ -78,9 +78,9 @@ export function DropdownMenuItem({ icon, danger, description, className, childre
     return (
         <Item
             className={cn(
-                'group flex w-full gap-3 px-2.5 py-2.5 rounded-sm cursor-pointer select-none outline-hidden',
+                'group flex w-full gap-2.5 px-2.5 py-2 rounded-lg cursor-pointer select-none outline-hidden',
                 description ? 'items-start' : 'items-center',
-                'text-foreground transition-colors data-[highlighted]:bg-muted data-[highlighted]:text-foreground',
+                'text-foreground transition-colors duration-100 data-[highlighted]:bg-secondary data-[highlighted]:text-foreground',
                 danger && 'text-destructive data-[highlighted]:bg-destructive/10 data-[highlighted]:text-destructive',
                 className
             )}
@@ -89,18 +89,16 @@ export function DropdownMenuItem({ icon, danger, description, className, childre
             {icon && (
                 <span
                     className={cn(
-                        'flex h-7 w-7 shrink-0 items-center justify-center rounded-sm border border-border bg-muted text-muted-foreground transition-colors',
+                        'flex h-5 w-5 shrink-0 items-center justify-center text-muted-foreground transition-colors',
                         description && 'mt-0.5',
-                        'group-data-[highlighted]:border-border group-data-[highlighted]:bg-background group-data-[highlighted]:text-foreground',
-                        danger &&
-                            'border-destructive/30 bg-destructive/10 text-destructive group-data-[highlighted]:border-destructive/40 group-data-[highlighted]:bg-destructive/15 group-data-[highlighted]:text-destructive'
+                        danger && 'text-destructive'
                     )}
                 >
                     <Icon icon={icon} className={'h-4 w-4'} />
                 </span>
             )}
             <span className={'flex min-w-0 flex-1 flex-col'}>
-                <span className={'truncate text-sm font-medium leading-5'}>{children}</span>
+                <span className={'truncate text-sm leading-5'}>{children}</span>
                 {description && (
                     <span
                         className={cn(

@@ -103,7 +103,7 @@ export default function Tooltip({ children, ...props }: Props) {
                         {...getFloatingProps({
                             ref: refs.setFloating,
                             className: cn(
-                                'bg-popover text-sm text-popover-foreground px-3 py-2 rounded-sm pointer-events-none max-w-[24rem] z-9999',
+                                'bg-popover text-sm text-popover-foreground px-3 py-2 rounded-md pointer-events-none max-w-[24rem] z-9999',
                                 props.className
                             ),
                             style: { ...floatingStyles, ...transitionStyles },

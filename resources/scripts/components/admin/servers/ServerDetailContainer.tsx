@@ -61,7 +61,7 @@ export default function ServerDetailContainer() {
                     </Link>
                 </div>
                 <Slot name='panel.servers.detail.actions' data={resourceContext} />
-                <SubNavigation className={'mb-6 rounded-sm'}>
+                <SubNavigation className={'mb-6 rounded-md'}>
                     <div>
                         <Link
                             to={'/panel/servers/$id'}

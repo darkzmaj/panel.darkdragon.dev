@@ -26,7 +26,7 @@ import { emptyCompactClass } from '@/components/ui/styles';
 import { usePermissions } from '@/plugins/usePermissions';
 
 const CronBox = ({ title, value }: { title: string; value: string }) => (
-    <div className={'bg-card rounded-sm p-3'}>
+    <div className={'bg-card rounded-md p-3'}>
         <p className={'text-muted-foreground text-sm'}>{title}</p>
         <p className={'text-xl font-medium text-foreground'}>{value}</p>
     </div>
@@ -64,8 +64,8 @@ const ScheduleDetails = ({ schedule }: { schedule: Schedule }) => {
 
     return (
         <PageContentBlock title={'Schedules'}>
-            <ScheduleCronRow cron={schedule.attributes.cron} className={'sm:hidden bg-card rounded-sm mb-4 p-3'} />
-            <div className={'rounded-sm shadow-sm'}>
+            <ScheduleCronRow cron={schedule.attributes.cron} className={'sm:hidden bg-card rounded-md mb-4 p-3'} />
+            <div className={'rounded-md shadow-sm'}>
                 <div className={'sm:flex items-center bg-muted p-3 sm:p-6 border-b-4 border-border rounded-t-sm'}>
                     <div className={'flex-1'}>
                         <h3 className={'flex items-center text-foreground text-2xl'}>

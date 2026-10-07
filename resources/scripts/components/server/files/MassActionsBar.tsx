@@ -49,7 +49,7 @@ const MassActionsBar = ({ selectedFiles }: { selectedFiles: readonly string[] })
                         {selectedFiles.length > 0 && (
                             <div
                                 className={
-                                    'flex items-center space-x-4 pointer-events-auto rounded-sm p-4 bg-background/50'
+                                    'flex items-center space-x-4 pointer-events-auto rounded-md p-4 bg-background/50'
                                 }
                             >
                                 {extensionData && <Slot name={'server.files.selectionActions'} data={extensionData} />}

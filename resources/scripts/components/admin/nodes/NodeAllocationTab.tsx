@@ -39,7 +39,7 @@ import { getPageSearch, usePageSearch } from '@/router/search';
 
 const countLabel = (count: number, noun: string) => `${count} ${noun}${count === 1 ? '' : 's'}`;
 
-const ghostDangerClass = 'rounded-sm text-muted-foreground transition-colors hover:bg-popover hover:text-destructive';
+const ghostDangerClass = 'rounded-md text-muted-foreground transition-colors hover:bg-popover hover:text-destructive';
 
 const unassignedAllocationIds = (items: AdminAllocation[]) => {
     const ids: number[] = [];
@@ -158,7 +158,7 @@ const AllocationServerCell = ({ allocation }: { allocation: AdminAllocation }) =
         return (
             <span
                 className={
-                    'inline-flex items-center rounded-sm border border-border bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground'
+                    'inline-flex items-center rounded-md border border-border bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground'
                 }
             >
                 Unassigned

@@ -44,7 +44,7 @@ export default function Console() {
                 <div
                     role={'alert'}
                     className={
-                        'absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-sm bg-terminal p-4 text-center text-sm text-foreground'
+                        'absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-md bg-terminal p-4 text-center text-sm text-foreground'
                     }
                 >
                     <p>The console could not be loaded.</p>

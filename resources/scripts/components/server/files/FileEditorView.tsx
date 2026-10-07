@@ -32,13 +32,13 @@ export const modeForFile = (filename: string) => findModeByFilename(filename)?.m
 type PartProps = ComponentPartProps<'server.files.editor'>;
 function Notice({ model }: PartProps) {
     return model.name.endsWith('.pteroignore') ? (
-        <div className={'mb-4 p-4 border-l-4 bg-muted rounded-sm border-accent'}>
+        <div className={'mb-4 p-4 border-l-4 bg-muted rounded-md border-accent'}>
             <p className={'text-muted-foreground text-sm'}>
-                You&apos;re editing a <code className={'font-mono bg-muted rounded-sm py-px px-1'}>.pteroignore</code>{' '}
+                You&apos;re editing a <code className={'font-mono bg-muted rounded-md py-px px-1'}>.pteroignore</code>{' '}
                 file. Any files or directories listed in here will be excluded from backups. Wildcards are supported by
-                using an asterisk (<code className={'font-mono bg-muted rounded-sm py-px px-1'}>*</code>
+                using an asterisk (<code className={'font-mono bg-muted rounded-md py-px px-1'}>*</code>
                 ). You can negate a prior rule by prepending an exclamation point (
-                <code className={'font-mono bg-muted rounded-sm py-px px-1'}>!</code>).
+                <code className={'font-mono bg-muted rounded-md py-px px-1'}>!</code>).
             </p>
         </div>
     ) : null;
@@ -62,7 +62,7 @@ function Editor({ model }: PartProps) {
 function Language({ model }: PartProps) {
     const { setLanguage } = useContext(FileEditorContext)!;
     return (
-        <div className={'w-full min-w-0 rounded-sm bg-muted sm:w-64'}>
+        <div className={'w-full min-w-0 rounded-md bg-muted sm:w-64'}>
             <Select
                 value={model.language}
                 onChange={(value) => setLanguage(String(value))}

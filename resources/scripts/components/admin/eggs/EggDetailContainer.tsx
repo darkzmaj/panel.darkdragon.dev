@@ -58,7 +58,7 @@ export default function EggDetailContainer() {
                     </div>
                 </div>
                 <Slot name='panel.eggs.detail.actions' data={resourceContext} />
-                <SubNavigation className={'mb-4 rounded-sm'}>
+                <SubNavigation className={'mb-4 rounded-md'}>
                     <div>
                         <Link
                             to={'/panel/eggs/$eggId'}

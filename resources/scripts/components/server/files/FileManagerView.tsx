@@ -98,7 +98,7 @@ function List({ model }: PartProps) {
     return (
         <div>
             {model.truncated && (
-                <div className={'rounded-sm bg-warning mb-px p-3'}>
+                <div className={'rounded-md bg-warning mb-px p-3'}>
                     <p className={'text-warning-foreground text-sm text-center'}>
                         This directory is too large to display in the browser, limiting output to first 250 files.
                     </p>

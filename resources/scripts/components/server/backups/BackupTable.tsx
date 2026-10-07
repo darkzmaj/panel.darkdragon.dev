@@ -25,7 +25,7 @@ const BackupIdentityCell = ({ backup }: { backup: ServerBackup }) => {
             <div className={'min-w-0'}>
                 <div className={'flex items-center gap-2'}>
                     {attributes.completed_at !== null && !attributes.is_successful ? (
-                        <span className={'rounded-sm bg-destructive px-1.5 py-0.5 text-xs text-destructive-foreground'}>
+                        <span className={'rounded-md bg-destructive px-1.5 py-0.5 text-xs text-destructive-foreground'}>
                             Failed
                         </span>
                     ) : null}

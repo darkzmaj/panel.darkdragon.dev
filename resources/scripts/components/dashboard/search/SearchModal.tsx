@@ -110,7 +110,7 @@ export default function SearchModal({ ...props }: Props) {
                                     <p className={'mt-1 text-xs text-muted-foreground'}>{defaultAllocations}</p>
                                 </div>
                                 <div className={'flex-none text-right'}>
-                                    <span className={'text-xs py-1 px-2 bg-accent text-accent-foreground rounded-sm'}>
+                                    <span className={'text-xs py-1 px-2 bg-accent text-accent-foreground rounded-md'}>
                                         {attributes.node}
                                     </span>
                                 </div>

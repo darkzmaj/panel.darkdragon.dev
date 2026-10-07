@@ -62,7 +62,7 @@ const RowMeaning = ({ meaning, detail }: Row) =>
     );
 
 const CheatsheetCard = ({ title, rows, tokenClass }: { title: string; rows: Row[]; tokenClass: string }) => (
-    <div className={'overflow-hidden rounded-sm border border-border bg-background/50'}>
+    <div className={'overflow-hidden rounded-md border border-border bg-background/50'}>
         <h3
             className={
                 'border-b border-border bg-popover px-3 py-2 text-xs font-semibold uppercase text-muted-foreground'

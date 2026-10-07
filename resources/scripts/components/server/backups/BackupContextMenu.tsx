@@ -91,7 +91,7 @@ const BackupContextMenu = ({ backup, page }: Props) => {
                     Your server will be stopped. You will not be able to control the power state, access the file
                     manager, or create additional backups until completed.
                 </p>
-                <p className={'mt-4 -mb-2 bg-card p-3 rounded-sm'}>
+                <p className={'mt-4 -mb-2 bg-card p-3 rounded-md'}>
                     <label htmlFor={'restore_truncate'} className={'text-base flex items-center cursor-pointer'}>
                         <Checkbox
                             className={

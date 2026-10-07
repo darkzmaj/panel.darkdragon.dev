@@ -23,3 +23,20 @@ These make Gobia CI green on clean upstream. They are the same hunks as the pull
 | `app/Extensions/Illuminate/Auth/Passwords/PasswordBroker.php`, `PasswordBrokerManager.php`, `app/Http/Controllers/Api/Client/Servers/FileController.php` | https://github.com/pterodactyl/panel/pull/7251 | Rector changes reported under PHP 8.4 |
 | `scripts/generate-extension-openapi.php` | https://github.com/pterodactyl/panel/pull/7252 | `mb_trim()` is undefined on PHP 8.3 |
 | `packages/sdk/vite.mjs`, `packages/sdk/vite.spec.ts` | https://github.com/pterodactyl/panel/pull/7253 | Extension builds preload shared lazy chunks from the site root |
+
+## Visual parity patches (Gobia shell and primitives)
+
+These are presentation patches. The extension API can replace five components (`dashboard.page`, `dashboard.serverCard`, `server.files.*`) and add slots, but it cannot replace the application shell, the auth screens or the shared UI primitives, so exact 1.x parity needs these edits. All new Gobia code lives in `resources/scripts/gobia/**` (not an upstream path, no conflicts); the files below are the only upstream files touched.
+
+| File | Purpose | Why the extension API cannot do it | Upstream conflict risk | Tests | Removal path |
+| --- | --- | --- | --- | --- | --- |
+| `resources/scripts/index.tsx` | Imports `@/gobia/gobia.css` | No stylesheet slot loads before first paint for the shell | Low (one import) | Vite build | Move the import into a theme CSS file if upstream themes may ship component CSS |
+| `router/layouts/AuthenticatedLayout.tsx`, `AdminLayout.tsx`, `AccountLayout.tsx`, `AuthLayout.tsx`, `ServerLayout.tsx` | Replace the horizontal navigation, sub navigation and auth wrapper with the Gobia shell, sidebar and local menu | Layouts are not replaceable components | Medium (layout files change upstream) | Browser comparison with 1.x, `gobia-core` vitest | Upstream "layout" replacement point |
+| `components/NavigationBar.tsx` | No longer rendered (kept so upstream merges stay trivial) | Same | Low | none | Delete after the next upstream sync |
+| `components/auth/LoginFormContainer.tsx` | Gobia sign in screen with the interactive preview | Auth screens have no slot that replaces the frame | Medium | Browser comparison | Upstream auth frame slot |
+| `components/elements/PageContentBlock.tsx`, `ServerContentBlock.tsx`, `PageHeading.tsx` | Page wrapper without the Pterodactyl footer, 1.x page head and subtitles | Shared wrapper, not a replaceable component | Medium | Browser comparison | Upstream page wrapper slot |
+| `components/elements/Button.tsx`, `Label.tsx`, `components/form/controls.tsx`, `components/ui/Select.tsx`, `Checkbox.tsx`, `typography.ts` | Gobia control sizes, radius, focus ring | Primitives are not replaceable | Medium (class strings) | Existing component specs | Tokens only, if upstream exposes control tokens |
+| `components/elements/dialog/Dialog.tsx`, `dropdown/DropdownMenu.tsx`, `table/DataTable.tsx`, `AppToaster.tsx`, `alert/Alert.tsx`, `ui/empty.tsx`, `ContentBox.tsx`, `TitledGreyBox.tsx`, `GreyRowBox.tsx` | Gobia modal, menu, table, toast, alert and card look | Same | Medium | Existing component specs | Same |
+| `components/admin/overview/OverviewContainer.tsx` | Gobia overview heading; the stock version card, external links and navigation cards are removed (updates are Gobia releases) | Core page, the slots only add content | Low | Browser comparison | Keep |
+| `router/routeTree.ts`, `components/admin/servers/ServersContainer.tsx` | Admin "Servers" is "Instances" | Route metadata is core | Low (two strings) | none | Keep |
+| `components/server/console/ServerConsoleContainer.tsx` | Console draws its own header | Core page | Low | none | Keep |

@@ -8,7 +8,7 @@ interface ChartBlockProps {
 
 export default function ChartBlock({ title, legend, children }: ChartBlockProps) {
     return (
-        <div className={'group relative rounded-sm bg-popover pt-2 shadow-lg border-b-4 border-border'}>
+        <div className={'group relative rounded-md bg-popover pt-2 shadow-lg border-b-4 border-border'}>
             <div className={'flex items-center justify-between px-4 py-2'}>
                 <h3 className={'font-header font-medium transition-colors duration-100 group-hover:text-foreground'}>
                     {title}

@@ -5,7 +5,7 @@ import { TriangleAlert } from 'lucide-react';
 type ResetKey = string | number | boolean | null | undefined;
 
 const retryButtonClass = [
-    'ml-3 shrink-0 rounded-sm border border-border bg-popover px-2 py-1 text-xs uppercase tracking-wide',
+    'ml-3 shrink-0 rounded-md border border-border bg-popover px-2 py-1 text-xs uppercase tracking-wide',
     'text-foreground transition-colors duration-150 hover:bg-secondary',
 ].join(' ');
 
@@ -47,7 +47,7 @@ class ErrorBoundary extends React.Component<Props, State> {
     render() {
         return this.state.hasError ? (
             <div className={'flex items-center justify-center w-full my-4'}>
-                <div role={'alert'} className={'flex items-center bg-muted rounded-sm p-3 text-destructive'}>
+                <div role={'alert'} className={'flex items-center bg-muted rounded-md p-3 text-destructive'}>
                     <Icon icon={TriangleAlert} className={'h-4 w-auto mr-2'} />
                     <p className={'text-sm text-foreground'}>
                         An error was encountered by the application while rendering this view. Try refreshing the page.

@@ -26,7 +26,7 @@ export default function ActivityLogMetaButton({ meta }: { meta: ActivityLogMetad
                     <Dialog open={open} onClose={onClose} hideCloseIcon title={'Metadata'}>
                         <pre
                             className={
-                                'bg-muted rounded-sm p-2 font-mono text-sm leading-relaxed overflow-x-scroll whitespace-pre-wrap'
+                                'bg-muted rounded-md p-2 font-mono text-sm leading-relaxed overflow-x-scroll whitespace-pre-wrap'
                             }
                         >
                             {JSON.stringify(meta, null, 2)}

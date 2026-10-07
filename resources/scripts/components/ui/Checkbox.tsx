@@ -14,7 +14,7 @@ export type CheckboxProps = Omit<
 
 const rootClass = [
     'flex items-center justify-center shrink-0 w-4 h-4 rounded-xs cursor-pointer',
-    'bg-input border border-input text-primary-foreground transition-colors duration-75 hover:border-primary/70',
+    'bg-background border border-input text-primary-foreground transition-colors duration-75 hover:border-primary/70',
     'data-[checked]:bg-primary data-[checked]:border-transparent',
     'data-[indeterminate]:bg-primary data-[indeterminate]:border-transparent',
     'data-[disabled]:opacity-60 data-[disabled]:cursor-default',

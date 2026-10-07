@@ -62,7 +62,7 @@ export default function UploadButton({ className }: WithClassname) {
                         <div className={'w-full flex items-center justify-center pointer-events-none'}>
                             <div
                                 className={
-                                    'flex items-center space-x-4 bg-muted w-full ring-4 ring-ring/50 rounded-sm p-6 mx-10 max-w-sm'
+                                    'flex items-center space-x-4 bg-muted w-full ring-4 ring-ring/50 rounded-md p-6 mx-10 max-w-sm'
                                 }
                             >
                                 <CloudUpload className={'w-10 h-10 shrink-0'} />

@@ -62,7 +62,7 @@ function Metrics({ model }: PartProps) {
                 <div className='flex-1 text-center'>
                     <span
                         className={cn(
-                            'rounded-sm px-2 py-1 text-xs',
+                            'rounded-md px-2 py-1 text-xs',
                             state.reason === 'maintenance'
                                 ? 'bg-warning text-warning-foreground'
                                 : ['suspended', 'connection-error'].includes(state.reason)

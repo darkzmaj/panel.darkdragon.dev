@@ -93,7 +93,7 @@ const TaskDetailsForm = ({ schedule, task, onClose }: Props & { onClose: () => v
             {formError && (
                 <div
                     className={
-                        'rounded-sm border border-destructive/40 bg-destructive/10 p-3 text-sm text-foreground mb-4'
+                        'rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-foreground mb-4'
                     }
                 >
                     {formError}
@@ -175,7 +175,7 @@ const TaskDetailsForm = ({ schedule, task, onClose }: Props & { onClose: () => v
                     </form.AppField>
                 )}
             </div>
-            <div className={'mt-6 bg-card border border-border shadow-inner p-4 rounded-sm'}>
+            <div className={'mt-6 bg-card border border-border shadow-inner p-4 rounded-md'}>
                 <form.AppField name={'continueOnFailure'}>
                     {(field) => (
                         <field.SwitchField

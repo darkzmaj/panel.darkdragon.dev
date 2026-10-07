@@ -135,7 +135,7 @@ export default function CreateApiKeyButton() {
                     The application API key shown below will not be displayed again. Store it somewhere safe before
                     closing this dialog.
                 </p>
-                <pre className={'text-sm bg-muted rounded-sm py-2 px-4 font-mono'}>
+                <pre className={'text-sm bg-muted rounded-md py-2 px-4 font-mono'}>
                     <CopyOnClick text={secret}>
                         <code className={'font-mono'}>{secret}</code>
                     </CopyOnClick>

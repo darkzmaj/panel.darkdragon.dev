@@ -378,7 +378,7 @@ export function UserDetailLayout() {
                     Back to Users
                 </Link>
                 <Slot name={'panel.users.detail.actions'} data={resourceContext} />
-                <SubNavigation className={'mb-6 rounded-sm'}>
+                <SubNavigation className={'mb-6 rounded-md'}>
                     <div>
                         <Link
                             to={'/panel/users/$id'}

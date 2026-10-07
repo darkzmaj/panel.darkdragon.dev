@@ -20,7 +20,7 @@ const SpinnerOverlay = ({ size, fixed, visible, backgroundOpacity, children }: P
     return (
         <div
             className={cn(
-                'top-0 left-0 flex items-center justify-center w-full h-full rounded-sm flex-col z-40',
+                'top-0 left-0 flex items-center justify-center w-full h-full rounded-md flex-col z-40',
                 'bg-background/(--spinner-overlay-opacity)',
                 !fixed ? 'absolute' : 'fixed'
             )}

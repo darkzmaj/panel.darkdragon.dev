@@ -46,8 +46,8 @@ export const FileInput = ({ className, ...props }: Omit<React.ComponentProps<'in
         {...props}
         type={'file'}
         className={cn(
-            'block w-full min-w-0 rounded-sm text-sm text-foreground',
-            'file:mr-3 file:rounded-sm file:border file:border-border file:bg-popover file:px-4 file:py-2 file:text-sm file:font-medium file:text-foreground',
+            'block w-full min-w-0 rounded-md text-sm text-foreground',
+            'file:mr-3 file:rounded-md file:border file:border-border file:bg-popover file:px-4 file:py-2 file:text-sm file:font-medium file:text-foreground',
             'enabled:cursor-pointer enabled:file:cursor-pointer enabled:hover:file:bg-secondary',
             'focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card',
             'disabled:cursor-default disabled:opacity-50',

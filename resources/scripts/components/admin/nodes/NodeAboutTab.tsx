@@ -25,9 +25,9 @@ const UsageBox = ({ title, metric }: { title: string; metric: NodeUtilization['m
             <p className={'text-sm text-foreground'}>
                 {metric ? `${metric.value} / ${metric.max} MiB` : <Spinner size={'small'} />}
             </p>
-            <div className={'mt-2 h-2 w-full rounded-sm bg-sunken overflow-hidden'}>
+            <div className={'mt-2 h-2 w-full rounded-md bg-sunken overflow-hidden'}>
                 <div
-                    className={cn('h-2 rounded-sm transition-[width,background-color] duration-150', colour)}
+                    className={cn('h-2 rounded-md transition-[width,background-color] duration-150', colour)}
                     style={{ width: `${percent}%` }}
                 />
             </div>

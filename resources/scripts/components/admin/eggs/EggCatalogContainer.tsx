@@ -183,7 +183,7 @@ export default function EggCatalogContainer() {
                         {visibleEntries.map((entry) => (
                             <article
                                 key={entry.id}
-                                className={'flex min-w-0 flex-col gap-3 rounded-sm border border-border bg-card p-4'}
+                                className={'flex min-w-0 flex-col gap-3 rounded-md border border-border bg-card p-4'}
                             >
                                 <div>
                                     <p className={'text-xs font-medium uppercase tracking-wide text-muted-foreground'}>

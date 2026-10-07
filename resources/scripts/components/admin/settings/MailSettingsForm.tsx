@@ -70,7 +70,7 @@ export default function MailSettingsForm({ settings }: { settings: AdminSettings
     if (disabled) {
         return (
             <TitledGreyBox title={'Mail Configuration'}>
-                <div className={'rounded-sm border border-border bg-popover px-4 py-3 text-sm text-foreground'}>
+                <div className={'rounded-md border border-border bg-popover px-4 py-3 text-sm text-foreground'}>
                     This interface is limited to instances using SMTP as the mail driver. Use{' '}
                     <code>php artisan p:environment:mail</code> to update mail settings, or set{' '}
                     <code>MAIL_DRIVER=smtp</code> in the environment file.

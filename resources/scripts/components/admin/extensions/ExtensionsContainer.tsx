@@ -93,7 +93,7 @@ function ExtensionMark({ extension }: { extension: AdminExtension }) {
     return (
         <div
             className={
-                'flex h-10 w-10 shrink-0 items-center justify-center rounded-sm bg-secondary text-sm font-semibold text-secondary-foreground'
+                'flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-secondary text-sm font-semibold text-secondary-foreground'
             }
             aria-hidden={'true'}
         >
@@ -511,7 +511,7 @@ function ExtensionCard({ extension }: { extension: AdminExtension }) {
     };
 
     return (
-        <article className={'flex h-full flex-col rounded-sm border border-border bg-card p-4'}>
+        <article className={'flex h-full flex-col rounded-md border border-border bg-card p-4'}>
             <div className={'flex min-w-0 items-start gap-3'}>
                 <ExtensionMark extension={extension} />
                 <div className={'min-w-0 flex-1'}>
@@ -520,7 +520,7 @@ function ExtensionCard({ extension }: { extension: AdminExtension }) {
                             {name}
                         </h2>
                         {badge && (
-                            <span className={cn('rounded-sm px-1.5 py-0.5 text-xs font-medium', badge.className)}>
+                            <span className={cn('rounded-md px-1.5 py-0.5 text-xs font-medium', badge.className)}>
                                 {badge.label}
                             </span>
                         )}
@@ -546,7 +546,7 @@ function ExtensionCard({ extension }: { extension: AdminExtension }) {
             )}
 
             {extension.error && (
-                <div className={'mt-3 rounded-sm border border-destructive/30 bg-destructive/10 p-3'}>
+                <div className={'mt-3 rounded-md border border-destructive/30 bg-destructive/10 p-3'}>
                     <p className={'break-words text-sm text-destructive'}>{extension.error}</p>
                 </div>
             )}

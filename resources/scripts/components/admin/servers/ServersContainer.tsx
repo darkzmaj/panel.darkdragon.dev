@@ -111,8 +111,8 @@ export default function ServersContainer() {
 
     return (
         <AdminContentBlock
-            title={'Admin · Servers'}
-            heading={'Servers'}
+            title={'Admin · Instances'}
+            heading={'Instances'}
             description={'Create and manage game servers across your nodes.'}
         >
             <form

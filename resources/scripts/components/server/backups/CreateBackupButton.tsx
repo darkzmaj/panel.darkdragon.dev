@@ -67,7 +67,7 @@ const CreateBackupDialogContent = ({ onClose }: { onClose: () => void }) => {
                     </form.AppField>
                 </div>
                 <Can action={'backup.delete'}>
-                    <div className={'mt-6 bg-card border border-border shadow-inner p-4 rounded-sm'}>
+                    <div className={'mt-6 bg-card border border-border shadow-inner p-4 rounded-md'}>
                         <form.AppField name={'isLocked'}>
                             {(field) => (
                                 <field.SwitchField

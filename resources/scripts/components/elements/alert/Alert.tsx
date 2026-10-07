@@ -42,7 +42,7 @@ export default function Alert({ type, title, className, children }: AlertProps) 
         <div
             role={'alert'}
             className={cn(
-                'flex items-start rounded-sm border border-l-4 px-4 py-3 text-foreground shadow-sm',
+                'flex items-start rounded-lg border border-l-4 px-4 py-3 text-foreground',
                 config.className,
                 className
             )}

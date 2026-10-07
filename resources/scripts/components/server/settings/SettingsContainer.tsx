@@ -56,12 +56,12 @@ const SettingsContainer = () => {
                     <TitledGreyBox title={'Debug Information'} className={'mb-6 md:mb-10'}>
                         <div className={'flex items-center justify-between text-sm'}>
                             <p>Node</p>
-                            <code className={'font-mono bg-muted rounded-sm py-1 px-2'}>{node}</code>
+                            <code className={'font-mono bg-muted rounded-md py-1 px-2'}>{node}</code>
                         </div>
                         <CopyOnClick text={uuid}>
                             <div className={'flex items-center justify-between mt-2 text-sm'}>
                                 <p>Server ID</p>
-                                <code className={'font-mono bg-muted rounded-sm py-1 px-2'}>{uuid}</code>
+                                <code className={'font-mono bg-muted rounded-md py-1 px-2'}>{uuid}</code>
                             </div>
                         </CopyOnClick>
                     </TitledGreyBox>

@@ -71,7 +71,7 @@ function ColorControl({ field, value, onChange }: ControlProps) {
         <div className={'flex items-center gap-2'}>
             <label
                 className={
-                    'relative block h-10 w-10 shrink-0 overflow-hidden rounded-sm border border-border bg-background'
+                    'relative block h-10 w-10 shrink-0 overflow-hidden rounded-md border border-border bg-background'
                 }
                 style={{ backgroundColor: color || undefined }}
             >
@@ -238,7 +238,7 @@ function FileControl({ field, file }: { field: AdminExtensionSettingField; file?
                             src={url}
                             alt={''}
                             className={
-                                'h-12 w-12 shrink-0 rounded-sm border border-border bg-background object-contain'
+                                'h-12 w-12 shrink-0 rounded-md border border-border bg-background object-contain'
                             }
                         />
                     )}
@@ -365,7 +365,7 @@ export default function SettingField({
                 {field.label}
                 {field.visibility === 'public' && (
                     <span
-                        className={'rounded-sm bg-accent/10 px-1.5 py-0.5 text-xs font-medium text-accent'}
+                        className={'rounded-md bg-accent/10 px-1.5 py-0.5 text-xs font-medium text-accent'}
                         title={'This value is sent to every visitor, including those who are not signed in.'}
                     >
                         Visible to guests

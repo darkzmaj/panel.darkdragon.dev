@@ -30,7 +30,7 @@ export default function DataTableColumnHeader<TData extends RowData, TValue>({
             aria-label={label}
             onClick={column.getToggleSortingHandler()}
             className={cn(
-                'group -ml-1 inline-flex h-8 items-center gap-1 rounded-sm px-1 text-left [text-transform:inherit] transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                'group -ml-1 inline-flex h-8 items-center gap-1 rounded-md px-1 text-left [text-transform:inherit] transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
                 direction && 'text-foreground',
                 className
             )}

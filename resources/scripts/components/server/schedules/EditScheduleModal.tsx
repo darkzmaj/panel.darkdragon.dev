@@ -89,7 +89,7 @@ const EditScheduleForm = ({ schedule, onClose }: Props & { onClose: () => void }
                 The schedule system supports the use of Cronjob syntax when defining when tasks should begin running.
                 Use the fields above to specify when these tasks should begin running.
             </p>
-            <div className={'mt-6 bg-card border border-border shadow-inner p-4 rounded-sm'}>
+            <div className={'mt-6 bg-card border border-border shadow-inner p-4 rounded-md'}>
                 <Switch
                     label={'Show Cheatsheet'}
                     description={'Show the cron cheatsheet for some examples.'}
@@ -98,7 +98,7 @@ const EditScheduleForm = ({ schedule, onClose }: Props & { onClose: () => void }
                 />
                 {showCheatsheet && <ScheduleCheatsheetCards />}
             </div>
-            <div className={'mt-6 bg-card border border-border shadow-inner p-4 rounded-sm'}>
+            <div className={'mt-6 bg-card border border-border shadow-inner p-4 rounded-md'}>
                 <form.AppField name={'onlyWhenOnline'}>
                     {(field) => (
                         <field.SwitchField
@@ -108,7 +108,7 @@ const EditScheduleForm = ({ schedule, onClose }: Props & { onClose: () => void }
                     )}
                 </form.AppField>
             </div>
-            <div className={'mt-6 bg-card border border-border shadow-inner p-4 rounded-sm'}>
+            <div className={'mt-6 bg-card border border-border shadow-inner p-4 rounded-md'}>
                 <form.AppField name={'enabled'}>
                     {(field) => (
                         <field.SwitchField

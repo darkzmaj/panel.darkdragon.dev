@@ -20,7 +20,7 @@ const ServerConsoleContainer = ({ active = true }: { active?: boolean }) => {
     const isNodeUnderMaintenance = server.attributes.is_node_under_maintenance;
 
     return (
-        <ServerContentBlock title={active ? 'Console' : undefined}>
+        <ServerContentBlock title={active ? 'Console' : undefined} heading={false}>
             {(isNodeUnderMaintenance || isInstalling || isTransferring) && (
                 <Alert type={'warning'} className={'mb-4'}>
                     {isNodeUnderMaintenance

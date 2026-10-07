@@ -30,7 +30,7 @@ const AllocationNotesCell = ({ allocation }: { allocation: ServerAllocation }) =
         <InputSpinner visible={updateAllocationNotes.isPending}>
             <TextArea
                 aria-label={`Notes for ${allocation.attributes.ip}:${allocation.attributes.port}`}
-                className={'min-h-9 resize-y bg-input hover:border-input border-transparent'}
+                className={'min-h-9 resize-y bg-background hover:border-input border-transparent'}
                 placeholder={'Notes'}
                 defaultValue={allocation.attributes.notes || undefined}
                 onChange={(event) => setAllocationNotes(event.currentTarget.value)}

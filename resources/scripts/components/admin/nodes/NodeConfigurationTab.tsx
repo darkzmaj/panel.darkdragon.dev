@@ -57,7 +57,7 @@ export default function NodeConfigurationTab() {
                     </CopyOnClick>
                     <pre
                         className={
-                            'whitespace-pre-wrap break-all rounded-sm border border-border bg-sunken p-4 pr-12 font-mono text-xs leading-relaxed text-foreground'
+                            'whitespace-pre-wrap break-all rounded-md border border-border bg-sunken p-4 pr-12 font-mono text-xs leading-relaxed text-foreground'
                         }
                     >
                         {command}
@@ -76,7 +76,7 @@ export default function NodeConfigurationTab() {
                     ) : !config ? (
                         <Spinner size={'large'} centered />
                     ) : (
-                        <div className={'overflow-hidden rounded-sm border border-border bg-sunken'}>
+                        <div className={'overflow-hidden rounded-md border border-border bg-sunken'}>
                             <div
                                 className={
                                     'flex items-center justify-between border-b border-border py-1.5 pr-1.5 pl-4 text-xs text-muted-foreground'
