@@ -96,7 +96,7 @@ export default function ResetPasswordContainer() {
                 <Link
                     to={'/auth/login'}
                     className={
-                        'text-xs text-muted-foreground tracking-wide no-underline uppercase hover:text-foreground'
+                        'text-sm text-muted-foreground no-underline hover:text-foreground'
                     }
                 >
                     Return to Login

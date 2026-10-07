@@ -5,5 +5,6 @@ export interface PageContentBlockProps {
     className?: string;
     children?: React.ReactNode;
 }
+/** Page wrapper. The Gobia shell supplies the width, the sidebar and the footer. */
 declare const PageContentBlock: ({ title, className, children }: PageContentBlockProps) => React.JSX.Element;
 export default PageContentBlock;

@@ -4,5 +4,5 @@ type Props<E extends React.ElementType = 'label'> = {
     as?: E;
     isLight?: boolean;
 } & Omit<React.ComponentPropsWithoutRef<E>, 'as' | 'isLight'>;
-declare const Label: <E extends React.ElementType = "label">({ as, isLight, className, ...props }: Props<E>) => React.JSX.Element;
+declare const Label: <E extends React.ElementType = "label">({ as, isLight: _isLight, className, ...props }: Props<E>) => React.JSX.Element;
 export default Label;

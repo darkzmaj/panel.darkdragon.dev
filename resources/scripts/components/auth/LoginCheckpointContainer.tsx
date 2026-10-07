@@ -69,7 +69,7 @@ export default function LoginCheckpointContainer() {
                         setIsMissingDevice((s) => !s);
                     }}
                     className={
-                        'cursor-pointer appearance-none border-0 bg-transparent p-0 text-xs text-muted-foreground tracking-wide uppercase no-underline hover:text-foreground'
+                        'cursor-pointer appearance-none border-0 bg-transparent p-0 text-sm text-muted-foreground no-underline hover:text-foreground'
                     }
                 >
                     {!isMissingDevice ? "I've Lost My Device" : 'I Have My Device'}
@@ -79,7 +79,7 @@ export default function LoginCheckpointContainer() {
                 <Link
                     to={'/auth/login'}
                     className={
-                        'text-xs text-muted-foreground tracking-wide uppercase no-underline hover:text-foreground'
+                        'text-sm text-muted-foreground no-underline hover:text-foreground'
                     }
                 >
                     Return to Login

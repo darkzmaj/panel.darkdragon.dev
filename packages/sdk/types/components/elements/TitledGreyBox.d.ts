@@ -8,5 +8,6 @@ interface Props {
     contentClassName?: string;
     children: React.ReactNode;
 }
-declare const TitledGreyBox: ({ icon, title, children, className, contentClassName }: Props) => React.JSX.Element;
+/** A card with a header row (icon and title) and a body. */
+declare const TitledGreyBox: ({ icon: Icon, title, children, className, contentClassName }: Props) => React.JSX.Element;
 export default TitledGreyBox;

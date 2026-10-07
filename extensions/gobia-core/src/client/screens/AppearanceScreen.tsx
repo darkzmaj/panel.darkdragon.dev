@@ -1,13 +1,14 @@
 import { ContentBox, PageContentBlock, toast } from '@pterodactyl/sdk';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Monitor, Moon, Sun, type LucideIcon } from 'lucide-react';
 import { applyScheme, SCHEMES, storeScheme, type Scheme } from '../appearance';
 import { fetchProfile, profileQueryKey, saveAppearance } from '../api';
 
-const LABELS = {
-    system: { title: 'System', description: 'Follow your device setting.' },
-    light: { title: 'Light', description: 'Always use the light palette.' },
-    dark: { title: 'Dark', description: 'Always use the dark palette.' },
-} satisfies Record<Scheme, { title: string; description: string }>;
+const OPTIONS = {
+    system: { label: 'System', text: 'Match your device. Switches automatically at night.', icon: Monitor },
+    dark: { label: 'Dark', text: 'Easy on the eyes in low light.', icon: Moon },
+    light: { label: 'Light', text: 'Bright and crisp for well-lit rooms.', icon: Sun },
+} satisfies Record<Scheme, { label: string; text: string; icon: LucideIcon }>;
 
 export default function AppearanceScreen() {
     const queryClient = useQueryClient();
@@ -25,27 +26,42 @@ export default function AppearanceScreen() {
 
     return (
         <PageContentBlock title={'Appearance'}>
-            <ContentBox title={'Colour scheme'}>
-                <div role={'radiogroup'} aria-label={'Colour scheme'} className={'gb:grid gb:gap-3 gb:sm:grid-cols-3'}>
-                    {SCHEMES.map((scheme) => (
-                        <button
-                            key={scheme}
-                            type={'button'}
-                            role={'radio'}
-                            aria-checked={selected === scheme}
-                            disabled={mutation.isPending}
-                            onClick={() => mutation.mutate(scheme)}
-                            className={
-                                'gb:flex gb:flex-col gb:items-start gb:gap-1 gb:rounded-lg gb:border gb:border-border gb:bg-background gb:p-4 gb:text-left gb:transition-colors ' +
-                                'gb:hover:bg-secondary gb:focus-visible:outline-2 gb:focus-visible:outline-ring gb:aria-checked:border-primary gb:aria-checked:bg-secondary gb:disabled:opacity-60'
-                            }
-                        >
-                            <span className={'gb:text-sm gb:font-semibold gb:text-foreground'}>
-                                {LABELS[scheme].title}
-                            </span>
-                            <span className={'gb:text-xs gb:text-muted-foreground'}>{LABELS[scheme].description}</span>
-                        </button>
-                    ))}
+            <div className={'gb-page-head'}>
+                <div style={{ minWidth: 0 }}>
+                    <h1>Appearance</h1>
+                    <p>Choose how the Panel looks. Your choice follows you to every device.</p>
+                </div>
+            </div>
+            <ContentBox title={'Theme'} description={'System follows your operating system setting.'}>
+                <div
+                    role={'radiogroup'}
+                    aria-label={'Theme'}
+                    style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))' }}
+                >
+                    {SCHEMES.map((scheme) => {
+                        const { label, text, icon: Icon } = OPTIONS[scheme];
+
+                        return (
+                            <button
+                                key={scheme}
+                                type={'button'}
+                                role={'radio'}
+                                aria-checked={selected === scheme}
+                                disabled={mutation.isPending}
+                                className={'gb-option' + (selected === scheme ? ' selected' : '')}
+                                style={{ alignItems: 'flex-start', marginTop: 0 }}
+                                onClick={() => mutation.mutate(scheme)}
+                            >
+                                <span className={'gb-file-icon'}>
+                                    <Icon aria-hidden />
+                                </span>
+                                <span>
+                                    <strong>{label}</strong>
+                                    <span>{text}</span>
+                                </span>
+                            </button>
+                        );
+                    })}
                 </div>
             </ContentBox>
         </PageContentBlock>

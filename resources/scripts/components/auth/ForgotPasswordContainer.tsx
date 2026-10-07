@@ -72,7 +72,7 @@ export default function ForgotPasswordContainer() {
                 <Link
                     to={'/auth/login'}
                     className={
-                        'text-xs text-muted-foreground tracking-wide uppercase no-underline hover:text-foreground'
+                        'text-sm text-muted-foreground no-underline hover:text-foreground'
                     }
                 >
                     Return to Login

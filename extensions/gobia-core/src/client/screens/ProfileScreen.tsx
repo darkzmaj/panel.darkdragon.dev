@@ -49,39 +49,50 @@ export default function ProfileScreen() {
 
     return (
         <PageContentBlock title={'Profile'}>
-            <div className={'gb:grid gb:gap-6 gb:lg:grid-cols-2'}>
-                <ContentBox title={'Avatar'}>
-                    <div className={'gb:flex gb:items-center gb:gap-5'}>
+            <div className={'gb-page-head'}>
+                <div style={{ minWidth: 0 }}>
+                    <h1>Profile</h1>
+                    <p>Update the identity shown across the Panel.</p>
+                </div>
+            </div>
+            <div className={'grid grid-cols-1 gap-4 xl:grid-cols-2'}>
+                <ContentBox
+                    title={'Profile Picture'}
+                    description={'Any image works. You crop it to a square before saving.'}
+                >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
                         <div
                             aria-hidden
                             className={
-                                'gb:grid gb:size-24 gb:shrink-0 gb:place-items-center gb:overflow-hidden gb:rounded-full gb:border gb:border-border gb:bg-sunken gb:text-3xl gb:font-semibold gb:text-muted-foreground'
+                                'grid size-20 shrink-0 place-items-center overflow-hidden rounded-full bg-secondary text-2xl font-semibold text-muted-foreground'
                             }
                         >
                             {profile?.avatar_url ? (
-                                <img src={profile.avatar_url} alt={''} className={'gb:size-full gb:object-cover'} />
+                                <img src={profile.avatar_url} alt={''} className={'size-full object-cover'} />
                             ) : (
                                 <span>{(profile?.username ?? '?').slice(0, 1).toUpperCase()}</span>
                             )}
                         </div>
-                        <div className={'gb:flex gb:flex-wrap gb:gap-2'}>
-                            <Button type={'button'} color={'primary'} onClick={() => fileInput.current?.click()}>
-                                Choose picture
-                            </Button>
-                            {profile?.avatar_url && (
-                                <Button.Danger
-                                    type={'button'}
-                                    isLoading={remove.isPending}
-                                    onClick={() => remove.mutate()}
-                                >
-                                    Remove
-                                </Button.Danger>
-                            )}
+                        <div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                                <Button type={'button'} onClick={() => fileInput.current?.click()}>
+                                    {profile?.avatar_url ? 'Replace Picture' : 'Upload Picture'}
+                                </Button>
+                                {profile?.avatar_url && (
+                                    <Button.Text
+                                        type={'button'}
+                                        isLoading={remove.isPending}
+                                        onClick={() => remove.mutate()}
+                                    >
+                                        Remove
+                                    </Button.Text>
+                                )}
+                            </div>
                             <input
                                 ref={fileInput}
                                 type={'file'}
                                 accept={'image/*'}
-                                className={'gb:sr-only'}
+                                className={'sr-only'}
                                 aria-label={'Choose an avatar picture'}
                                 onChange={(event) => {
                                     const file = event.currentTarget.files?.[0];
@@ -89,27 +100,29 @@ export default function ProfileScreen() {
                                     if (file) setPicked(file);
                                 }}
                             />
+                            <p className={'gb-hint'} style={{ marginTop: 8 }}>
+                                Stored as a 256 pixel PNG.
+                            </p>
                         </div>
                     </div>
-                    <p className={'gb:mt-4 gb:text-xs gb:text-muted-foreground'}>
-                        Any image works. You crop it to a square next and it is stored as a 256 pixel PNG.
-                    </p>
                 </ContentBox>
 
-                <ContentBox title={'Username'}>
-                    <form onSubmit={submitRename} className={'gb:flex gb:flex-col gb:gap-4'}>
-                        <div>
-                            <Label htmlFor={'gobia-username'}>New username</Label>
-                            <Input
-                                id={'gobia-username'}
-                                value={username}
-                                placeholder={profile?.username}
-                                autoComplete={'off'}
-                                onChange={(event) => setUsername(event.currentTarget.value)}
-                            />
-                        </div>
-                        <div>
-                            <Label htmlFor={'gobia-username-password'}>Current password</Label>
+                <ContentBox
+                    title={'Username'}
+                    description={'Used to sign in and shown to people you share instances with.'}
+                >
+                    <form onSubmit={submitRename}>
+                        <Label htmlFor={'gobia-username'}>Username</Label>
+                        <Input
+                            id={'gobia-username'}
+                            value={username}
+                            placeholder={profile?.username}
+                            autoComplete={'off'}
+                            onChange={(event) => setUsername(event.currentTarget.value)}
+                        />
+                        <p className={'gb-hint'}>Usernames are stored in lowercase and must be unique.</p>
+                        <div style={{ marginTop: 16 }}>
+                            <Label htmlFor={'gobia-username-password'}>Confirm Password</Label>
                             <Input
                                 id={'gobia-username-password'}
                                 type={'password'}
@@ -118,14 +131,13 @@ export default function ProfileScreen() {
                                 onChange={(event) => setPassword(event.currentTarget.value)}
                             />
                         </div>
-                        <div>
+                        <div style={{ marginTop: 18 }}>
                             <Button
                                 type={'submit'}
-                                color={'primary'}
                                 isLoading={rename.isPending}
                                 disabled={!username.trim() || !password}
                             >
-                                Change username
+                                Update Username
                             </Button>
                         </div>
                     </form>

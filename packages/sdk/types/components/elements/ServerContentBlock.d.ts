@@ -3,6 +3,9 @@ import type { PageContentBlockProps } from "./PageContentBlock.js";
 interface Props extends PageContentBlockProps {
     /** Shown after the server name in the document title; omit to leave the title alone. */
     title?: string;
+    /** The heading above the page. Defaults to the title; pass false when the page draws its own header. */
+    heading?: string | false;
+    subtitle?: string;
 }
-declare const ServerContentBlock: ({ title, children, ...props }: Props) => import("react").JSX.Element;
+declare const ServerContentBlock: ({ title, heading, subtitle, children, ...props }: Props) => import("react").JSX.Element;
 export default ServerContentBlock;

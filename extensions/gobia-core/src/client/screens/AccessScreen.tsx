@@ -1,16 +1,4 @@
-import {
-    Button,
-    ContentBox,
-    Dialog,
-    Empty,
-    EmptyDescription,
-    EmptyHeader,
-    EmptyTitle,
-    PageContentBlock,
-    Spinner,
-    httpErrorToHuman,
-    toast,
-} from '@pterodactyl/sdk';
+import { Button, Dialog, PageContentBlock, httpErrorToHuman, toast } from '@pterodactyl/sdk';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import AccessEditor from '../access/AccessEditor';
@@ -34,61 +22,85 @@ export default function AccessScreen() {
 
     return (
         <PageContentBlock title={'Access'}>
-            <ContentBox title={'People with access to your instances'}>
-                <div className={'gb:mb-4 gb:flex gb:items-center gb:justify-between gb:gap-3'}>
-                    <p className={'gb:text-sm gb:text-muted-foreground'}>
+            <div className={'gb-page-head'}>
+                <div style={{ minWidth: 0 }}>
+                    <h1>Access</h1>
+                    <p>
                         Share several instances with one person at once. Permissions are the same ones you can set per
                         instance.
                     </p>
-                    <Button type={'button'} color={'primary'} onClick={() => setEditing('new')} disabled={!data}>
+                </div>
+                <div className={'gb-page-actions'}>
+                    <Button type={'button'} onClick={() => setEditing('new')} disabled={!data}>
                         Grant access
                     </Button>
                 </div>
-                {isPending ? (
-                    <Spinner centered />
-                ) : isError ? (
+            </div>
+            {isPending ? (
+                <div className={'gb-list'}>
+                    {[0, 1].map((row) => (
+                        <div key={row} className={'gb-skeleton'} style={{ height: 76, borderRadius: 0 }} />
+                    ))}
+                </div>
+            ) : isError ? (
+                <div className={'gb-list'} role={'alert'} style={{ padding: '40px 16px', textAlign: 'center' }}>
+                    <p className={'gb-secondary'} style={{ marginBottom: 12 }}>
+                        Access could not be loaded.
+                    </p>
                     <Button type={'button'} onClick={() => refetch()}>
                         Retry
                     </Button>
-                ) : data.grants.length === 0 ? (
-                    <Empty>
-                        <EmptyHeader>
-                            <EmptyTitle>Nobody else has access</EmptyTitle>
-                            <EmptyDescription>
-                                People you grant access to see your instances under the Other filter.
-                            </EmptyDescription>
-                        </EmptyHeader>
-                    </Empty>
-                ) : (
-                    <ul className={'gb:flex gb:flex-col gb:gap-2'}>
-                        {data.grants.map((grant) => (
-                            <li
-                                key={grant.uuid}
+                </div>
+            ) : data.grants.length === 0 ? (
+                <div className={'gb-list'} style={{ padding: '40px 16px', textAlign: 'center' }}>
+                    <p style={{ color: 'var(--gb-text-strong)', fontWeight: 600 }}>Nobody else has access</p>
+                    <p className={'gb-secondary'}>
+                        People you grant access to see your instances under the Other filter.
+                    </p>
+                </div>
+            ) : (
+                <div className={'gb-list'}>
+                    {data.grants.map((grant, index) => (
+                        <div
+                            key={grant.uuid}
+                            style={{
+                                display: 'flex',
+                                flexWrap: 'wrap',
+                                alignItems: 'center',
+                                gap: 12,
+                                padding: 16,
+                                borderTop: index ? '1px solid var(--gb-border-muted)' : 0,
+                            }}
+                        >
+                            <div
+                                aria-hidden
                                 className={
-                                    'gb:flex gb:flex-wrap gb:items-center gb:justify-between gb:gap-3 gb:rounded-lg gb:border gb:border-border gb:p-3'
+                                    'grid size-10 shrink-0 place-items-center rounded-full bg-secondary font-semibold text-muted-foreground'
                                 }
                             >
-                                <div className={'gb:min-w-0'}>
-                                    <p className={'gb:truncate gb:font-medium'}>{grant.username}</p>
-                                    <p className={'gb:truncate gb:text-xs gb:text-muted-foreground'}>{grant.email}</p>
-                                    <p className={'gb:mt-1 gb:text-xs gb:text-muted-foreground'}>
-                                        {grant.servers.map((server) => server.name).join(', ')} ·{' '}
-                                        {grant.permissions.length} permissions
-                                    </p>
-                                </div>
-                                <div className={'gb:flex gb:gap-2'}>
-                                    <Button type={'button'} onClick={() => setEditing(grant)}>
-                                        Edit
-                                    </Button>
-                                    <Button.Danger type={'button'} onClick={() => setRemoving(grant)}>
-                                        Remove
-                                    </Button.Danger>
-                                </div>
-                            </li>
-                        ))}
-                    </ul>
-                )}
-            </ContentBox>
+                                {grant.username.slice(0, 1).toUpperCase()}
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <p style={{ color: 'var(--gb-text-strong)', fontWeight: 600 }} className={'truncate'}>
+                                    {grant.username} <span className={'gb-muted'}>{grant.email}</span>
+                                </p>
+                                <p className={'gb-secondary truncate'} style={{ fontSize: 13 }}>
+                                    {grant.servers.map((server) => server.name).join(', ')} · {grant.permissions.length}{' '}
+                                    permissions
+                                </p>
+                            </div>
+                            <div style={{ display: 'flex', gap: 8 }}>
+                                <Button.Text type={'button'} onClick={() => setEditing(grant)}>
+                                    Edit
+                                </Button.Text>
+                                <Button.Danger type={'button'} onClick={() => setRemoving(grant)}>
+                                    Remove
+                                </Button.Danger>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
             {data && editing && (
                 <AccessEditor data={data} grant={editing === 'new' ? null : editing} onClose={() => setEditing(null)} />
             )}

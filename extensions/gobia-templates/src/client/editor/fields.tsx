@@ -1,15 +1,24 @@
-import type { ChangeEvent, ReactNode } from 'react';
+import { useId, type ChangeEvent, type ReactElement, type ReactNode } from 'react';
 
-const control =
-    'gt:w-full gt:rounded-md gt:border gt:border-input gt:bg-background gt:px-3 gt:py-2 gt:text-sm gt:text-foreground gt:placeholder:text-muted-foreground gt:focus-visible:outline-2 gt:focus-visible:outline-ring';
+export function Field({
+    label,
+    hint,
+    children,
+}: {
+    label: string;
+    hint?: string;
+    children: (id: string) => ReactElement;
+}) {
+    const id = useId();
 
-export function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
     return (
-        <label className={'gt:flex gt:flex-col gt:gap-1 gt:text-sm'}>
-            <span className={'gt:font-medium'}>{label}</span>
-            {children}
-            {hint && <span className={'gt:text-xs gt:text-muted-foreground'}>{hint}</span>}
-        </label>
+        <div className={'gb-field'}>
+            <label className={'gb-label'} htmlFor={id}>
+                {label}
+            </label>
+            {children(id)}
+            {hint && <p className={'gb-hint'}>{hint}</p>}
+        </div>
     );
 }
 
@@ -32,23 +41,27 @@ export function TextField({
 }) {
     return (
         <Field label={label} hint={hint}>
-            {multiline ? (
-                <textarea
-                    value={value}
-                    placeholder={placeholder}
-                    rows={3}
-                    onChange={(event: ChangeEvent<HTMLTextAreaElement>) => onChange(event.currentTarget.value)}
-                    className={control}
-                />
-            ) : (
-                <input
-                    type={type}
-                    value={value}
-                    placeholder={placeholder}
-                    onChange={(event) => onChange(event.currentTarget.value)}
-                    className={control}
-                />
-            )}
+            {(id) =>
+                multiline ? (
+                    <textarea
+                        id={id}
+                        value={value}
+                        placeholder={placeholder}
+                        rows={3}
+                        onChange={(event: ChangeEvent<HTMLTextAreaElement>) => onChange(event.currentTarget.value)}
+                        className={'gb-input'}
+                    />
+                ) : (
+                    <input
+                        id={id}
+                        type={type}
+                        value={value}
+                        placeholder={placeholder}
+                        onChange={(event) => onChange(event.currentTarget.value)}
+                        className={'gb-input'}
+                    />
+                )
+            }
         </Field>
     );
 }
@@ -66,13 +79,16 @@ export function NumberField({
 }) {
     return (
         <Field label={label} hint={hint}>
-            <input
-                type={'number'}
-                inputMode={'numeric'}
-                value={value}
-                onChange={(event) => onChange(event.currentTarget.value)}
-                className={control}
-            />
+            {(id) => (
+                <input
+                    id={id}
+                    type={'number'}
+                    inputMode={'numeric'}
+                    value={value}
+                    onChange={(event) => onChange(event.currentTarget.value)}
+                    className={'gb-input'}
+                />
+            )}
         </Field>
     );
 }
@@ -94,21 +110,24 @@ export function SelectField<T extends string | number>({
 }) {
     return (
         <Field label={label} hint={hint}>
-            <select
-                value={value ?? ''}
-                onChange={(event) => {
-                    const chosen = options.find((option) => String(option.value) === event.currentTarget.value);
-                    if (chosen) onChange(chosen.value);
-                }}
-                className={control}
-            >
-                {empty && <option value={''}>{empty}</option>}
-                {options.map((option) => (
-                    <option key={String(option.value)} value={String(option.value)}>
-                        {option.label}
-                    </option>
-                ))}
-            </select>
+            {(id) => (
+                <select
+                    id={id}
+                    value={value ?? ''}
+                    onChange={(event) => {
+                        const chosen = options.find((option) => String(option.value) === event.currentTarget.value);
+                        if (chosen) onChange(chosen.value);
+                    }}
+                    className={'gb-input'}
+                >
+                    {empty && <option value={''}>{empty}</option>}
+                    {options.map((option) => (
+                        <option key={String(option.value)} value={String(option.value)}>
+                            {option.label}
+                        </option>
+                    ))}
+                </select>
+            )}
         </Field>
     );
 }
@@ -125,27 +144,21 @@ export function Check({
     onChange: (checked: boolean) => void;
 }) {
     return (
-        <label className={'gt:flex gt:items-start gt:gap-3 gt:text-sm'}>
-            <input
-                type={'checkbox'}
-                checked={checked}
-                onChange={(event) => onChange(event.currentTarget.checked)}
-                className={'gt:mt-0.5 gt:size-4 gt:accent-primary'}
-            />
-            <span className={'gt:flex gt:flex-col'}>
-                <span className={'gt:font-medium'}>{label}</span>
-                {hint && <span className={'gt:text-xs gt:text-muted-foreground'}>{hint}</span>}
+        <label className={'gb-check'}>
+            <input type={'checkbox'} checked={checked} onChange={(event) => onChange(event.currentTarget.checked)} />
+            <span>
+                <strong>{label}</strong>
+                {hint && <span className={'gb-hint'}>{hint}</span>}
             </span>
         </label>
     );
 }
 
-export function Section({ title, children }: { title: string; children: ReactNode }) {
+/** A card with a title bar. Inactive sections stay mounted (hidden) so every tab shares one form. */
+export function Section({ title, active = true, children }: { title: string; active?: boolean; children: ReactNode }) {
     return (
-        <section className={'gt:flex gt:flex-col gt:gap-4 gt:rounded-lg gt:border gt:border-border gt:bg-card gt:p-4'}>
-            <h2 className={'gt:text-sm gt:font-semibold gt:uppercase gt:tracking-wide gt:text-muted-foreground'}>
-                {title}
-            </h2>
+        <section hidden={!active} className={'gb-card gb-section'}>
+            <h2 className={'gb-section-head'}>{title}</h2>
             {children}
         </section>
     );

@@ -26,7 +26,7 @@ function Row({ label, value }: { label: string; value: string }) {
     return (
         <div
             className={
-                'gb:flex gb:justify-between gb:gap-4 gb:border-b gb:border-border gb:py-2 gb:text-sm last:gb:border-0'
+                'gb:flex gb:justify-between gb:gap-4 gb:border-b gb:border-border/55 gb:py-2.5 gb:text-sm last:gb:border-0'
             }
         >
             <dt className={'gb:text-muted-foreground'}>{label}</dt>
@@ -103,6 +103,12 @@ export default function UpdatesScreen() {
 
     return (
         <PageContentBlock title={'Updates'}>
+            <div className={'gb-page-head'}>
+                <div style={{ minWidth: 0 }}>
+                    <h1>Panel Updates</h1>
+                    <p>Install published releases of this Panel.</p>
+                </div>
+            </div>
             <div className={'gb:grid gb:gap-6 gb:lg:grid-cols-2'}>
                 <ContentBox title={'This installation'}>
                     <dl>
