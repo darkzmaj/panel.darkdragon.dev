@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, Ellipsis, Folder, FolderOpen } from 'lucide-react';
+import { ChevronDown, ChevronRight, Ellipsis } from 'lucide-react';
 import {
     useEffect,
     useRef,
@@ -86,11 +86,7 @@ function InlineName({
         <div className={'gb-tree-row inline' + (problem && value !== '' ? ' invalid' : '')}>
             <div className={'gb-tree-inline'} style={{ paddingLeft: depth * 14 + 8 }}>
                 <span className={'gb-tree-chevron'} />
-                {folder ? (
-                    <Folder className={'gb-tree-folder'} aria-hidden />
-                ) : (
-                    <FileTypeIcon name={initial || 'file'} />
-                )}
+                <FileTypeIcon name={initial || (folder ? 'folder' : 'file')} folder={folder} />
                 <input
                     ref={input}
                     className={'gb-tree-input'}
@@ -277,11 +273,7 @@ function Row({
                 {directory ? (
                     <>
                         {entry ? <Chevron className={'gb-tree-chevron'} aria-hidden /> : null}
-                        {open ? (
-                            <FolderOpen className={'gb-tree-folder'} aria-hidden />
-                        ) : (
-                            <Folder className={'gb-tree-folder'} aria-hidden />
-                        )}
+                        <FileTypeIcon name={entry?.name ?? ''} folder open={open} root={entry === null} />
                     </>
                 ) : (
                     <>

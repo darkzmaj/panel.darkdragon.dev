@@ -31,6 +31,11 @@ export interface TreeState {
     move: (from: string, to: string) => () => void;
     /** Remove entries locally at once; returns the undo. */
     remove: (paths: readonly string[]) => () => void;
+    /**
+     * Starts a mutation the server has not confirmed yet. Listings that arrive meanwhile may predate it, so they are
+     * dropped instead of undoing the optimistic change; call the returned function once the server answered.
+     */
+    hold: () => () => void;
 }
 
 const under = (path: string, root: string) => path === root || path.startsWith(`${root}/`);
@@ -92,8 +97,14 @@ export function useTree(uuid: string, source: TreeSource = 'fetch'): TreeState {
         latest.current = { listings, expanded };
     });
 
+    // Mutations in flight, and a counter that changes with every local mutation: an answer to a listing request that
+    // started before one of them describes a folder that no longer looks like that.
+    const holds = useRef(0);
+    const generation = useRef(0);
+
     const load = useCallback(
         async (directory: string) => {
+            const started = generation.current;
             setListings((current) => {
                 const existing = current[directory];
                 return existing && existing !== 'loading' && 'items' in existing
@@ -104,6 +115,15 @@ export function useTree(uuid: string, source: TreeSource = 'fetch'): TreeState {
                 if (directory === '/') mark('tree-request', true);
                 const items = await listDirectory(uuid, directory);
                 if (directory === '/') mark('tree-response', true);
+                if (holds.current > 0 || generation.current !== started) {
+                    // Stale: keep what the explorer shows, and ask again later if there was nothing yet.
+                    setListings((current) => {
+                        if (current[directory] !== 'loading') return current;
+                        const { [directory]: _dropped, ...rest } = current;
+                        return rest;
+                    });
+                    return;
+                }
                 setListings((current) => ({ ...current, [directory]: { items } }));
             } catch (error) {
                 setListings((current) => ({ ...current, [directory]: { error: httpErrorToHuman(error as Error) } }));
@@ -146,6 +166,7 @@ export function useTree(uuid: string, source: TreeSource = 'fetch'): TreeState {
     );
 
     const patch = useCallback((directory: string, change: (items: TreeEntry[]) => TreeEntry[]) => {
+        generation.current += 1;
         setListings((current) => {
             const listing = current[directory];
             if (!listing || listing === 'loading' || 'error' in listing) return current;
@@ -154,6 +175,7 @@ export function useTree(uuid: string, source: TreeSource = 'fetch'): TreeState {
     }, []);
 
     const move = useCallback((from: string, to: string) => {
+        generation.current += 1;
         const before = { listings: latest.current.listings, expanded: latest.current.expanded };
         setListings((current) => moveListings(current, from, to));
         setExpanded((current) => new Set([...current].map((path) => reroot(path, from, to))));
@@ -164,9 +186,21 @@ export function useTree(uuid: string, source: TreeSource = 'fetch'): TreeState {
     }, []);
 
     const remove = useCallback((paths: readonly string[]) => {
+        generation.current += 1;
         const before = latest.current.listings;
         setListings((current) => removeFromListings(current, paths));
         return () => setListings(before);
+    }, []);
+
+    const hold = useCallback(() => {
+        holds.current += 1;
+        let released = false;
+        return () => {
+            if (released) return;
+            released = true;
+            holds.current -= 1;
+            generation.current += 1;
+        };
     }, []);
 
     const mode = source === 'wait' ? 'wait' : source === 'fetch' ? 'fetch' : 'seed';
@@ -199,7 +233,7 @@ export function useTree(uuid: string, source: TreeSource = 'fetch'): TreeState {
         };
     }, [reload]);
 
-    return { listings, expanded, toggle, expand, reload, patch, move, remove };
+    return { listings, expanded, toggle, expand, reload, patch, move, remove, hold };
 }
 
 /** The directories whose listing changes when `paths` are created, renamed, moved or deleted. */

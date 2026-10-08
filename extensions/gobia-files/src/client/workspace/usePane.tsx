@@ -715,6 +715,7 @@ export function usePane(config: PaneConfig) {
                 modifiedAt: new Date().toISOString(),
             };
             const before = latest.current.tree.listings[directory];
+            const release = tree.hold();
             tree.patch(directory, (items) =>
                 [...items.filter((item) => item.path !== path), entry].sort((a, b) =>
                     a.directory === b.directory
@@ -732,8 +733,10 @@ export function usePane(config: PaneConfig) {
             } catch (error) {
                 tree.patch(directory, (items) => items.filter((item) => item.path !== path));
                 if (before && before !== 'loading' && 'items' in before) tree.patch(directory, () => before.items);
+                release();
                 throw error;
             }
+            release();
             void tree.reload([directory]);
             if (what === 'file') {
                 dispatch({ type: 'open', path, name });
@@ -745,6 +748,7 @@ export function usePane(config: PaneConfig) {
 
     const rename = (from: string, to: string) =>
         guard(async () => {
+            const release = tree.hold();
             const undo = tree.move(from, to);
             dispatch({ type: 'rename', from, to });
             setSelection(to);
@@ -756,8 +760,10 @@ export function usePane(config: PaneConfig) {
                 undo();
                 dispatch({ type: 'rename', from: to, to: from });
                 setSelection(from);
+                release();
                 throw error;
             }
+            release();
             tree.expand(dirname(to));
             void tree.reload([dirname(from), dirname(to)]);
         });
@@ -767,6 +773,7 @@ export function usePane(config: PaneConfig) {
             const byDirectory = new Map<string, TreeEntry[]>();
             for (const entry of entries)
                 byDirectory.set(dirname(entry.path), [...(byDirectory.get(dirname(entry.path)) ?? []), entry]);
+            const release = tree.hold();
             const undo = tree.remove(entries.map((entry) => entry.path));
             try {
                 for (const [directory, group] of byDirectory) {
@@ -779,9 +786,11 @@ export function usePane(config: PaneConfig) {
                 }
             } catch (error) {
                 undo();
+                release();
                 void tree.reload([...byDirectory.keys()], true);
                 throw error;
             }
+            release();
             // Clean tabs of deleted files close; one with unsaved work stays so nothing is lost.
             for (const tab of latest.current.state.tabs) {
                 const gone = entries.some((entry) => tab.path === entry.path || tab.path.startsWith(`${entry.path}/`));
@@ -844,6 +853,7 @@ export function usePane(config: PaneConfig) {
         const before = picked;
         const pairs = movable.map((from) => [from, join(directory, basename(from))] as const);
         void guard(async () => {
+            const release = tree.hold();
             const undos = pairs.map(([from, to]) => tree.move(from, to));
             for (const [from, to] of pairs) dispatch({ type: 'rename', from, to });
             const targets = pairs.map(([, to]) => to);
@@ -859,8 +869,10 @@ export function usePane(config: PaneConfig) {
                 for (const undo of undos.reverse()) undo();
                 for (const [from, to] of pairs) dispatch({ type: 'rename', from: to, to: from });
                 setPicked(before);
+                release();
                 throw error;
             }
+            release();
             tree.expand(directory);
             void tree.reload([...new Set([...movable.map(dirname), directory])]);
         });
