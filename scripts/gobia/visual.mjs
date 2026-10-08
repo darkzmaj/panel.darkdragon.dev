@@ -54,6 +54,20 @@ const fail = (message) => {
     console.log(`FAIL ${message}`);
 };
 
+/**
+ * The account's stored appearance beats the emulated colour scheme, so a run that (or a person who) picked a theme would
+ * silently change every screenshot. Put it back to "system" before any page is captured.
+ */
+async function resetAppearance(context) {
+    const jar = await context.cookies(baseUrl);
+    const token = decodeURIComponent(jar.find((cookie) => cookie.name === 'XSRF-TOKEN')?.value ?? '');
+    const response = await context.request.put(`${baseUrl}/api/client/extensions/gobia-core/profile/appearance`, {
+        headers: { 'X-XSRF-TOKEN': token, 'X-Requested-With': 'XMLHttpRequest', Accept: 'application/json' },
+        data: { theme: 'system' },
+    });
+    if (!response.ok()) note(`could not reset the stored appearance (${response.status()})`);
+}
+
 async function login(context) {
     const page = await context.newPage();
     await page.goto(`${baseUrl}/auth/login`);
@@ -163,6 +177,7 @@ try {
 
     const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, colorScheme: scheme });
     await login(context);
+    await resetAppearance(context);
     const server = await discoverServer(context);
     const pages = [
         ['dashboard', '/'],

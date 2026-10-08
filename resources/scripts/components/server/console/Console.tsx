@@ -19,13 +19,13 @@ const terminalContainerClass = [
 ].join(' ');
 
 const commandInputClass = [
-    'peer relative w-full bg-terminal px-2 py-2 pr-4 pl-10 font-mono text-sm text-foreground sm:rounded-b-sm',
+    'peer relative w-full bg-terminal px-2 py-2 pr-4 pl-10 font-mono text-sm text-terminal-foreground sm:rounded-b-sm',
     'border-0 border-b-2 border-transparent transition-colors duration-100',
     'outline-hidden focus:ring-0 focus-visible:outline-hidden active:border-accent focus:border-accent',
 ].join(' ');
 
 const commandIconClass =
-    'absolute left-0 top-0 z-10 flex h-full select-none items-center px-3 text-foreground transition-colors duration-100 peer-focus:text-foreground peer-focus:animate-pulse';
+    'absolute left-0 top-0 z-10 flex h-full select-none items-center px-3 text-terminal-foreground transition-colors duration-100 peer-focus:text-terminal-foreground peer-focus:animate-pulse';
 
 export default function Console() {
     const { ref, retry, scrolledUp, setScrolledUp, terminal, terminalError, terminalReady } = useTerminal();
@@ -44,7 +44,7 @@ export default function Console() {
                 <div
                     role={'alert'}
                     className={
-                        'absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-md bg-terminal p-4 text-center text-sm text-foreground'
+                        'absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-md bg-terminal p-4 text-center text-sm text-terminal-foreground'
                     }
                 >
                     <p>The console could not be loaded.</p>
