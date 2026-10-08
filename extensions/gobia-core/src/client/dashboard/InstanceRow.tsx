@@ -114,6 +114,7 @@ function RowDetails({ instance, live }: { instance: Instance; live: Live | null 
                 <span className={'gb-server-title'}>
                     <StatusDots
                         mode={modeOf(state, instance.status)}
+                        seed={instance.uuid}
                         powerLabel={label}
                         cpu={{
                             level: levelOf(cpu, instance.limits.cpu),

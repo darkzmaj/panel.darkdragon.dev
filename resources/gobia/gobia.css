@@ -4219,10 +4219,7 @@ html {
     background: rgb(var(--gb-danger));
 }
 .gb-sdot.flash {
-    animation: gb-flash 1.6s ease-in-out infinite;
-}
-.gb-sdot.flash.high {
-    animation-duration: 0.9s;
+    animation: gb-flash var(--flash-d, 1.6s) ease-in-out var(--flash-delay, 0s) infinite;
 }
 @keyframes gb-flash {
     0%,

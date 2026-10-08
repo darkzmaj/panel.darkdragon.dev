@@ -1,4 +1,5 @@
-import { LEVEL_TEXT, dotView, type DotsMode, type Level } from './levels';
+import { useMemo } from 'react';
+import { LEVEL_TEXT, dotView, flashTiming, type DotsMode, type Level } from './levels';
 
 interface Reading {
     level: Level;
@@ -8,6 +9,8 @@ interface Reading {
 
 interface Props {
     mode: DotsMode;
+    /** The instance's uuid: it fixes the speed of every dot, the same in the list and in the instance card. */
+    seed: string;
     powerLabel: string;
     cpu: Reading;
     memory: Reading;
@@ -26,7 +29,12 @@ const OFF_TEXT = {
  * stopping and installing flash yellow; an instance that is off or unavailable shows four steady red dots. Only
  * opacity animates, which the browser composites without repainting, and motion stops for people who ask for it.
  */
-export default function StatusDots({ mode, powerLabel, cpu, memory, disk, vertical = false }: Props) {
+export default function StatusDots({ mode, seed, powerLabel, cpu, memory, disk, vertical = false }: Props) {
+    // Computed once per mount: changing a running animation's delay would restart it on every update.
+    const timing = useMemo(() => {
+        const now = Date.now();
+        return Object.fromEntries(['power', 'cpu', 'memory', 'disk'].map((key) => [key, flashTiming(seed, key, now)]));
+    }, [seed]);
     const off = mode === 'offline' || mode === 'unavailable' ? OFF_TEXT[mode] : undefined;
     const text = (label: string, reading: Reading, view: ReturnType<typeof dotView>) =>
         off
@@ -59,6 +67,14 @@ export default function StatusDots({ mode, powerLabel, cpu, memory, disk, vertic
                     data-level={dot.view.level}
                     role={'img'}
                     aria-label={dot.label}
+                    style={
+                        dot.view.flashing
+                            ? ({
+                                  '--flash-d': `${timing[dot.key]?.duration}ms`,
+                                  '--flash-delay': `-${timing[dot.key]?.delay}ms`,
+                              } as React.CSSProperties)
+                            : undefined
+                    }
                 />
             ))}
         </span>

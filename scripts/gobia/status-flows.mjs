@@ -120,6 +120,32 @@ export async function statusFlows({ browser, context, login, scheme, baseUrl, ro
         }
     );
 
+    const rhythm = (scope) =>
+        scope.locator('.gb-sdot.flash').evaluateAll((nodes) =>
+            nodes.map((node) => ({
+                dot: node.dataset.dot,
+                duration: node.style.getPropertyValue('--flash-d'),
+                delay: node.style.getPropertyValue('--flash-delay'),
+            }))
+        );
+    let listRhythm = [];
+    await check('status: the dots flash at four different speeds and none in step', async () => {
+        await mock({});
+        await power('start');
+        await waitLevel('power', 'ok', 8000);
+        await page.waitForTimeout(300);
+        listRhythm = await rhythm(row);
+        if (listRhythm.length !== 4) throw new Error(`${listRhythm.length} dots flash`);
+        if (new Set(listRhythm.map((dot) => dot.duration)).size !== 4)
+            throw new Error(`speeds repeat: ${JSON.stringify(listRhythm)}`);
+        if (new Set(listRhythm.map((dot) => dot.delay)).size !== 4) throw new Error('two dots start together');
+        // Only opacity moves, so the browser can run it on the compositor without repainting.
+        const animation = await row
+            .locator('[data-dot="cpu"]')
+            .evaluate((node) => getComputedStyle(node).animationName);
+        if (animation !== 'gb-flash') throw new Error(`animation ${animation}`);
+    });
+
     await check(
         'status: the instance card in the sidebar shows the same four dots, stacked, and they follow too',
         async () => {
@@ -137,6 +163,15 @@ export async function statusFlows({ browser, context, login, scheme, baseUrl, ro
                 new Set(boxes.map((box) => Math.round(box.y))).size !== 4
             )
                 throw new Error('the dots are not stacked vertically');
+            const cardRhythm = await rhythm(card);
+            if (cardRhythm.length === 0) throw new Error('the instance card dots do not flash while the instance runs');
+            for (const dot of cardRhythm) {
+                const same = listRhythm.find((entry) => entry.dot === dot.dot);
+                if (same && same.duration !== dot.duration)
+                    throw new Error(
+                        `${dot.dot} flashes at ${dot.duration} in the card and ${same.duration} in the list`
+                    );
+            }
             await mock({ cpu: 130, memory: 100 * MIB, disk: 100 * MIB });
             await page.waitForFunction(
                 () =>

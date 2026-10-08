@@ -74,3 +74,40 @@ export const LEVEL_TEXT = {
     high: 'high',
     max: 'at its limit',
 } satisfies Record<Level, string>;
+
+/** How long one flash lasts, from very fast to slow. Each dot of each instance gets one, for good. */
+export const FLASH_MS = [520, 760, 1050, 1400, 1900, 2600] as const;
+
+const hash = (text: string): number => {
+    let value = 2166136261;
+    for (let index = 0; index < text.length; index++) {
+        value ^= text.charCodeAt(index);
+        value = Math.imul(value, 16777619);
+    }
+    return value >>> 0;
+};
+
+const DOTS = ['power', 'cpu', 'memory', 'disk'] as const;
+
+/**
+ * The rhythm of one dot. The speed comes from the instance and the dot alone, so the dot flashes at the same speed in
+ * the list and in the instance card; the four dots of an instance always get four different speeds and every dot its
+ * own starting point, so nothing flashes in step. The phase also follows the clock, so a dot that is drawn again
+ * (another page, another row) carries on where it was.
+ */
+export interface FlashTiming {
+    duration: number;
+    delay: number;
+}
+
+export function flashTiming(seed: string, dot: string, now: number): FlashTiming {
+    const code = hash(seed);
+    // Walking the six speeds with a step that is coprime with six never repeats within four dots.
+    const step = code % 2 === 0 ? 1 : 5;
+    const index =
+        ((code % FLASH_MS.length) + Math.max(0, DOTS.indexOf(dot as (typeof DOTS)[number])) * step) % FLASH_MS.length;
+    const duration = FLASH_MS[index] ?? 1400;
+    const offset = hash(`${seed}:${dot}:phase`) % duration;
+
+    return { duration, delay: (now + offset) % duration };
+}

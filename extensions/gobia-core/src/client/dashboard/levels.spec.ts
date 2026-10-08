@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dotView, levelOf, modeOf } from './levels';
+import { FLASH_MS, dotView, flashTiming, levelOf, modeOf } from './levels';
 
 describe('resource levels', () => {
     it('is grey when there is nothing to measure and normal without a limit', () => {
@@ -51,5 +51,38 @@ describe('dots', () => {
                 expect(dotView(mode, own)).toEqual({ level: 'max', flashing: false });
             }
         }
+    });
+});
+
+describe('flash timing', () => {
+    const dots = ['power', 'cpu', 'memory', 'disk'];
+
+    it('is the same wherever the dot is drawn, whatever the time', () => {
+        for (const dot of dots) {
+            expect(flashTiming('abc', dot, 1000).duration).toBe(flashTiming('abc', dot, 987654).duration);
+        }
+    });
+
+    it('gives the four dots of an instance four different speeds and phases', () => {
+        for (const seed of [
+            'a',
+            'b',
+            'e5e0f441-83b7-4d09-8358-add2f1b5dc0a',
+            '2b99681f-1687-4309-84bd-17d43b27a880',
+            'x'.repeat(40),
+        ]) {
+            const timings = dots.map((dot) => flashTiming(seed, dot, 5000));
+            expect(new Set(timings.map((timing) => timing.duration)).size).toBe(4);
+            expect(timings.every((timing) => FLASH_MS.includes(timing.duration as (typeof FLASH_MS)[number]))).toBe(
+                true
+            );
+            expect(timings.every((timing) => timing.delay >= 0 && timing.delay < timing.duration)).toBe(true);
+        }
+    });
+
+    it('spreads instances over every speed', () => {
+        const seen = new Set<number>();
+        for (let index = 0; index < 60; index++) seen.add(flashTiming(`server-${index}`, 'power', 0).duration);
+        expect(seen.size).toBe(FLASH_MS.length);
     });
 });

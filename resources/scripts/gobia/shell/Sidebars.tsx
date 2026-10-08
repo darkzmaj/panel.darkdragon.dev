@@ -106,6 +106,7 @@ export function ServerSidebar({ id, name, node, internalId, server }: ServerSide
                 <StatusDots
                     vertical
                     mode={modeOf(power || null, null)}
+                    seed={server.attributes.uuid}
                     powerLabel={power || 'offline'}
                     cpu={{
                         level: levelOf(live?.cpu ?? null, limits?.cpu ?? 0),
