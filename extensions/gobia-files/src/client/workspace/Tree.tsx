@@ -1,11 +1,37 @@
-import { ChevronDown, ChevronRight, Ellipsis, File as FileIcon, Folder, FolderOpen } from 'lucide-react';
-import { useEffect, useRef, useState, type DragEvent, type ReactNode } from 'react';
+import { ChevronDown, ChevronRight, Ellipsis, Folder, FolderOpen } from 'lucide-react';
+import {
+    useEffect,
+    useRef,
+    useState,
+    type DragEvent,
+    type KeyboardEvent,
+    type MouseEvent,
+    type ReactNode,
+} from 'react';
+import FileTypeIcon from './FileTypeIcon';
 import type { TreeEntry } from './api';
 import { basename, dirname } from './paths';
 import type { TreeState } from './useTree';
 
 export const MOVE_TYPE = 'application/x-gobia-file';
 export const ROOT = '/';
+
+export type SelectMode = 'single' | 'toggle' | 'range';
+
+/** The paths in the order the explorer shows them, folders only when they are expanded. */
+export function visiblePaths(tree: TreeState): string[] {
+    const out: string[] = [];
+    const walk = (path: string) => {
+        const listing = tree.listings[path];
+        if (!listing || listing === 'loading' || !('items' in listing)) return;
+        for (const item of listing.items) {
+            out.push(item.path);
+            if (item.directory && tree.expanded.has(item.path)) walk(item.path);
+        }
+    };
+    walk(ROOT);
+    return out;
+}
 
 /** Why `name` cannot be used for an entry in a folder that already holds `taken`, or null when it can. */
 export function nameProblem(name: string, taken: ReadonlySet<string>): string | null {
@@ -56,12 +82,15 @@ function InlineName({
         const dot = initial.lastIndexOf('.');
         element.setSelectionRange(0, dot > 0 ? dot : initial.length);
     }, [initial]);
-    const Icon = folder ? Folder : FileIcon;
     return (
         <div className={'gb-tree-row inline' + (problem && value !== '' ? ' invalid' : '')}>
             <div className={'gb-tree-inline'} style={{ paddingLeft: depth * 14 + 8 }}>
                 <span className={'gb-tree-chevron'} />
-                <Icon className={folder ? 'gb-tree-folder' : 'gb-tree-file'} aria-hidden />
+                {folder ? (
+                    <Folder className={'gb-tree-folder'} aria-hidden />
+                ) : (
+                    <FileTypeIcon name={initial || 'file'} />
+                )}
                 <input
                     ref={input}
                     className={'gb-tree-input'}
@@ -95,17 +124,21 @@ function InlineName({
 
 interface TreeProps {
     tree: TreeState;
-    selection: string | null;
+    selection: ReadonlySet<string>;
     activePath: string | null;
     openPaths: ReadonlySet<string>;
     dirtyPaths: ReadonlySet<string>;
     canMove: boolean;
     canUpload: boolean;
-    onSelect: (path: string) => void;
+    onSelect: (path: string, mode: SelectMode) => void;
+    /** Keyboard arrows move the selection to the previous or next visible path. */
+    onClear: () => void;
+    /** Called when a drag starts on `path`; returns the paths that travel (the selection, or just that path). */
+    onDragSelect: (path: string) => string[];
     onOpen: (entry: TreeEntry) => void;
     /** A right click, the menu key or the three dot button; `entry` is null for the root. */
     onMenu: (entry: TreeEntry | null, x: number, y: number) => void;
-    onMove: (from: string, toDirectory: string) => void;
+    onMove: (from: string[], toDirectory: string) => void;
     onDropFiles: (data: DataTransfer, directory: string) => void;
     /** An entry being created or renamed in place. */
     inline: Inline | null;
@@ -120,18 +153,21 @@ interface RowProps {
     depth: number;
     open: boolean;
     selected: boolean;
+    active: boolean;
+    dragged: boolean;
     openFile: boolean;
     dirty: boolean;
     canMove: boolean;
     canUpload: boolean;
-    onClick: () => void;
+    onClick: (event: MouseEvent) => void;
     onMenu: (x: number, y: number) => void;
+    onDragStart: (path: string) => string[];
     onMove: TreeProps['onMove'];
     onDropFiles: TreeProps['onDropFiles'];
     onHoverOpen: () => void;
     /** The path being dragged anywhere in the tree, to light up the folders it may be dropped on. */
-    dragging: string | null;
-    onDragging: (path: string | null) => void;
+    dragging: readonly string[] | null;
+    onDragging: (paths: readonly string[] | null) => void;
     taken: ReadonlySet<string>;
     settled: boolean;
 }
@@ -141,12 +177,15 @@ function Row({
     depth,
     open,
     selected,
+    active,
+    dragged,
     openFile,
     dirty,
     canMove,
     canUpload,
     onClick,
     onMenu,
+    onDragStart,
     onMove,
     onDropFiles,
     onHoverOpen,
@@ -163,7 +202,9 @@ function Row({
     const dragOver = (event: DragEvent) => {
         if (!directory) return;
         const internal = event.dataTransfer.types.includes(MOVE_TYPE);
-        const allowed = internal ? canMove && (dragging === null || validTarget(dragging, path, taken)) : canUpload;
+        const allowed = internal
+            ? canMove && (dragging === null || dragging.every((item) => validTarget(item, path, taken)))
+            : canUpload;
         event.preventDefault();
         event.dataTransfer.dropEffect = allowed ? (internal ? 'move' : 'copy') : 'none';
         setOver(allowed ? 'ok' : 'denied');
@@ -175,9 +216,11 @@ function Row({
         event.preventDefault();
         event.stopPropagation();
         setOver(null);
+        // The dragged row may unmount once the move lands, so its own dragend can never clear the highlights.
+        onDragging(null);
         const moved = event.dataTransfer.getData(MOVE_TYPE);
         if (moved) {
-            if (canMove && validTarget(moved, path, taken)) onMove(moved, path);
+            if (canMove) onMove(JSON.parse(moved) as string[], path);
         } else if (canUpload) {
             onDropFiles(event.dataTransfer, path);
         }
@@ -188,9 +231,12 @@ function Row({
             className={
                 'gb-tree-row' +
                 (entry === null ? ' root' : '') +
-                (selected ? ' selected' : '') +
+                (selected ? ' selected' : active ? ' active-file' : '') +
+                (dragged ? ' dragged' : '') +
                 (settled ? ' settled' : '') +
-                (dragging && directory && over === null && validTarget(dragging, path, taken) ? ' drop-valid' : '') +
+                (dragging && directory && over === null && dragging.every((item) => validTarget(item, path, taken))
+                    ? ' drop-valid'
+                    : '') +
                 (over === 'ok' ? ' drop-ok' : over === 'denied' ? ' drop-denied' : '')
             }
             onDragOver={dragOver}
@@ -199,21 +245,25 @@ function Row({
         >
             <button
                 type={'button'}
-                aria-current={selected ? 'true' : undefined}
+                aria-current={selected || active ? 'true' : undefined}
+                aria-pressed={entry ? selected : undefined}
+                data-path={entry ? entry.path : undefined}
                 aria-expanded={directory ? open : undefined}
                 draggable={entry !== null && canMove}
                 onDragStart={(event) => {
                     if (!entry) return;
-                    event.dataTransfer.setData(MOVE_TYPE, entry.path);
+                    const traveling = onDragStart(entry.path);
+                    event.dataTransfer.setData(MOVE_TYPE, JSON.stringify(traveling));
                     event.dataTransfer.effectAllowed = 'move';
                     // A compact chip instead of the browser's translucent copy of the whole row.
                     const chip = document.createElement('div');
                     chip.className = 'gb-drag-chip';
-                    chip.textContent = entry.name;
+                    chip.textContent =
+                        traveling.length > 1 ? `${entry.name} and ${traveling.length - 1} more` : entry.name;
                     document.body.append(chip);
                     event.dataTransfer.setDragImage(chip, 12, 12);
                     window.setTimeout(() => chip.remove(), 0);
-                    onDragging(entry.path);
+                    onDragging(traveling);
                 }}
                 onDragEnd={() => onDragging(null)}
                 onClick={onClick}
@@ -236,7 +286,7 @@ function Row({
                 ) : (
                     <>
                         <span className={'gb-tree-chevron'} />
-                        <FileIcon className={'gb-tree-file'} aria-hidden />
+                        <FileTypeIcon name={entry?.name ?? ''} />
                     </>
                 )}
                 <span className={'gb-tree-name' + (openFile ? ' open' : '')}>
@@ -268,7 +318,19 @@ function Row({
 
 export default function Tree(props: TreeProps) {
     const { tree, selection, activePath, openPaths, dirtyPaths, canMove, canUpload, inline } = props;
-    const [dragging, setDragging] = useState<string | null>(null);
+    const [dragging, setDragging] = useState<readonly string[] | null>(null);
+
+    const arrows = (event: KeyboardEvent) => {
+        const key = event.key;
+        if (key !== 'ArrowDown' && key !== 'ArrowUp') return;
+        const buttons = [...event.currentTarget.querySelectorAll<HTMLElement>('button[data-path]')];
+        const at = buttons.findIndex((button) => button === document.activeElement);
+        const next = buttons[Math.max(0, Math.min(buttons.length - 1, at + (key === 'ArrowDown' ? 1 : -1)))];
+        if (!next) return;
+        event.preventDefault();
+        next.focus();
+        props.onSelect(next.dataset.path ?? ROOT, event.shiftKey ? 'range' : 'single');
+    };
 
     const namesIn = (path: string): ReadonlySet<string> => {
         const listing = tree.listings[path];
@@ -332,20 +394,30 @@ export default function Tree(props: TreeProps) {
                             entry={entry}
                             depth={depth}
                             open={open}
-                            selected={selection === entry.path || activePath === entry.path}
+                            selected={selection.has(entry.path)}
+                            active={activePath === entry.path}
+                            dragged={dragging?.includes(entry.path) ?? false}
                             openFile={openPaths.has(entry.path)}
                             dirty={dirtyPaths.has(entry.path)}
                             canMove={canMove}
                             canUpload={canUpload}
-                            onClick={() => {
-                                props.onSelect(entry.path);
+                            onClick={(event) => {
+                                const mode = event.shiftKey
+                                    ? 'range'
+                                    : event.ctrlKey || event.metaKey
+                                      ? 'toggle'
+                                      : 'single';
+                                props.onSelect(entry.path, mode);
+                                if (mode !== 'single') return;
                                 if (entry.directory) tree.toggle(entry.path);
                                 else props.onOpen(entry);
                             }}
                             onMenu={(x, y) => {
-                                props.onSelect(entry.path);
+                                // A right click inside the selection keeps it; elsewhere it selects just that entry.
+                                if (!selection.has(entry.path)) props.onSelect(entry.path, 'single');
                                 props.onMenu(entry, x, y);
                             }}
+                            onDragStart={props.onDragSelect}
                             onMove={props.onMove}
                             onDropFiles={props.onDropFiles}
                             onHoverOpen={() => tree.expand(entry.path)}
@@ -362,21 +434,24 @@ export default function Tree(props: TreeProps) {
     };
 
     return (
-        <nav aria-label={'Server files'} className={'gb-tree'}>
+        <nav aria-label={'Server files'} className={'gb-tree'} onKeyDown={arrows}>
             <Row
                 entry={null}
                 depth={0}
                 open
-                selected={selection === ROOT}
+                selected={selection.has(ROOT)}
+                active={false}
+                dragged={false}
                 openFile={false}
                 dirty={false}
                 canMove={false}
                 canUpload={canUpload}
-                onClick={() => props.onSelect(ROOT)}
+                onClick={() => props.onSelect(ROOT, 'single')}
                 onMenu={(x, y) => {
-                    props.onSelect(ROOT);
+                    props.onSelect(ROOT, 'single');
                     props.onMenu(null, x, y);
                 }}
+                onDragStart={props.onDragSelect}
                 onMove={props.onMove}
                 onDropFiles={props.onDropFiles}
                 onHoverOpen={() => undefined}

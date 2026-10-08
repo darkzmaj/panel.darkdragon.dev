@@ -37,7 +37,8 @@ import { loadTabs, saveTabs, takePendingOpen } from './session';
 import { isDirty, tabsReducer } from './tabs';
 import type { FileResult } from './search';
 import SearchPanel, { type ReplaceResult } from './SearchPanel';
-import Tree, { ROOT, validTarget, type Inline } from './Tree';
+import FileTypeIcon from './FileTypeIcon';
+import Tree, { ROOT, validTarget, visiblePaths, type Inline, type SelectMode } from './Tree';
 import { mark } from './timing';
 import UploadPanel from './UploadPanel';
 import { pickedFromDrop, pickedFromInput, useUploadQueue } from './uploads';
@@ -127,6 +128,13 @@ function ToolButton({
     );
 }
 
+interface Picked {
+    paths: readonly string[];
+    primary: string | null;
+    anchor: string | null;
+}
+const NOTHING: Picked = { paths: [], primary: null, anchor: null };
+
 export default function Workspace({ model }: ReplacementProps<'server.files.manager'>) {
     const uuid = useCurrentServer((server) => server.attributes.uuid) ?? '';
     const [state, dispatch] = useReducer(tabsReducer, uuid, loadTabs);
@@ -152,7 +160,13 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
     const tree = useTree(uuid, treeSource);
     const [prompt, setPrompt] = useState<Prompt | null>(null);
     const [menu, setMenu] = useState<MenuState | null>(null);
-    const [selection, setSelection] = useState<string | null>(null);
+    // What is selected lives here, not in CSS: every selected path, the one the keyboard and menus act on, and the
+    // anchor a shift click extends from.
+    const [picked, setPicked] = useState<Picked>(NOTHING);
+    const selection = picked.primary;
+    const selectedSet = useMemo(() => new Set(picked.paths), [picked.paths]);
+    const setSelection = (path: string | null) =>
+        setPicked(path === null ? NOTHING : { paths: [path], primary: path, anchor: path });
     const [inline, setInline] = useState<Inline | null>(null);
     const [explorerView, setExplorerView] = useState<'files' | 'search'>('files');
     const [settled, setSettled] = useState<string | null>(null);
@@ -522,6 +536,74 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
         }
     };
 
+    const selectRow = (path: string, mode: SelectMode) =>
+        setPicked((current) => {
+            if (mode === 'toggle') {
+                const has = current.paths.includes(path);
+                const paths = has
+                    ? current.paths.filter((item) => item !== path)
+                    : [...current.paths.filter((item) => item !== ROOT), path];
+                return { paths, primary: has ? (paths.at(-1) ?? null) : path, anchor: path };
+            }
+            if (mode === 'range' && current.anchor && current.anchor !== ROOT && path !== ROOT) {
+                const order = visiblePaths(latest.current.tree);
+                const a = order.indexOf(current.anchor);
+                const b = order.indexOf(path);
+                if (a >= 0 && b >= 0) {
+                    return {
+                        paths: order.slice(Math.min(a, b), Math.max(a, b) + 1),
+                        primary: path,
+                        anchor: current.anchor,
+                    };
+                }
+            }
+            return { paths: [path], primary: path, anchor: path };
+        });
+
+    // A selection only goes away when its entry does: a loaded folder that no longer lists a path drops it.
+    useEffect(() => {
+        if (picked.paths.length === 0) return;
+        const kept = picked.paths.filter((path) => {
+            if (path === ROOT) return true;
+            const listing = tree.listings[dirname(path)];
+            return (
+                !listing ||
+                listing === 'loading' ||
+                !('items' in listing) ||
+                listing.items.some((item) => item.path === path)
+            );
+        });
+        if (kept.length === picked.paths.length) return;
+        setPicked((current) => {
+            const paths = current.paths.filter((path) => kept.includes(path));
+            return {
+                paths,
+                primary: paths.includes(current.primary ?? '') ? current.primary : (paths.at(-1) ?? null),
+                anchor: current.anchor,
+            };
+        });
+    }, [tree.listings, picked.paths]);
+
+    const selectedEntries = (): TreeEntry[] => {
+        const found: TreeEntry[] = [];
+        for (const listing of Object.values(tree.listings)) {
+            if (listing === 'loading' || 'error' in listing) continue;
+            for (const item of listing.items) if (selectedSet.has(item.path)) found.push(item);
+        }
+        return found;
+    };
+
+    const dragSelect = (path: string): string[] => {
+        if (!selectedSet.has(path)) {
+            setSelection(path);
+            return [path];
+        }
+        // Items inside a selected folder travel with it.
+        return picked.paths.filter(
+            (item) => item !== ROOT && !picked.paths.some((other) => other !== item && item.startsWith(`${other}/`))
+        );
+    };
+
     const targetDirectory = (): string => {
         if (!selection || selection === ROOT) return ROOT;
         for (const listing of Object.values(tree.listings)) {
@@ -660,17 +742,45 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
         }
     };
 
-    const moveInto = (from: string, directory: string) => {
+    const moveInto = (froms: string[], directory: string) => {
         const listing = latest.current.tree.listings[directory];
         const taken =
             listing && listing !== 'loading' && 'items' in listing
                 ? new Set(listing.items.map((item) => item.name))
                 : undefined;
-        if (!validTarget(from, directory, taken)) {
-            if (taken?.has(basename(from))) toast.error(`${basename(from)} already exists in that folder.`);
+        const movable = froms.filter((from) => {
+            const valid = validTarget(from, directory, taken);
+            if (!valid && taken?.has(basename(from))) toast.error(`${basename(from)} already exists in that folder.`);
+            return valid;
+        });
+        if (movable.length === 0) return;
+        if (movable.length === 1) {
+            void rename(movable[0]!, join(directory, basename(movable[0]!)));
             return;
         }
-        void rename(from, join(directory, basename(from)));
+        const before = picked;
+        const pairs = movable.map((from) => [from, join(directory, basename(from))] as const);
+        void guard(async () => {
+            const undos = pairs.map(([from, to]) => tree.move(from, to));
+            for (const [from, to] of pairs) dispatch({ type: 'rename', from, to });
+            const targets = pairs.map(([, to]) => to);
+            setPicked({ paths: targets, primary: targets.at(-1) ?? null, anchor: targets[0] ?? null });
+            setSettled(targets[0] ?? null);
+            try {
+                await renameEntries(
+                    uuid,
+                    ROOT,
+                    pairs.map(([from, to]) => ({ from: from.slice(1), to: to.slice(1) }))
+                );
+            } catch (error) {
+                for (const undo of undos.reverse()) undo();
+                for (const [from, to] of pairs) dispatch({ type: 'rename', from: to, to: from });
+                setPicked(before);
+                throw error;
+            }
+            tree.expand(directory);
+            void tree.reload([...new Set([...movable.map(dirname), directory])]);
+        });
     };
 
     const submitInline = (name: string) => {
@@ -906,6 +1016,11 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
                 </div>
                 <div
                     style={{ flex: 1, overflow: 'auto', padding: '4px 0', minHeight: 0 }}
+                    onClick={(event) => {
+                        // The empty part of the explorer clears the selection.
+                        const target = event.target as HTMLElement;
+                        if (target === event.currentTarget || target.classList.contains('gb-tree')) setSelection(null);
+                    }}
                     onKeyDown={(event) => {
                         const entry = selectedEntry();
                         if (!entry) return;
@@ -914,19 +1029,22 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
                             setInline({ kind: 'rename', entry });
                         } else if (event.key === 'Delete' && permissions.delete) {
                             event.preventDefault();
-                            setPrompt({ kind: 'delete', entries: [entry] });
+                            const entries = selectedEntries();
+                            setPrompt({ kind: 'delete', entries: entries.length > 0 ? entries : [entry] });
                         }
                     }}
                 >
                     <Tree
                         tree={tree}
-                        selection={selection}
+                        selection={selectedSet}
                         activePath={state.active}
                         openPaths={openPaths}
                         dirtyPaths={dirtyPaths}
                         canMove={permissions.update}
                         canUpload={permissions.create}
-                        onSelect={setSelection}
+                        onSelect={selectRow}
+                        onClear={() => setSelection(null)}
+                        onDragSelect={dragSelect}
                         onOpen={openFile}
                         onMenu={openMenu}
                         onMove={moveInto}
@@ -1050,6 +1168,7 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
                                     onClick={() => dispatch({ type: 'activate', path: tab.path })}
                                     className={'gb-tab-name'}
                                 >
+                                    <FileTypeIcon name={tab.name} size={14} />
                                     {tab.name}
                                 </button>
                                 {isDirty(tab) && (

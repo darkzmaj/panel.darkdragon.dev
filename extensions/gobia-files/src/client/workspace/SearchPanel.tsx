@@ -1,5 +1,6 @@
 import { Button, Dialog, toast } from '@pterodactyl/sdk';
-import { ChevronDown, ChevronRight, File as FileIcon, Replace, Search } from 'lucide-react';
+import { ChevronDown, ChevronRight, Replace, Search } from 'lucide-react';
+import FileTypeIcon from './FileTypeIcon';
 import { useRef, useState, type FormEvent } from 'react';
 import {
     buildPattern,
@@ -294,7 +295,7 @@ export default function SearchPanel({ uuid, buffers, canReplace, onOpen, onRepla
                                     ) : (
                                         <ChevronDown size={14} aria-hidden />
                                     )}
-                                    <FileIcon size={14} aria-hidden />
+                                    <FileTypeIcon name={file.path.slice(file.path.lastIndexOf('/') + 1)} size={14} />
                                     <span
                                         style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
                                     >
