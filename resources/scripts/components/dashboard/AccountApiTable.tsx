@@ -10,9 +10,9 @@ export const accountApiColumns = (onDelete: (identifier: string) => void): Colum
         accessorFn: (key) => key.attributes.description,
         header: ({ column }) => <DataTableColumnHeader column={column} title={'Description'} />,
         cell: ({ row }) => (
-            <div className={'min-w-40'}>
+            <div className={'min-w-0'}>
                 <p className={'truncate font-medium'}>{row.original.attributes.description}</p>
-                <p className={'mt-0.5 truncate font-mono text-xs text-muted-foreground md:hidden'}>
+                <p className={'mt-0.5 break-all font-mono text-xs text-muted-foreground @md:hidden'}>
                     {row.original.attributes.identifier}
                 </p>
             </div>
@@ -25,7 +25,7 @@ export const accountApiColumns = (onDelete: (identifier: string) => void): Colum
         cell: ({ row }) => (
             <code className={'font-mono text-xs text-muted-foreground'}>{row.original.attributes.identifier}</code>
         ),
-        meta: { headerClassName: 'hidden md:table-cell', cellClassName: 'hidden md:table-cell' },
+        meta: { headerClassName: 'hidden @md:table-cell', cellClassName: 'hidden @md:table-cell' },
     },
     {
         id: 'last_used_at',
@@ -38,7 +38,7 @@ export const accountApiColumns = (onDelete: (identifier: string) => void): Colum
                     : 'Never'}
             </span>
         ),
-        meta: { headerClassName: 'hidden lg:table-cell w-40', cellClassName: 'hidden lg:table-cell w-40' },
+        meta: { headerClassName: 'hidden @2xl:table-cell w-40', cellClassName: 'hidden @2xl:table-cell w-40' },
     },
     actionsColumn<ApiKey>(1, (key) => (
         <RowActions>
