@@ -64,9 +64,7 @@ import { serverDatabasesQueryOptions } from '@/api/server/databases/queries';
 import { serverAllocationsQueryOptions } from '@/api/server/network/queries';
 import { serverStartupQueryOptions } from '@/api/server/startup/queries';
 import { serverScheduleQueryOptions, serverSchedulesQueryOptions } from '@/api/server/schedules/queries';
-import { serverSubusersQueryOptions } from '@/api/server/users/queries';
 import { serverActivityFacetsQueryOptions, serverActivityLogsQueryOptions } from '@/api/server/activity/queries';
-import { systemPermissionsQueryOptions } from '@/api/system/queries';
 import { siteSettingsQueryOptions } from '@/api/settings/queries';
 import { getBootstrapExtensions, hasBootstrapSession } from '@/bootstrap';
 import { registerClassPrefixes } from '@/lib/cn';
@@ -330,36 +328,23 @@ const serverChildren = [
             after: 'server.schedules.detail.after',
         }),
     }),
+    // Gobia: sharing a server is managed in Account, Access. The old server Users address (a bookmark, a link in an email
+    // or the activity log) lands there with this server selected. The subuser API and the permission checks are untouched.
     createRoute({
         getParentRoute: () => serverRoute,
         path: 'users/new',
-        beforeLoad: requireServerPermission('user.create'),
-        loader: async ({ context }) => {
-            await context.queryClient.ensureQueryData({ ...systemPermissionsQueryOptions, revalidateIfStale: true });
+        beforeLoad: ({ context }) => {
+            throw redirect({ href: `/account/access?server=${context.serverUuid}&grant=1` });
         },
-        component: serverScreen(() => import('@/components/server/users/CreateSubuserContainer'), 'user.create', {
-            before: 'server.users.create.before',
-            after: 'server.users.create.after',
-        }),
+        component: () => null,
     }),
     createRoute({
         getParentRoute: () => serverRoute,
         path: 'users',
-        staticData: { nav: { label: 'Users', permission: 'user.*' } },
-        beforeLoad: requireServerPermission('user.*'),
-        loader: async ({ context }) => {
-            await Promise.all([
-                context.queryClient.ensureQueryData({ ...systemPermissionsQueryOptions, revalidateIfStale: true }),
-                context.queryClient.ensureQueryData({
-                    ...serverSubusersQueryOptions(context.serverUuid),
-                    revalidateIfStale: true,
-                }),
-            ]);
+        beforeLoad: ({ context }) => {
+            throw redirect({ href: `/account/access?server=${context.serverUuid}` });
         },
-        component: serverScreen(() => import('@/components/server/users/UsersContainer'), 'user.*', {
-            before: 'server.users.before',
-            after: 'server.users.after',
-        }),
+        component: () => null,
     }),
     createRoute({
         getParentRoute: () => serverRoute,

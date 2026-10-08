@@ -1,14 +1,27 @@
 import { Button, Dialog, PageContentBlock, httpErrorToHuman, toast } from '@pterodactyl/sdk';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import AccessEditor from '../access/AccessEditor';
 import { accessQueryKey, fetchAccess, revokeAccess, type Grant } from '../access/api';
+import { PRESET_LABELS, presetOf, type PermissionGroups } from '../access/permissions';
+
+function presetLabel(grant: Grant, groups: PermissionGroups) {
+    const preset = presetOf(grant.permissions, groups, null);
+    return preset ? PRESET_LABELS[preset] : `Custom (${grant.permissions.length} permissions)`;
+}
 
 export default function AccessScreen() {
     const queryClient = useQueryClient();
     const { data, isPending, isError, refetch } = useQuery({ queryKey: accessQueryKey, queryFn: fetchAccess });
     const [editing, setEditing] = useState<Grant | 'new' | null>(null);
     const [removing, setRemoving] = useState<Grant | null>(null);
+    // The old server Users address lands here as ?server=<uuid> (and &grant=1 for "add someone").
+    const [preselected] = useState(() => new URLSearchParams(window.location.search).get('server'));
+    const [openOnArrival] = useState(() => new URLSearchParams(window.location.search).get('grant') === '1');
+    const loaded = data !== undefined;
+    useEffect(() => {
+        if (loaded && openOnArrival) setEditing('new');
+    }, [loaded, openOnArrival]);
 
     const remove = useMutation({
         mutationFn: (grant: Grant) => revokeAccess(grant.uuid),
@@ -26,13 +39,13 @@ export default function AccessScreen() {
                 <div style={{ minWidth: 0 }}>
                     <h1>Access</h1>
                     <p>
-                        Share several instances with one person at once. Permissions are the same ones you can set per
+                        Choose who can open your instances and what they may do. This replaces the Users page of each
                         instance.
                     </p>
                 </div>
                 <div className={'gb-page-actions'}>
                     <Button type={'button'} onClick={() => setEditing('new')} disabled={!data}>
-                        Grant access
+                        Grant Access
                     </Button>
                 </div>
             </div>
@@ -53,7 +66,7 @@ export default function AccessScreen() {
                 </div>
             ) : data.grants.length === 0 ? (
                 <div className={'gb-list'} style={{ padding: '40px 16px', textAlign: 'center' }}>
-                    <p style={{ color: 'var(--gb-text-strong)', fontWeight: 600 }}>Nobody else has access</p>
+                    <p style={{ color: 'var(--gb-text-strong)', fontWeight: 600 }}>Nobody else has access yet</p>
                     <p className={'gb-secondary'}>
                         People you grant access to see your instances under the Other filter.
                     </p>
@@ -85,8 +98,8 @@ export default function AccessScreen() {
                                     {grant.username} <span className={'gb-muted'}>{grant.email}</span>
                                 </p>
                                 <p className={'gb-secondary truncate'} style={{ fontSize: 13 }}>
-                                    {grant.servers.map((server) => server.name).join(', ')} · {grant.permissions.length}{' '}
-                                    permissions
+                                    {grant.servers.map((server) => server.name).join(', ')} ·{' '}
+                                    {presetLabel(grant, data.permission_groups)}
                                 </p>
                             </div>
                             <div style={{ display: 'flex', gap: 8 }}>
@@ -102,7 +115,12 @@ export default function AccessScreen() {
                 </div>
             )}
             {data && editing && (
-                <AccessEditor data={data} grant={editing === 'new' ? null : editing} onClose={() => setEditing(null)} />
+                <AccessEditor
+                    data={data}
+                    grant={editing === 'new' ? null : editing}
+                    initialServer={preselected}
+                    onClose={() => setEditing(null)}
+                />
             )}
             {removing && (
                 <Dialog.Confirm

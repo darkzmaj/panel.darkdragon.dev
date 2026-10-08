@@ -13,7 +13,8 @@ export interface Grant {
 
 export interface AccessData {
     grants: Grant[];
-    servers: { uuid: string; name: string }[];
+    /** The instances the person may share, with what they may hand out on each (null: everything, they own it). */
+    servers: { uuid: string; name: string; owned: boolean; grantable: string[] | null }[];
     permission_groups: PermissionGroups;
 }
 
