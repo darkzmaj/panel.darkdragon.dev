@@ -9,6 +9,7 @@ import Spinner from '@/components/elements/Spinner';
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty';
 import { emptyCompactClass } from '@/components/ui/styles';
 import PageContentBlock from '@/components/elements/PageContentBlock';
+import PageHeading from '@/components/elements/PageHeading';
 import { Dialog } from '@/components/elements/dialog';
 import Code from '@/components/elements/Code';
 import { useAccountApiKeys, useDeleteAccountApiKey } from '@/api/account/api-keys/queries';
@@ -37,7 +38,8 @@ export default function AccountApiContainer() {
 
     return (
         <PageContentBlock title={'Account API'}>
-            <div className={'md:flex flex-nowrap my-10'}>
+            <PageHeading title={'API credentials'} description={'Keys for scripts and tools that act as you.'} />
+            <div className={'md:flex flex-nowrap'}>
                 <ContentBox title={'Create API Key'} className={'flex-none w-full md:w-1/2'}>
                     <CreateApiKeyForm />
                 </ContentBox>

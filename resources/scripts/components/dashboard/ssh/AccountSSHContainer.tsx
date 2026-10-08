@@ -5,6 +5,7 @@ import { httpErrorToHuman } from '@/api/http';
 import ContentBox from '@/components/elements/ContentBox';
 import Spinner from '@/components/elements/Spinner';
 import PageContentBlock from '@/components/elements/PageContentBlock';
+import PageHeading from '@/components/elements/PageHeading';
 import { useSSHKeys } from '@/api/account/ssh-keys/queries';
 import CreateSSHKeyForm from '@/components/dashboard/ssh/CreateSSHKeyForm';
 import { ServerError } from '@/components/elements/ScreenBlock';
@@ -30,7 +31,8 @@ export default function AccountSSHContainer() {
 
     return (
         <PageContentBlock title={'SSH Keys'}>
-            <div className={'md:flex flex-nowrap my-10'}>
+            <PageHeading title={'SSH keys'} description={'Public keys that may sign in to your instances over SFTP.'} />
+            <div className={'md:flex flex-nowrap'}>
                 <ContentBox title={'Add SSH Key'} className={'flex-none w-full md:w-1/2'}>
                     <CreateSSHKeyForm />
                 </ContentBox>

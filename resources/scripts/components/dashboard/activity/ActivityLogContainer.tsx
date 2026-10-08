@@ -2,6 +2,7 @@ import { keepPreviousData } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { useActivityFacets, useActivityLogs } from '@/api/account/activity/queries';
 import PageContentBlock from '@/components/elements/PageContentBlock';
+import PageHeading from '@/components/elements/PageHeading';
 import ActivityLogView, { type ActivityLogSearch } from '@/components/elements/activity/ActivityLogView';
 import { useActivitySearch } from '@/router/search';
 
@@ -16,6 +17,7 @@ export default function ActivityLogContainer() {
 
     return (
         <PageContentBlock title={'Account Activity Log'}>
+            <PageHeading title={'Activity'} description={'Sign-ins and changes made to your account.'} />
             <ActivityLogView
                 data={data}
                 error={error}

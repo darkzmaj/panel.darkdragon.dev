@@ -28,6 +28,14 @@ function Shell({ children }: { children: React.ReactNode }) {
         element.classList.add('gb-route');
     }, [pathname]);
 
+    // A long menu (the admin one) keeps the current page in view, whichever page was opened first.
+    useEffect(() => {
+        const frame = requestAnimationFrame(() =>
+            document.querySelector('.gb-sidebar-scroll [aria-current="page"]')?.scrollIntoView({ block: 'nearest' })
+        );
+        return () => cancelAnimationFrame(frame);
+    }, [pathname]);
+
     // Navigating always closes the mobile drawer.
     useEffect(() => setDrawerOpen(false), [pathname, setDrawerOpen]);
 

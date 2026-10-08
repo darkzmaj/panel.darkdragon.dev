@@ -32,7 +32,6 @@ import { Dialog } from '@/components/elements/dialog';
 import { Alert } from '@/components/elements/alert';
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty';
 import { emptyCompactClass } from '@/components/ui/styles';
-import { cardTitleClass } from '@/components/ui/typography';
 import { httpErrorToHuman } from '@/api/http';
 import { cn } from '@/lib/cn';
 import { getPageSearch, usePageSearch } from '@/router/search';
@@ -435,7 +434,7 @@ export default function NodeAllocationTab() {
                 contentClassName={'p-0'}
                 title={
                     <div className={'flex min-h-5 items-center justify-between gap-3'}>
-                        <h2 className={cardTitleClass}>Existing Allocations</h2>
+                        <span className={'gb-eyebrow'}>Existing Allocations</span>
                         {selected.length > 0 ? (
                             <div className={'-my-1 flex items-center gap-3'}>
                                 <span className={'text-xs text-muted-foreground'}>{selected.length} selected</span>

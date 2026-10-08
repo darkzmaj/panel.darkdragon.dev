@@ -25,7 +25,6 @@ import { actionsColumn, EditLinkAction, RowActions } from '@/components/elements
 import { relationshipData } from '@/api/relationships';
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty';
 import { emptyCompactClass } from '@/components/ui/styles';
-import { cardTitleClass } from '@/components/ui/typography';
 
 const locationToValues = (location: AdminLocation): LocationValues => ({
     short: location.attributes.short,
@@ -179,7 +178,7 @@ function LocationDetailForm({ location }: { location: AdminLocation }) {
             <TitledGreyBox
                 title={
                     <div className={'flex items-center justify-between gap-3'}>
-                        <h2 className={cardTitleClass}>Nodes</h2>
+                        <span className={'gb-eyebrow'}>Nodes</span>
                         <span className={'text-xs text-muted-foreground'}>
                             {attributes.nodes_count} nodes · {attributes.servers_count} servers
                         </span>
