@@ -322,6 +322,97 @@ export async function fileFlows({ context, baseUrl, check: plain }) {
         await fresh.waitForURL(new RegExp(`/server/${id}/files$`), { timeout: 20000 });
         await fresh.close();
     });
+    await check('files: nested folders keep open tabs, unsaved text and the explorer in step', async () => {
+        const row = (name) => page.locator('.gb-tree-row', { hasText: name }).first();
+        const menu = async (name, item) => {
+            await row(name).locator('button.gb-tree-more').click({ force: true });
+            await page.getByRole('menuitem', { name: item }).click();
+        };
+        // Only the two files of this check; earlier checks leave other tabs open.
+        const tabPaths = () =>
+            page
+                .locator('.gb-tab')
+                .evaluateAll((tabs) =>
+                    tabs.map((tab) => tab.getAttribute('title')).filter((path) => /\/[ab]\.txt$/.test(path))
+                );
+        const first = `tree-${run}`;
+        const second = `moved-${run}`;
+        const outer = `outer-${run}`;
+
+        // A folder with two files open; one of them has unsaved text.
+        await root.click();
+        await page.getByRole('button', { name: 'New folder' }).first().click();
+        await page.getByLabel('Folder name').fill(first);
+        await page.getByLabel('Folder name').press('Enter');
+        await row(first).waitFor();
+        for (const name of ['a.txt', 'b.txt']) {
+            await row(first).locator('button').first().click();
+            await page.getByRole('button', { name: 'New file' }).first().click();
+            await page.getByLabel('File name').fill(name);
+            await page.getByLabel('File name').press('Enter');
+            await page.locator('.gb-tab-name', { hasText: name }).waitFor();
+        }
+        await page.locator('.gb-tab-name', { hasText: 'a.txt' }).click();
+        await page.locator('.monaco-editor').first().click();
+        await page.keyboard.type('unsaved text');
+        await page.locator('.gb-tab', { hasText: 'a.txt' }).locator('.gb-tree-dirty').waitFor();
+
+        // Renaming the folder moves both tabs and keeps the text.
+        await menu(first, 'Rename');
+        await page.getByLabel('New name').fill(second);
+        await page.getByLabel('New name').press('Enter');
+        await row(second).waitFor();
+        const renamed = await tabPaths();
+        if (!renamed.every((path) => path?.includes(second)) || renamed.length < 2)
+            throw new Error(`tabs did not follow the rename: ${renamed}`);
+        if ((await page.locator('.gb-tab', { hasText: 'a.txt' }).locator('.gb-tree-dirty').count()) !== 1)
+            throw new Error('the unsaved mark was lost');
+
+        // Moving it into another folder does the same; the folder cannot go into its own child.
+        await root.click();
+        await page.getByRole('button', { name: 'New folder' }).first().click();
+        await page.getByLabel('Folder name').fill(outer);
+        await page.getByLabel('Folder name').press('Enter');
+        await row(outer).waitFor();
+        await row(second).locator('button').first().dragTo(row(outer));
+        await page.waitForFunction(
+            (outerName) =>
+                [...document.querySelectorAll('.gb-tab')]
+                    .filter((tab) => tab.getAttribute('title').includes('moved-'))
+                    .every((tab) => tab.getAttribute('title').includes(outerName)),
+            outer
+        );
+        await row(outer).locator('button').first().dragTo(row(second));
+        await page.waitForTimeout(400);
+        if (!(await tabPaths()).every((path) => path?.includes(`/${outer}/${second}/`)))
+            throw new Error('the outer folder moved into its own child');
+
+        // A refusal from the node puts the explorer and the tabs back.
+        await page.route('**/files/rename', (request) =>
+            request.fulfill({ status: 500, contentType: 'application/json', body: '{"errors":[{"detail":"refused"}]}' })
+        );
+        await menu(outer, 'Rename');
+        await page.getByLabel('New name').fill(`refused-${run}`);
+        await page.getByLabel('New name').press('Enter');
+        await page.waitForTimeout(800);
+        await page.unroute('**/files/rename');
+        await row(outer).waitFor();
+        if ((await page.locator('.gb-tree-name', { hasText: `refused-${run}` }).count()) !== 0)
+            throw new Error('the refused rename stayed in the explorer');
+        if (!(await tabPaths()).every((path) => path?.includes(`/${outer}/`)))
+            throw new Error('the tabs kept the refused name');
+
+        // Deleting the folder closes the clean tab and keeps the one with unsaved text.
+        await menu(outer, 'Delete');
+        await page.getByRole('button', { name: 'Delete', exact: true }).click();
+        await page.locator('.gb-tree-name', { hasText: outer }).waitFor({ state: 'detached' });
+        // The tabs follow once the node has confirmed the deletion.
+        await page.waitForTimeout(1500);
+        if ((await tabPaths()).length !== 1)
+            throw new Error(`expected only the tab with unsaved text to stay: ${await tabPaths()}`);
+        await page.locator('.gb-tab', { hasText: 'a.txt' }).locator('.gb-tab-close').click();
+        await page.getByRole('button', { name: 'Discard changes' }).click();
+    });
     await check('files: delete the folder and files closes their tabs', async () => {
         for (const name of [folder, 'renamed-' + note]) {
             const row = page.locator('.gb-tree-row', { hasText: name }).first();
@@ -409,4 +500,40 @@ export async function mobileFlows({ browser, login, scheme, baseUrl, check: plai
         await page.getByRole('menu').waitFor({ state: 'detached' });
     });
     await phone.close();
+}
+
+/** The editor chunk is requested by the file workspace and by nothing else. */
+export async function bundleFlows({ context, baseUrl, check }) {
+    const page = await context.newPage();
+    const hits = [];
+    page.on('request', (request) => {
+        if (/monaco|editor\.worker|CodeEditor|codicon/i.test(request.url())) hits.push(request.url().split('/').pop());
+    });
+    await page.goto(baseUrl + '/');
+    await page.locator('a.gb-server-row').first().waitFor({ timeout: 30000 });
+    const id = (await page.locator('a.gb-server-row').first().getAttribute('href')).split('/')[2];
+    for (const [label, path] of [
+        ['dashboard', '/'],
+        ['admin overview', '/panel'],
+        ['admin nodes', '/panel/nodes'],
+        ['templates', '/panel/templates'],
+        ['account', '/account'],
+        ['server console', `/server/${id}`],
+        ['server settings', `/server/${id}/settings`],
+    ]) {
+        await check(`bundle: ${label} requests no editor code`, async () => {
+            await page.goto(baseUrl + path);
+            await page.waitForSelector('.gb-app', { timeout: 30000 });
+            await page.waitForLoadState('networkidle').catch(() => undefined);
+            await page.waitForTimeout(1200);
+            if (hits.length > 0) throw new Error(`requested ${hits.join(', ')}`);
+        });
+    }
+    await check('bundle: the file workspace fetches the editor once the explorer is up', async () => {
+        await page.goto(`${baseUrl}/server/${id}/files`);
+        await page.waitForSelector('.gb-tree-name', { timeout: 30000 });
+        await page.waitForFunction(() => window.__gobiaFiles?.['monaco-chunk-loaded'], null, { timeout: 15000 });
+        if (hits.length === 0) throw new Error('no editor request was made');
+    });
+    await page.close();
 }

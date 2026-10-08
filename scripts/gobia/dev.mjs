@@ -69,23 +69,25 @@ async function ensure(name, port, launch) {
 }
 
 await ensure('mariadb', Number(dotenv.DB_PORT ?? 3307), () =>
-    start('mariadb', join(mariaDir, process.platform === 'win32' ? 'bin/mariadbd.exe' : 'bin/mariadbd'), [`--defaults-file=${join(mariaData, 'my.ini')}`, '--console'])
+    start('mariadb', join(mariaDir, process.platform === 'win32' ? 'bin/mariadbd.exe' : 'bin/mariadbd'), [
+        `--defaults-file=${join(mariaData, 'my.ini')}`,
+        '--console',
+    ])
 );
 for (let i = 0; i < 30 && !(await listening(Number(dotenv.DB_PORT ?? 3307))); i++)
     await new Promise((r) => setTimeout(r, 500));
 
 await ensure('panel', Number(appUrl.port || 8000), () =>
-    start('panel', 'php', [
-        'artisan',
-        'serve',
-        `--host=${appUrl.hostname}`,
-        `--port=${appUrl.port || 8000}`,
-        '--no-reload',
-    ], {
-        // The browser checks load many pages a minute; the production default (256) would answer them with 429. Only this
-        // local stack raises it, and GOBIA_API_RATELIMIT overrides the value.
-        extraEnv: { APP_API_CLIENT_RATELIMIT: process.env.GOBIA_API_RATELIMIT ?? '4096' },
-    })
+    start(
+        'panel',
+        'php',
+        ['artisan', 'serve', `--host=${appUrl.hostname}`, `--port=${appUrl.port || 8000}`, '--no-reload'],
+        {
+            // The browser checks load many pages a minute; the production default (256) would answer them with 429. Only this
+            // local stack raises it, and GOBIA_API_RATELIMIT overrides the value.
+            extraEnv: { APP_API_CLIENT_RATELIMIT: process.env.GOBIA_API_RATELIMIT ?? '4096' },
+        }
+    )
 );
 start('queue', 'php', ['artisan', 'queue:work', '--tries=3', '--sleep=1']);
 start('scheduler', 'php', ['artisan', 'schedule:work']);
