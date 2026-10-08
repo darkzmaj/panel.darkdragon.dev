@@ -29,7 +29,7 @@ import { useCurrentUser } from '@/api/account/queries';
 import { useServerStatus } from '@/state/server';
 import { useLiveStats } from '@/gobia/liveStats';
 import StatusDots from '@/gobia/StatusDots';
-import { levelOf, powerLevel } from '@/gobia/statusLevels';
+import { levelOf, modeOf } from '@/gobia/statusLevels';
 import { bytesToString } from '@/lib/formatters';
 import Can from '@/components/elements/Can';
 import NavigationLabel from '@/extensions/NavigationLabel';
@@ -105,14 +105,14 @@ export function ServerSidebar({ id, name, node, internalId, server }: ServerSide
             <ServerSwitcher id={id}>
                 <StatusDots
                     vertical
-                    power={powerLevel(power || null)}
+                    mode={modeOf(power || null, null)}
                     powerLabel={power || 'offline'}
                     cpu={{
-                        level: levelOf(running ? (live?.cpu ?? null) : null, limits?.cpu ?? 0),
+                        level: levelOf(live?.cpu ?? null, limits?.cpu ?? 0),
                         text: `${Math.round(live?.cpu ?? 0)}%`,
                     }}
                     memory={{
-                        level: levelOf(running ? (live?.memory ?? null) : null, (limits?.memory ?? 0) * MIB),
+                        level: levelOf(live?.memory ?? null, (limits?.memory ?? 0) * MIB),
                         text: bytesToString(live?.memory ?? 0),
                     }}
                     disk={{

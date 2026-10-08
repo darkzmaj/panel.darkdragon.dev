@@ -65,19 +65,27 @@ export async function statusFlows({ browser, context, login, scheme, baseUrl, ro
         if (rows === 0 || dots !== rows * 4) throw new Error(`${dots} dots for ${rows} rows`);
     });
 
-    await check('status: the power dot follows start and stop within a moment and flashes only while on', async () => {
-        await mock({});
-        await power('stop');
-        await waitLevel('power', 'idle', 8000);
-        if ((await row.locator('[data-dot="power"]').getAttribute('class')).includes('flash'))
-            throw new Error('an offline instance flashes');
-        await power('start');
-        const took = await waitLevel('power', 'high', 6000).catch(() => null);
-        const upMs = await waitLevel('power', 'ok', 8000);
-        if (!(await row.locator('[data-dot="power"]').getAttribute('class')).includes('flash'))
-            throw new Error('a running instance does not flash');
-        console.log(`  power dot: starting after ${took ?? 'n/a'} ms, running after ${upMs} ms`);
-    });
+    await check(
+        'status: the power dot follows start and stop within a moment and every dot flashes while on and sits red while off',
+        async () => {
+            await mock({});
+            await power('stop');
+            await waitLevel('power', 'max', 8000);
+            for (const dot of ['power', 'cpu', 'memory', 'disk']) {
+                const cls = await row.locator(`[data-dot="${dot}"]`).getAttribute('class');
+                if (cls.includes('flash') || (await level(dot)) !== 'max')
+                    throw new Error(`an offline instance must show a steady red ${dot} dot, got ${cls}`);
+            }
+            await power('start');
+            const took = await waitLevel('power', 'high', 6000).catch(() => null);
+            const upMs = await waitLevel('power', 'ok', 8000);
+            for (const dot of ['power', 'cpu', 'memory', 'disk']) {
+                if (!(await row.locator(`[data-dot="${dot}"]`).getAttribute('class')).includes('flash'))
+                    throw new Error(`the running ${dot} dot does not flash`);
+            }
+            console.log(`  power dot: starting after ${took ?? 'n/a'} ms, running after ${upMs} ms`);
+        }
+    );
 
     await check(
         'status: CPU, memory and storage dots turn yellow when high and red at the limit, within two seconds',

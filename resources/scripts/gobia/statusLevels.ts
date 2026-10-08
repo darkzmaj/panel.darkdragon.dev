@@ -3,7 +3,7 @@ export type Level = 'idle' | 'ok' | 'high' | 'max';
 
 /** At or above this share of its limit a resource is high (the dot flashes yellow). */
 export const HIGH_AT = 0.75;
-/** At or above this share it is at its limit (the dot turns red). */
+/** At or above this share it is at its limit (the dot flashes red). */
 export const MAX_AT = 0.95;
 
 /**
@@ -19,22 +19,52 @@ export function levelOf(value: number | null, limit: number): Level {
     return 'ok';
 }
 
-/** The power dot: running flashes green, starting and stopping flash yellow, anything unavailable is red, off is grey. */
-export interface PowerView {
+/** What the instance is doing, which decides how all four dots look. */
+export type DotsMode = 'running' | 'transition' | 'offline' | 'unavailable' | 'installing' | 'checking';
+
+/**
+ * `state` is the power state Wings reports (null while unknown), `status` the instance's own status from the Panel
+ * (null when it is usable; installing, suspended or a failed install otherwise).
+ */
+export function modeOf(state: string | null, status: string | null): DotsMode {
+    if (status === 'installing') return 'installing';
+    if (status !== null) return 'unavailable';
+    switch (state) {
+        case 'running':
+            return 'running';
+        case 'starting':
+        case 'stopping':
+            return 'transition';
+        case 'offline':
+        case 'stopped':
+            return 'offline';
+        default:
+            return 'checking';
+    }
+}
+
+export interface DotView {
     level: Level;
     flashing: boolean;
 }
 
-export function powerLevel(state: string | null, problem = false): PowerView {
-    if (problem) return { level: 'max', flashing: false };
-    switch (state) {
-        case 'running':
-            return { level: 'ok', flashing: true };
-        case 'starting':
-        case 'stopping':
+/**
+ * One dot. Everything that is alive flashes: running dots in the colour of their level, starting, stopping and
+ * installing in yellow, an unknown state in grey. The only dots that hold still are the red ones of an instance that is
+ * off or unavailable. `own` is the level of this dot's resource (green for the power dot).
+ */
+export function dotView(mode: DotsMode, own: Level): DotView {
+    switch (mode) {
+        case 'offline':
+        case 'unavailable':
+            return { level: 'max', flashing: false };
+        case 'transition':
+        case 'installing':
             return { level: 'high', flashing: true };
-        default:
-            return { level: 'idle', flashing: false };
+        case 'checking':
+            return { level: 'idle', flashing: true };
+        case 'running':
+            return { level: own === 'idle' ? 'ok' : own, flashing: true };
     }
 }
 

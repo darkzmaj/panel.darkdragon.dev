@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { levelOf, powerLevel } from './levels';
+import { dotView, levelOf, modeOf } from './levels';
 
 describe('resource levels', () => {
     it('is grey when there is nothing to measure and normal without a limit', () => {
@@ -18,13 +18,38 @@ describe('resource levels', () => {
     });
 });
 
-describe('power level', () => {
-    it('flashes only while the instance is up or changing', () => {
-        expect(powerLevel('running')).toEqual({ level: 'ok', flashing: true });
-        expect(powerLevel('starting')).toEqual({ level: 'high', flashing: true });
-        expect(powerLevel('stopping')).toEqual({ level: 'high', flashing: true });
-        expect(powerLevel('offline')).toEqual({ level: 'idle', flashing: false });
-        expect(powerLevel(null)).toEqual({ level: 'idle', flashing: false });
-        expect(powerLevel('running', true)).toEqual({ level: 'max', flashing: false });
+describe('what the instance is doing', () => {
+    it('maps the power state and the instance status to a mode', () => {
+        expect(modeOf('running', null)).toBe('running');
+        expect(modeOf('starting', null)).toBe('transition');
+        expect(modeOf('stopping', null)).toBe('transition');
+        expect(modeOf('offline', null)).toBe('offline');
+        expect(modeOf('stopped', null)).toBe('offline');
+        expect(modeOf(null, null)).toBe('checking');
+        expect(modeOf('running', 'installing')).toBe('installing');
+        expect(modeOf('offline', 'suspended')).toBe('unavailable');
+    });
+});
+
+describe('dots', () => {
+    it('flash in the colour of their level while running, red included', () => {
+        expect(dotView('running', 'ok')).toEqual({ level: 'ok', flashing: true });
+        expect(dotView('running', 'high')).toEqual({ level: 'high', flashing: true });
+        expect(dotView('running', 'max')).toEqual({ level: 'max', flashing: true });
+        expect(dotView('running', 'idle')).toEqual({ level: 'ok', flashing: true });
+    });
+
+    it('flash yellow while changing and grey while unknown', () => {
+        expect(dotView('transition', 'ok')).toEqual({ level: 'high', flashing: true });
+        expect(dotView('installing', 'ok')).toEqual({ level: 'high', flashing: true });
+        expect(dotView('checking', 'ok')).toEqual({ level: 'idle', flashing: true });
+    });
+
+    it('hold still, and red, only when the instance is off or unavailable', () => {
+        for (const mode of ['offline', 'unavailable'] as const) {
+            for (const own of ['idle', 'ok', 'high', 'max'] as const) {
+                expect(dotView(mode, own)).toEqual({ level: 'max', flashing: false });
+            }
+        }
     });
 });

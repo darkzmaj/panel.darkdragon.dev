@@ -32,6 +32,8 @@ const TOKEN_MS = 10 * 60 * 1000;
 const credentialCache = new Map<string, { at: number; token: string; socket: string }>();
 
 const emit = (entry: Entry) => {
+    // Nobody sees the dots of a hidden tab: keep the newest frame and let the next visible one repaint.
+    if (document.hidden) return;
     for (const listener of [...entry.listeners]) listener();
 };
 

@@ -148,6 +148,7 @@ function SecondPane({
     mobile,
     register,
     onFocus,
+    onSaveAll,
     peer,
     onTransfer,
     onCrossDrop,
@@ -157,6 +158,7 @@ function SecondPane({
     mobile: boolean;
     register: (handle: PaneHandle | null) => void;
     onFocus: () => void;
+    onSaveAll: () => void;
     peer: { name: string; canWrite: boolean } | null;
     onTransfer: (paths: string[], mode: TransferMode, directory?: string) => void;
     onCrossDrop: (origin: string, paths: string[], directory: string) => void;
@@ -170,6 +172,7 @@ function SecondPane({
         treeSource: 'fetch' satisfies TreeSource,
         mobile,
         onFocusPane: onFocus,
+        onSaveAll,
         peer,
         onTransfer,
         onCrossDrop,
@@ -374,6 +377,11 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
             ? { name: summaryA.data.name, canWrite: summaryA.data.permissions.create }
             : null;
 
+    const saveEverything = useCallback(() => {
+        void panes.current.a?.saveAll();
+        void panes.current.b?.saveAll();
+    }, []);
+
     const pane = usePane({
         uuid,
         paneId: 'a',
@@ -382,6 +390,7 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
         mobile,
         onNavigate: () => setDrawer(false),
         onFocusPane: () => setFocused('a'),
+        onSaveAll: saveEverything,
         peer: peerForA,
         onTransfer: (paths, mode, directory) => void startTransfer('a', paths, mode, directory),
         onCrossDrop: (origin, paths, directory) => void startTransfer(origin as PaneId, paths, 'copy', directory),
@@ -412,15 +421,14 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
             const handle = panes.current[inside ?? focusedRef.current] ?? panes.current.a;
             if (!handle) return;
             if (event.shiftKey) {
-                void panes.current.a?.saveAll();
-                void panes.current.b?.saveAll();
+                saveEverything();
             } else if (handle.activePath) {
                 void handle.save(handle.activePath);
             }
         };
         window.addEventListener('keydown', onKey, true);
         return () => window.removeEventListener('keydown', onKey, true);
-    }, []);
+    }, [saveEverything]);
 
     const startResize = (event: React.PointerEvent) => {
         event.preventDefault();
@@ -700,6 +708,7 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
                     mobile={mobile}
                     register={registerSecond}
                     onFocus={() => setFocused('b')}
+                    onSaveAll={saveEverything}
                     peer={peerForB}
                     onTransfer={(paths, mode, directory) => void startTransfer('b', paths, mode, directory)}
                     onCrossDrop={(origin, paths, directory) =>

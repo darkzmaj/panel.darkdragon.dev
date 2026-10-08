@@ -701,7 +701,7 @@ h4,
     border-radius: 50%;
     object-fit: cover;
 }
-.gb-user-btn svg {
+.gb-user-btn > svg {
     width: 14px;
     height: 14px;
     color: var(--gb-text-3);
@@ -4217,7 +4217,6 @@ html {
 }
 .gb-sdot.max {
     background: rgb(var(--gb-danger));
-    box-shadow: 0 0 6px 1px rgb(var(--gb-danger) / 0.55);
 }
 .gb-sdot.flash {
     animation: gb-flash 1.6s ease-in-out infinite;
@@ -4229,18 +4228,13 @@ html {
     0%,
     100% {
         opacity: 1;
-        box-shadow: 0 0 6px 1px currentColor;
     }
     50% {
-        opacity: 0.35;
-        box-shadow: none;
+        opacity: 0.25;
     }
 }
-.gb-sdot.flash.ok {
-    color: rgb(var(--gb-success) / 0.6);
-}
-.gb-sdot.flash.high {
-    color: rgb(var(--gb-warning) / 0.6);
+.gb-sdot.flash {
+    will-change: opacity;
 }
 @media (prefers-reduced-motion: reduce) {
     .gb-sdot.flash {

@@ -137,9 +137,9 @@ export default function ServerSwitcher({ id, children }: { id: string; children:
                 className={'gb-subcard gb-switcher'}
                 aria-haspopup={'listbox'}
                 aria-expanded={open}
-                aria-label={'Switch instance'}
                 onClick={() => setOpen((value) => !value)}
             >
+                <span className={'sr-only'}>Switch instance: </span>
                 {children}
                 <ChevronsUpDown className={'gb-switcher-chevron'} aria-hidden />
             </button>

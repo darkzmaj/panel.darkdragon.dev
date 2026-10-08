@@ -168,6 +168,8 @@ export interface PaneConfig {
     mobile: boolean;
     /** Called when a file is opened or created, so a phone's drawer can close. */
     onNavigate?: () => void;
+    /** Save every open file of every pane (Ctrl+Shift+S); this pane's own files when absent. */
+    onSaveAll?: () => void;
     /** The pane received focus (the editor or the explorer), so shortcuts know which one to act on. */
     onFocusPane?: () => void;
     /** The other server of the dual workspace, when there is one and this pane may send files to it. */
@@ -1378,7 +1380,7 @@ export function usePane(config: PaneConfig) {
                         onDirtyChange={(path, dirty) => dispatch({ type: 'dirty', path, dirty })}
                         onSnapshot={(path, content) => dispatch({ type: 'snapshot', path, content })}
                         onSave={() => void save(active.path)}
-                        onSaveAll={() => void saveAll()}
+                        onSaveAll={() => (config.onSaveAll ? config.onSaveAll() : void saveAll())}
                         onFocus={() => config.onFocusPane?.()}
                     />
                 ) : (

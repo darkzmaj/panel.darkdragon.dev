@@ -104,6 +104,38 @@ export async function explorerFlows({ browser, context, login, scheme, baseUrl, 
         if (!(await isSelected(f2))) throw new Error('moved folder lost the selection');
     });
 
+    await check(
+        'explorer: a listing that was requested before a move cannot undo it or drop the selection',
+        async () => {
+            // The race behind the old flake: a refresh started while the server was still renaming returned the old folder
+            // contents and replaced the moved row, which then pruned the selection.
+            const racer = `sel-race-${run}`;
+            await create('New folder', 'Folder name', racer);
+            await button(racer).click();
+            await page.route('**/files/rename', async (route) => {
+                await new Promise((resolve) => setTimeout(resolve, 1800));
+                await route.continue();
+            });
+            await button(racer).dragTo(row(f1));
+            for (const wait of [200, 500, 600]) {
+                await page.waitForTimeout(wait);
+                await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+            }
+            await page.waitForTimeout(2500);
+            await page.unroute('**/files/rename');
+            await row(racer).waitFor();
+            if (!(await isSelected(racer))) throw new Error('the moved folder lost its selection during the move');
+            const parent = await row(racer).evaluate(
+                (element) =>
+                    element
+                        .closest('.gb-tree-group')
+                        ?.parentElement?.closest('.gb-tree-group')
+                        ?.querySelector('.gb-tree-name')?.textContent
+            );
+            if (parent !== f1) throw new Error(`the folder is listed under ${parent} instead of ${f1}`);
+        }
+    );
+
     await check('explorer: renaming keeps the item selected', async () => {
         const renamed = `sel-renamed-${run}.py`;
         await button(c).click();
@@ -135,15 +167,26 @@ export async function explorerFlows({ browser, context, login, scheme, baseUrl, 
             await page.locator('.gb-tab-name', { hasText: a }).first().click();
             await away();
             if (!(await isSelected(a))) throw new Error('selection lost after switching tabs');
-            const marks = await page
-                .locator('.gb-tab .gb-file-badge')
-                .evaluateAll((nodes) => nodes.map((node) => node.dataset.kind));
-            if (!marks.includes('{}') || !marks.includes('RS')) throw new Error(`tab icons: ${marks.join(',')}`);
-            const tree = await page
-                .locator('.gb-tree .gb-file-badge')
-                .evaluateAll((nodes) => nodes.map((node) => node.dataset.kind));
-            if (!tree.includes('{}') || !tree.includes('RS') || !tree.includes('PY'))
-                throw new Error(`tree icons: ${tree.join(',')}`);
+            const read = (selector) =>
+                page.locator(selector).evaluateAll((nodes) =>
+                    nodes.map((node) => ({
+                        icon: node.dataset.icon,
+                        shown: node.complete && node.naturalWidth > 0 && node.getBoundingClientRect().width > 0,
+                    }))
+                );
+            const tabs = await read('.gb-tab img.gb-ftype');
+            const tree = await read('.gb-tree img.gb-ftype');
+            for (const wanted of ['json', 'rust']) {
+                if (!tabs.some((icon) => icon.icon === wanted && icon.shown))
+                    throw new Error(`tab icon ${wanted} missing or not drawn: ${JSON.stringify(tabs)}`);
+            }
+            for (const wanted of ['json', 'rust', 'python']) {
+                if (!tree.some((icon) => icon.icon === wanted && icon.shown))
+                    throw new Error(`tree icon ${wanted} missing or not drawn`);
+            }
+            if (!tree.some((icon) => icon.icon?.startsWith('folder') && icon.shown))
+                throw new Error('folders have no folder icon');
+            if (tree.some((icon) => !icon.shown)) throw new Error('an icon failed to render');
         }
     );
 

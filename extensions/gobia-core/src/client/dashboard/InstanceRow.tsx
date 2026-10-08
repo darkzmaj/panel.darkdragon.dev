@@ -2,7 +2,7 @@ import { PanelLink, useServerResources } from '@pterodactyl/sdk';
 import { Ellipsis, GripVertical, Server as ServerIcon } from 'lucide-react';
 import { memo, useEffect, useState, type CSSProperties } from 'react';
 import { formatBytes, formatCpu, formatLimit } from './format';
-import { levelOf, powerLevel } from './levels';
+import { levelOf, modeOf } from './levels';
 import { useLiveStats, type Live } from './liveStats';
 import StatusDots from './StatusDots';
 import type { useSortable } from './useSortable';
@@ -113,8 +113,7 @@ function RowDetails({ instance, live }: { instance: Instance; live: Live | null 
             <span className={'gb-server-name'}>
                 <span className={'gb-server-title'}>
                     <StatusDots
-                        power={powerLevel(state, unavailable && instance.status !== 'installing')}
-                        installing={instance.status === 'installing'}
+                        mode={modeOf(state, instance.status)}
                         powerLabel={label}
                         cpu={{
                             level: levelOf(cpu, instance.limits.cpu),

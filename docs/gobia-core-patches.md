@@ -79,3 +79,13 @@ Chromium, found by the keyboard flow. `gobia/shell/GobiaShell.tsx` scrolls the c
 | `router/routeTree.ts` | Navigation entries of activity, instances, mounts, tags, extensions and API keys removed (their routes and addresses are unchanged); labels "Nodes & Instances" and "Eggs & Mounts" | Nav metadata is core | Low | `routeTree.spec.ts`, browser flows | Keep |
 | `gobia/shell/Nav.tsx`, `Sidebars.tsx`, `GobiaFooter.tsx`, `resources/gobia/gobia.css` | Groups, highlight of merged entries, footer layout | Shell is Gobia code | None | browser flows | None |
 | `components/admin/overview/OverviewContainer.tsx`, `RecentActivity.tsx` (new) | Recent Activity below the statistics | The overview page is core; the statistics come from a slot | Low | `admin:` flow | Keep |
+
+## Live status dots, instance switcher and the Files workspace
+
+| File | Purpose | Why the extension API cannot do it | Upstream conflict risk | Tests | Removal path |
+| --- | --- | --- | --- | --- | --- |
+| `resources/scripts/components/server/WebsocketHandler.tsx` | Requests one stats frame after the socket authenticates and publishes every `stats` event to `gobia/liveStats.ts` (two small hunks), so the instance card shows live numbers on every server page | The shell and the server socket are core; slots cannot read socket events | Low | `status:` browser flows | Upstream hook for socket events |
+| `resources/scripts/gobia/shell/Sidebars.tsx`, new `gobia/shell/ServerSwitcher.tsx`, `gobia/StatusDots.tsx`, `gobia/statusLevels.ts`, `gobia/liveStats.ts` | The instance card is a searchable switcher that keeps the page; four stacked status dots | Sidebar is Gobia shell code | None (Gobia files) | `dual:` and `status:` browser flows | None |
+| `extensions/gobia-core/src/client/dashboard/*` | Four live dots per instance row, one grid for header and rows, websocket stats (`liveStats.ts`) | Extension code | None | `levels.spec.ts`, `status:` flows | None |
+| `extensions/gobia-files/**` | Pane hook, dual workspace, save pipeline, icons, transfer backend (`GobiaFiles\`, route `POST /api/client/extensions/gobia-files/transfers`) | Extension code; the replaced component `server.files.manager` stays the entry point | None | `FileTransferTest`, `dual:`/`explorer:` flows | None |
+| `services/mock-wings/server.mjs` | Pushes stats every second and has a dev only `mock-stats` endpoint | Development tool, never shipped | None | `status:` flows | Keep |
