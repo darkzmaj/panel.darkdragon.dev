@@ -7,13 +7,13 @@ const palette = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--ch
 type Props = Omit<AvatarProps, 'colors'>;
 
 const _Avatar = ({ variant = 'beam', ...props }: AvatarProps) => (
-    <BoringAvatar colors={palette} variant={variant} {...props} />
+    <BoringAvatar colors={palette} variant={variant} aria-hidden {...props} />
 );
 
 const UserAvatar = ({ variant = 'beam', ...props }: Omit<Props, 'name'>) => {
     const uuid = useCurrentUser().uuid;
 
-    return <BoringAvatar colors={palette} name={uuid} variant={variant} {...props} />;
+    return <BoringAvatar colors={palette} name={uuid} variant={variant} aria-hidden {...props} />;
 };
 
 _Avatar.displayName = 'Avatar';
