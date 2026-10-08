@@ -9,6 +9,12 @@ export interface Tab {
     status: 'loading' | 'ready' | 'error';
     error: string | null;
     saving: boolean;
+    /** Whether the editor holds edits that are not on the server. Unset: compare `content` with `original`. */
+    dirty?: boolean;
+    /** Bumped when the text is replaced from outside the editor, so the editor takes the new text. */
+    rev: number;
+    /** How the last save ended; cleared by the next edit. */
+    result?: 'saved' | 'error' | 'conflict' | null;
 }
 
 export interface TabsState {
@@ -22,7 +28,16 @@ export type TabsAction =
     | { type: 'failed'; path: string; error: string }
     | { type: 'edit'; path: string; content: string }
     | { type: 'saving'; path: string; saving: boolean }
-    | { type: 'saved'; path: string; content: string; modifiedAt: string | null }
+    /** The editor's edited or clean state flipped (typing alone never goes through the reducer). */
+    | { type: 'dirty'; path: string; dirty: boolean }
+    /** The editor's text a moment after typing stopped. Not an external change. */
+    | { type: 'snapshot'; path: string; content: string }
+    /** Text replaced from outside the editor, left unsaved (search and replace on an open tab). */
+    | { type: 'replace'; path: string; content: string }
+    /** The version of the file on the server became known after a save. */
+    | { type: 'version'; path: string; modifiedAt: string | null }
+    | { type: 'result'; path: string; result: 'saved' | 'error' | 'conflict' | null }
+    | { type: 'saved'; path: string; content: string; modifiedAt: string | null; dirty?: boolean }
     | { type: 'activate'; path: string }
     | { type: 'close'; path: string }
     /** A file or folder moved on the server: tabs under `from` follow it and keep their text. */
@@ -33,7 +48,7 @@ export type TabsAction =
 
 export const EMPTY_TABS: TabsState = { tabs: [], active: null };
 
-export const isDirty = (tab: Tab): boolean => tab.status === 'ready' && tab.content !== tab.original;
+export const isDirty = (tab: Tab): boolean => tab.status === 'ready' && (tab.dirty ?? tab.content !== tab.original);
 
 const patch = (state: TabsState, path: string, change: Partial<Tab>): TabsState => ({
     ...state,
@@ -53,6 +68,7 @@ export function tabsReducer(state: TabsState, action: TabsAction): TabsState {
                 status: 'loading',
                 error: null,
                 saving: false,
+                rev: 0,
             };
             return { tabs: [...state.tabs, tab], active: action.path };
         }
@@ -63,11 +79,29 @@ export function tabsReducer(state: TabsState, action: TabsAction): TabsState {
                 modifiedAt: action.modifiedAt,
                 status: 'ready',
                 error: null,
+                dirty: false,
+                result: null,
+                rev: (state.tabs.find((tab) => tab.path === action.path)?.rev ?? 0) + 1,
             });
         case 'failed':
             return patch(state, action.path, { status: 'error', error: action.error });
         case 'edit':
+            return patch(state, action.path, { content: action.content, dirty: undefined, result: null });
+        case 'dirty':
+            return patch(state, action.path, action.dirty ? { dirty: true, result: null } : { dirty: false });
+        case 'snapshot':
             return patch(state, action.path, { content: action.content });
+        case 'replace':
+            return patch(state, action.path, {
+                content: action.content,
+                dirty: undefined,
+                result: null,
+                rev: (state.tabs.find((tab) => tab.path === action.path)?.rev ?? 0) + 1,
+            });
+        case 'version':
+            return patch(state, action.path, { modifiedAt: action.modifiedAt });
+        case 'result':
+            return patch(state, action.path, { result: action.result });
         case 'saving':
             return patch(state, action.path, { saving: action.saving });
         case 'saved':
@@ -75,6 +109,8 @@ export function tabsReducer(state: TabsState, action: TabsAction): TabsState {
                 original: action.content,
                 modifiedAt: action.modifiedAt,
                 saving: false,
+                dirty: action.dirty ?? undefined,
+                result: 'saved',
             });
         case 'activate':
             return state.tabs.some((tab) => tab.path === action.path) ? { ...state, active: action.path } : state;

@@ -54,6 +54,7 @@ export function loadTabs(uuid: string): TabsState {
                           status: 'ready' as const,
                           error: null,
                           saving: false,
+                          rev: 0,
                       },
                   ]
                 : []

@@ -17,6 +17,7 @@ const three: State = {
         status: 'ready' as const,
         error: null,
         saving: false,
+        rev: 0,
     })),
     active: '/a',
 };
