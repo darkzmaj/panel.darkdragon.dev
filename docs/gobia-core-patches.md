@@ -70,3 +70,12 @@ smaller than they were: the view transition stylesheet is gone, and the files ed
 Core edits made since: the loading skeleton (`gobia/PageSkeleton.tsx`, a busy indicator with the progressbar role so pages keep a single status region), the account
 activity, API credentials and SSH keys headings, card heading consistency in the location and node pages, and container based columns in the two account key tables. The dialog keeps Tab and Shift+Tab inside itself (`components/elements/dialog/Dialog.tsx`, already patched): the library's focus guards let focus reach the page behind in headless
 Chromium, found by the keyboard flow. `gobia/shell/GobiaShell.tsx` scrolls the current menu entry into view, `components/elements/AppToaster.tsx`, `components/Avatar.tsx` and `components/server/startup/StartupContainer.tsx` and `components/server/console/Console.tsx` fix contrast, alt text and missing label findings of axe (the terminal text colour was the page foreground, dark on the dark terminal in the light theme). All of these are presentation or accessibility only and are covered by the browser checks.
+
+## Admin navigation and footer (final cleanup)
+
+| File | Purpose | Why the extension API cannot do it | Upstream conflict risk | Tests | Removal path |
+| --- | --- | --- | --- | --- | --- |
+| `resources/scripts/components/admin/AdminTabs.tsx` (new), `AdminContentBlock.tsx`, `settings/SettingsContainer.tsx`, `settings/SettingsTabButton.tsx` (deleted) | Tabs that merge Nodes and Instances, Eggs and Mounts and the Settings sections; the shared heading comes from the tab group | Admin pages are core routes | Low to medium (AdminContentBlock is shared) | `admin:` browser flows, egg specs | Keep |
+| `router/routeTree.ts` | Navigation entries of activity, instances, mounts, tags, extensions and API keys removed (their routes and addresses are unchanged); labels "Nodes & Instances" and "Eggs & Mounts" | Nav metadata is core | Low | `routeTree.spec.ts`, browser flows | Keep |
+| `gobia/shell/Nav.tsx`, `Sidebars.tsx`, `GobiaFooter.tsx`, `resources/gobia/gobia.css` | Groups, highlight of merged entries, footer layout | Shell is Gobia code | None | browser flows | None |
+| `components/admin/overview/OverviewContainer.tsx`, `RecentActivity.tsx` (new) | Recent Activity below the statistics | The overview page is core; the statistics come from a slot | Low | `admin:` flow | Keep |

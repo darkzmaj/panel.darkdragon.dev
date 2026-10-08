@@ -94,6 +94,10 @@ compatible approved Gobia release exists AND the local preflight reports the ins
 * Client access (subusers, shared per instance, managed in Account, Access) is not the same as administrator accounts (Admin, Users). Never merge the two.
 * Delegation: the owner manages access; a subuser holding `user.create`, `user.read`, `user.update` and `user.delete` on a server may too, but only hands out permissions they hold and cannot change anyone who holds more than them. Presets (View Only, Manage Server, Full Access) are lists of real permission ids in `extensions/gobia-core/src/client/access/permissions.ts`; ids are never renamed.
 
+## Admin navigation
+
+The admin sidebar is fixed: Dashboard (Overview, Users), Network (Nodes & Instances, Locations, Templates), Services (Eggs & Mounts, Database Hosts), System (Settings, Updates). Activity is part of Overview; Tags, Extensions and administrator API keys are Settings tabs; Mounts is an Eggs tab and Instances a Nodes tab. Tabs are real routes (`AdminTabs.tsx`); do not add standalone sidebar entries for them or remove their addresses. See `docs/gobia-visual-parity.md`.
+
 ## Extension policy
 
 Gobia extensions declare compatibility with specific Pterodactyl API and SDK versions using the real manifest field
