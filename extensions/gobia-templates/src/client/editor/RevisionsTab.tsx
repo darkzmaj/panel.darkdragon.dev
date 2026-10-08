@@ -11,7 +11,7 @@ export default function RevisionsTab({ id }: { id: number }) {
 
     if (revisions.isPending) {
         return (
-            <div className={'gb-list'} aria-busy>
+            <div className={'gb-list'} role={'progressbar'} aria-label={'Loading revisions'}>
                 {[0, 1, 2].map((row) => (
                     <div key={row} className={'gb-skeleton'} style={{ height: 78, borderRadius: 0 }} />
                 ))}
