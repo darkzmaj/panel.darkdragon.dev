@@ -67,5 +67,6 @@ Every permanent and visual patch above was re-read against the current extension
 and router options are not replaceable components, and the one theme hook the shell needs (stored scheme before first paint) has no extension point. Two entries became
 smaller than they were: the view transition stylesheet is gone, and the files editor no longer needs any core file (it is an extension replacement of `server.files.editor`).
 Core edits made since: the loading skeleton (`gobia/PageSkeleton.tsx`, a busy indicator with the progressbar role so pages keep a single status region), the account
-activity, API credentials and SSH keys headings, card heading consistency in the location and node pages, and container based columns in the two account key tables. They
-are presentation only and are covered by the same browser checks.
+activity, API credentials and SSH keys headings, card heading consistency in the location and node pages, and container based columns in the two account key tables. The dialog keeps Tab and Shift+Tab inside itself (`components/elements/dialog/Dialog.tsx`, already patched): the library's focus guards let focus reach the page behind in headless
+Chromium, found by the keyboard flow. `gobia/shell/GobiaShell.tsx` scrolls the current menu entry into view, `components/elements/AppToaster.tsx` and `components/Avatar.tsx` fix a contrast
+and an alt text finding of axe. All of these are presentation or accessibility only and are covered by the browser checks.
