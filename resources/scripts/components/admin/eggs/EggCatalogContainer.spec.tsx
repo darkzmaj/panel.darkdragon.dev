@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({ navigate: vi.fn(), notifyError: vi.fn(), toast
 
 vi.mock('@tanstack/react-router', () => ({
     useNavigate: () => mocks.navigate,
+    useLocation: () => '/panel/eggs',
     Link: ({ to, ...props }: ComponentProps<'a'> & { to: string }) => <a href={to} {...props} />,
 }));
 vi.mock('sonner', () => ({ toast: { success: mocks.toastSuccess } }));

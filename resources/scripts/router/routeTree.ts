@@ -813,7 +813,6 @@ const panelChildren = [
     createRoute({
         getParentRoute: () => panelRoute,
         path: 'activity',
-        staticData: { nav: { label: 'Activity' } },
         validateSearch: parseActivitySearch,
         loaderDeps: ({ search }) => ({ page: search.page ?? 1, event: search.event, user: search.user }),
         loader: async ({ context, deps }) => {
@@ -914,7 +913,7 @@ const panelChildren = [
     createRoute({
         getParentRoute: () => panelRoute,
         path: 'nodes',
-        staticData: { nav: { label: 'Nodes' } },
+        staticData: { nav: { label: 'Nodes & Instances' } },
         validateSearch: parseNodeListSearch,
         loaderDeps: ({ search }) => ({ page: search.page ?? 1, filter: search.filter ?? '', sort: search.sort }),
         loader: async ({ context, deps }) => {
@@ -939,7 +938,6 @@ const panelChildren = [
     createRoute({
         getParentRoute: () => panelRoute,
         path: 'servers',
-        staticData: { nav: { label: 'Instances' } },
         validateSearch: parseServerListSearch,
         loaderDeps: ({ search }) => ({ page: search.page ?? 1, filter: search.filter ?? '', sort: search.sort }),
         loader: async ({ context, deps }) => {
@@ -1007,7 +1005,6 @@ const panelChildren = [
     createRoute({
         getParentRoute: () => panelRoute,
         path: 'mounts',
-        staticData: { nav: { label: 'Mounts' } },
         validateSearch: parseMountListSearch,
         loaderDeps: ({ search }) => ({ page: search.page ?? 1, filter: search.filter ?? '', sort: search.sort }),
         loader: async ({ context, deps }) => {
@@ -1033,7 +1030,7 @@ const panelChildren = [
     createRoute({
         getParentRoute: () => panelRoute,
         path: 'eggs',
-        staticData: { nav: { label: 'Eggs' } },
+        staticData: { nav: { label: 'Eggs & Mounts' } },
         loader: async ({ context }) => {
             await context.queryClient.ensureQueryData({ ...adminEggsQueryOptions(), revalidateIfStale: true });
         },
@@ -1061,7 +1058,6 @@ const panelChildren = [
     createRoute({
         getParentRoute: () => panelRoute,
         path: 'tags',
-        staticData: { nav: { label: 'Tags' } },
         validateSearch: parseTagListSearch,
         loaderDeps: ({ search }) => ({ page: search.page ?? 1, filter: search.filter ?? '', sort: search.sort }),
         loader: async ({ context, deps }) => {
@@ -1078,7 +1074,6 @@ const panelChildren = [
     createRoute({
         getParentRoute: () => panelRoute,
         path: 'extensions',
-        staticData: { nav: { label: 'Extensions' } },
         loader: async ({ context }) => {
             await context.queryClient.ensureQueryData({ ...adminExtensionsQueryOptions(), revalidateIfStale: true });
         },
@@ -1090,7 +1085,6 @@ const panelChildren = [
     createRoute({
         getParentRoute: () => panelRoute,
         path: 'api',
-        staticData: { nav: { label: 'API Keys' } },
         validateSearch: parseApiKeyListSearch,
         loaderDeps: ({ search }) => ({ page: search.page ?? 1, filter: search.filter ?? '', sort: search.sort }),
         loader: async ({ context, deps }) => {

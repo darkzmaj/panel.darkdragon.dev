@@ -179,11 +179,18 @@ const adminIcons = new Map<string, LucideIcon>([
 
 // The Gobia admin groups. Entries a group does not name (extension screens) land in System.
 const adminGroups: Array<{ label: string; segments: string[] }> = [
-    { label: 'Dashboard', segments: ['', 'activity', 'users'] },
-    { label: 'Network', segments: ['nodes', 'servers', 'locations', 'templates'] },
-    { label: 'Services', segments: ['databases', 'mounts', 'eggs', 'tags'] },
-    { label: 'System', segments: ['settings', 'extensions', 'api', 'updates'] },
+    { label: 'Dashboard', segments: ['', 'users'] },
+    { label: 'Network', segments: ['nodes', 'locations', 'templates'] },
+    { label: 'Services', segments: ['eggs', 'databases'] },
+    { label: 'System', segments: ['settings', 'updates'] },
 ];
+
+// Entries that stand for several merged pages stay highlighted on all of them.
+const alsoActive = new Map<string, string[]>([
+    ['nodes', ['/panel/servers']],
+    ['eggs', ['/panel/mounts']],
+    ['settings', ['/panel/api', '/panel/extensions', '/panel/tags']],
+]);
 
 const hrefFor = ({ segment }: AreaNavEntry) => `/panel${segment ? `/${segment}` : ''}`;
 
@@ -200,6 +207,7 @@ export function AdminSidebar() {
                 to={hrefFor(entry)}
                 exact={entry.exact ?? entry.segment === ''}
                 icon={adminIcons.get(entry.segment)}
+                alsoActive={alsoActive.get(entry.segment)}
             >
                 <NavigationLabel {...entry} icon={adminIcons.get(entry.segment) ? undefined : entry.icon} />
             </NavItem>

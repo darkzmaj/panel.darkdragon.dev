@@ -1,11 +1,10 @@
-import { useLocation, useNavigate, useSearch } from '@tanstack/react-router';
+import { useLocation, useSearch } from '@tanstack/react-router';
 import { useAdminSettings } from '@/api/admin/settings/queries';
 import AdminContentBlock from '@/components/admin/AdminContentBlock';
 import Spinner from '@/components/elements/Spinner';
 import AdvancedSettingsForm from '@/components/admin/settings/AdvancedSettingsForm';
 import GeneralSettingsForm from '@/components/admin/settings/GeneralSettingsForm';
 import MailSettingsForm from '@/components/admin/settings/MailSettingsForm';
-import SettingsTabButton from '@/components/admin/settings/SettingsTabButton';
 import { httpErrorToHuman } from '@/api/http';
 import { ServerError } from '@/components/elements/ScreenBlock';
 import { Alert } from '@/components/elements/alert';
@@ -15,17 +14,10 @@ type SettingsSearch = {
     tab?: string;
 };
 
-const tabs: { key: Tab; label: string }[] = [
-    { key: 'general', label: 'General' },
-    { key: 'mail', label: 'Mail' },
-    { key: 'advanced', label: 'Advanced' },
-];
-
 const parseTab = (tab: string | undefined): Tab =>
     tab === 'mail' || tab === 'advanced' || tab === 'general' ? tab : 'general';
 
 export default function SettingsContainer() {
-    const navigate = useNavigate();
     const location = useLocation();
     const search = useSearch({ strict: false }) as SettingsSearch;
     const pathTab = location.pathname.endsWith('/mail')
@@ -55,28 +47,6 @@ export default function SettingsContainer() {
                     </span>
                 </Alert>
             )}
-            <div className={'flex border-b border-border mb-6'}>
-                {tabs.map((item) => (
-                    <SettingsTabButton
-                        key={item.key}
-                        active={tab === item.key}
-                        onClick={() =>
-                            navigate({
-                                to:
-                                    item.key === 'general'
-                                        ? '/panel/settings'
-                                        : item.key === 'mail'
-                                          ? '/panel/settings/mail'
-                                          : '/panel/settings/advanced',
-                                replace: true,
-                                viewTransition: false,
-                            })
-                        }
-                    >
-                        {item.label}
-                    </SettingsTabButton>
-                ))}
-            </div>
             {!settings ? (
                 <Spinner size={'large'} centered />
             ) : (
