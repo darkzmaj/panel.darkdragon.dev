@@ -126,9 +126,14 @@ export default function CodeEditor({
         const focused = instance.onDidFocusEditorText(() => callbacks.current.onFocus());
         // Monaco owns the shortcut while it has focus and keeps the browser's Save Page dialog from opening; the
         // workspace handles it for the rest of the page.
-        instance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => callbacks.current.onSave());
-        instance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyS, () =>
-            callbacks.current.onSaveAll()
+        // addCommand binds the key for every editor on the page unless a context says otherwise: scope it to this
+        // editor, or the last editor created would answer Ctrl+S for all of them.
+        const mine = `editorId == '${instance.getId()}'`;
+        instance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => callbacks.current.onSave(), mine);
+        instance.addCommand(
+            monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyS,
+            () => callbacks.current.onSaveAll(),
+            mine
         );
         const observer = new MutationObserver(() => applyTheme(isDark()));
         observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });

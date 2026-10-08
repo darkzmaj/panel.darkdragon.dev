@@ -36,6 +36,7 @@ import NavigationLabel from '@/extensions/NavigationLabel';
 import { ScreenGate } from '@/extensions/screenNavigation';
 import Slot from '@/extensions/Slot';
 import { NavItem, NavLabel } from '@/gobia/shell/Nav';
+import ServerSwitcher from '@/gobia/shell/ServerSwitcher';
 import { getAreaNav, type AreaNavEntry } from '@/router/nav';
 
 /** Workspace, account and administration links shown beside the instance list and the account pages. */
@@ -101,10 +102,7 @@ export function ServerSidebar({ id, name, node, internalId, server }: ServerSide
             <NavItem to={'/'} exact icon={ArrowLeft}>
                 All instances
             </NavItem>
-            <div
-                className={'gb-subcard'}
-                style={{ margin: '10px 0 2px', padding: '12px 14px', display: 'flex', gap: 10, alignItems: 'center' }}
-            >
+            <ServerSwitcher id={id}>
                 <StatusDots
                     vertical
                     power={powerLevel(power || null)}
@@ -138,7 +136,7 @@ export function ServerSidebar({ id, name, node, internalId, server }: ServerSide
                         {node} · {power || 'offline'}
                     </span>
                 </span>
-            </div>
+            </ServerSwitcher>
             <NavLabel>Instance</NavLabel>
             <Slot name={'server.navigation.before'} data={server} />
             {getAreaNav('server').map(({ segment, label, exact, permission, ...meta }) => {

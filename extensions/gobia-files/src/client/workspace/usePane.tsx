@@ -8,6 +8,8 @@ import {
     FolderPlus,
     FolderUp,
     Link2,
+    Copy,
+    MoveRight,
     Pencil,
     RefreshCw,
     Search,
@@ -168,6 +170,12 @@ export interface PaneConfig {
     onNavigate?: () => void;
     /** The pane received focus (the editor or the explorer), so shortcuts know which one to act on. */
     onFocusPane?: () => void;
+    /** The other server of the dual workspace, when there is one and this pane may send files to it. */
+    peer?: { name: string; canWrite: boolean } | null;
+    /** Copy or move these paths of this server to the other one (the root of it unless a folder is given). */
+    onTransfer?: (paths: string[], mode: 'copy' | 'move', directory?: string) => void;
+    /** Files dropped on this explorer from the other one. */
+    onCrossDrop?: (origin: string, paths: string[], directory: string) => void;
 }
 
 export interface FilePermissions {
@@ -179,7 +187,7 @@ export interface FilePermissions {
 
 export function usePane(config: PaneConfig) {
     const { uuid, permissions, mobile } = config;
-    const [state, dispatch] = useReducer(tabsReducer, uuid, loadTabs);
+    const [state, dispatch] = useReducer(tabsReducer, uuid, (id: string) => loadTabs(id, config.paneId));
     const tree = useTree(uuid, config.treeSource);
     const [prompt, setPrompt] = useState<Prompt | null>(null);
     const [menu, setMenu] = useState<MenuState | null>(null);
@@ -214,7 +222,7 @@ export function usePane(config: PaneConfig) {
 
     useEffect(() => mark('workspace-mounted', true), []);
     useEffect(() => {
-        const pending = takePendingOpen(uuid);
+        const pending = config.paneId === 'a' ? takePendingOpen(uuid) : null;
         if (pending) void openAt(pending, 1, 1);
         // Only on arrival: later navigation inside the workspace opens files itself.
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -288,10 +296,10 @@ export function usePane(config: PaneConfig) {
         if (owner.current !== uuid) {
             owner.current = uuid;
             recent.current.clear();
-            dispatch({ type: 'restore', state: loadTabs(uuid) });
+            dispatch({ type: 'restore', state: loadTabs(uuid, config.paneId) });
             return;
         }
-        saveTabs(uuid, state);
+        saveTabs(uuid, state, config.paneId);
     }, [uuid, state]);
 
     const anyDirty = state.tabs.some(isDirty);
@@ -954,6 +962,27 @@ export function usePane(config: PaneConfig) {
                 });
             }
         }
+        if (entry && config.peer && config.onTransfer) {
+            const peer = config.peer;
+            const paths = selectedSet.has(entry.path) ? dragSelect(entry.path) : [entry.path];
+            const plural = paths.length > 1 ? `${paths.length} items` : entry.name;
+            if (peer.canWrite) {
+                items.push({
+                    key: 'transfer-copy',
+                    label: `Copy ${plural} to ${peer.name}`,
+                    icon: Copy,
+                    onSelect: () => config.onTransfer?.(paths, 'copy'),
+                });
+                if (permissions.delete) {
+                    items.push({
+                        key: 'transfer-move',
+                        label: `Move ${plural} to ${peer.name}`,
+                        icon: MoveRight,
+                        onSelect: () => config.onTransfer?.(paths, 'move'),
+                    });
+                }
+            }
+        }
         items.push({ key: 'path', label: 'Copy path', icon: Link2, onSelect: () => void copyPath(entry) });
         if (entry && permissions.delete) {
             items.push({
@@ -1115,6 +1144,8 @@ export function usePane(config: PaneConfig) {
                         dirtyPaths={dirtyPaths}
                         canMove={permissions.update}
                         canUpload={permissions.create}
+                        paneId={paneId}
+                        onCrossDrop={config.onCrossDrop}
                         onSelect={selectRow}
                         onClear={() => setSelection(null)}
                         onDragSelect={dragSelect}
@@ -1556,5 +1587,32 @@ export function usePane(config: PaneConfig) {
         </>
     );
 
-    return { explorer, editor, overlays, uuid, tree, state, active, save, saveAll, dispatch };
+    const api = {
+        uuid,
+        paneId,
+        tree,
+        permissions,
+        selectedPaths: () => picked.paths.filter((path) => path !== ROOT),
+        /** Whether an open tab of this pane holds unsaved edits for the path (or anything under it). */
+        hasUnsaved: (path: string) =>
+            latest.current.state.tabs.some(
+                (tab) => isDirty(tab) && (tab.path === path || tab.path.startsWith(`${path}/`))
+            ),
+        /** Closes the clean tabs of files that left this server (a move), keeping any with unsaved work. */
+        closeGone: (paths: readonly string[]) => {
+            for (const tab of latest.current.state.tabs) {
+                const gone = paths.some((path) => tab.path === path || tab.path.startsWith(`${path}/`));
+                if (gone && !isDirty(tab)) dispatch({ type: 'close', path: tab.path });
+            }
+        },
+        /** Selects what just arrived, so the person sees where the files landed. */
+        select: (paths: string[]) => {
+            if (paths.length === 0) return;
+            setPicked({ paths, primary: paths.at(-1) ?? null, anchor: paths[0] ?? null });
+            setSettled(paths[0] ?? null);
+        },
+        dirtyCount: state.tabs.filter(isDirty).length,
+    };
+
+    return { explorer, editor, overlays, uuid, tree, state, active, save, saveAll, dispatch, api };
 }

@@ -4324,3 +4324,361 @@ html {
 .gb-server-head > span {
     text-align: left;
 }
+
+/* ------------------------------------------------------------------ dual server workspace */
+.gb-pane {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.gb-pane-body {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+.gb-pane-head {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--gb-border-muted);
+    background: var(--gb-surface-2);
+}
+.gb-pane-number {
+    flex: none;
+    display: inline-grid;
+    place-items: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 6px;
+    background: rgb(var(--p-500) / 0.2);
+    color: var(--gb-text-strong);
+    font-size: 11px;
+    font-weight: 700;
+}
+.gb-pane-state {
+    flex: none;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--gb-text-3);
+}
+.gb-pane-state.on {
+    color: rgb(var(--gb-success));
+}
+.gb-editor-label {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--gb-text-2);
+    border-bottom: 1px solid var(--gb-border-muted);
+    background: var(--gb-surface-2);
+}
+.gb-editors[data-layout='stacked'] > .gb-editor-pane,
+.gb-editors[data-layout='side'] > .gb-editor-pane {
+    border: 1px solid var(--gb-border-muted);
+    border-radius: 10px;
+    overflow: hidden;
+    transition: flex-grow 140ms ease;
+}
+.gb-splitter {
+    flex: none;
+    background: transparent;
+    position: relative;
+    z-index: 1;
+}
+.gb-splitter.horizontal {
+    height: 8px;
+    cursor: row-resize;
+}
+.gb-splitter.vertical {
+    width: 8px;
+    cursor: col-resize;
+}
+.gb-splitter::after {
+    content: '';
+    position: absolute;
+    inset: 3px 0;
+    border-radius: 2px;
+    background: transparent;
+    transition: background 120ms linear;
+}
+.gb-splitter.vertical::after {
+    inset: 0 3px;
+}
+.gb-splitter:hover::after,
+.gb-splitter:focus-visible::after {
+    background: rgb(var(--p-500) / 0.6);
+}
+.gb-layout-controls {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.gb-layout-controls .gb-btn svg,
+.gb-segmented svg {
+    width: 14px;
+    height: 14px;
+}
+.gb-segmented {
+    display: inline-flex;
+    border: 1px solid var(--gb-border-muted);
+    border-radius: 9px;
+    overflow: hidden;
+}
+.gb-segmented button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    border: 0;
+    background: transparent;
+    color: var(--gb-text-2);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.gb-segmented button + button {
+    border-left: 1px solid var(--gb-border-muted);
+}
+.gb-segmented button:hover {
+    background: var(--gb-surface-2);
+}
+.gb-segmented button.active {
+    background: rgb(var(--p-500) / 0.2);
+    color: var(--gb-text-strong);
+}
+.gb-save-state {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--gb-text-3);
+}
+.gb-save-state.modified {
+    color: rgb(var(--gb-warning));
+}
+.gb-save-state.saving {
+    color: var(--gb-text-2);
+}
+.gb-save-state.saved {
+    color: rgb(var(--gb-success));
+}
+.gb-save-state.error,
+.gb-save-state.conflict {
+    color: rgb(var(--gb-danger));
+}
+
+/* server picker */
+.gb-picker-trigger {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    border: 1px solid var(--gb-border-muted);
+    border-radius: 8px;
+    background: var(--gb-surface);
+    color: var(--gb-text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+.gb-picker-trigger:hover {
+    background: var(--gb-surface-2);
+}
+.gb-picker-trigger svg {
+    width: 14px;
+    height: 14px;
+    flex: none;
+    color: var(--gb-text-3);
+}
+.gb-picker-text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+}
+.gb-picker-text strong,
+.gb-picker-text small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.gb-picker-text strong {
+    font-size: 13px;
+    color: var(--gb-text-strong);
+}
+.gb-picker-text small {
+    font-size: 11px;
+    color: var(--gb-text-3);
+}
+.gb-picker-pop {
+    position: fixed;
+    z-index: 80;
+    max-height: min(420px, 70vh);
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--gb-border);
+    border-radius: 12px;
+    background: var(--gb-surface);
+    box-shadow: var(--gb-shadow-pop);
+    overflow: hidden;
+}
+.gb-picker-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--gb-border-muted);
+}
+.gb-picker-search svg {
+    width: 14px;
+    height: 14px;
+    color: var(--gb-text-3);
+}
+.gb-picker-search input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--gb-text);
+    font: inherit;
+    font-size: 13px;
+}
+.gb-picker-list {
+    list-style: none;
+    margin: 0;
+    padding: 4px;
+    overflow-y: auto;
+}
+.gb-picker-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+.gb-picker-item.active,
+.gb-picker-item:hover {
+    background: var(--gb-surface-2);
+}
+.gb-picker-state {
+    flex: none;
+    font-size: 11px;
+    color: var(--gb-text-3);
+}
+.gb-picker-empty {
+    padding: 12px;
+    color: var(--gb-text-3);
+    font-size: 13px;
+}
+
+/* transfers */
+.gb-transfers {
+    margin-top: 12px;
+    display: grid;
+    gap: 8px;
+    padding: 10px;
+    border: 1px solid var(--gb-border-muted);
+    border-radius: 10px;
+    background: var(--gb-surface);
+    font-size: 12px;
+}
+.gb-transfer-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+.gb-transfer-bar {
+    width: 100%;
+    height: 6px;
+}
+.gb-transfer-list {
+    list-style: none;
+    margin: 6px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 4px;
+    max-height: 140px;
+    overflow-y: auto;
+}
+.gb-transfer-list li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+.gb-transfer-name {
+    flex: none;
+    max-width: 40%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.gb-transfer-error {
+    color: rgb(var(--gb-danger));
+}
+.gb-link-button {
+    justify-self: start;
+    border: 0;
+    background: none;
+    padding: 0;
+    color: var(--gb-text-3);
+    font: inherit;
+    text-decoration: underline;
+    cursor: pointer;
+}
+@media (max-width: 767px) {
+    .gb-workspace-head {
+        flex-wrap: wrap;
+    }
+    .gb-layout-controls {
+        margin-left: auto;
+    }
+}
+
+/* the instance card of the sidebar is a button that opens the instance switcher */
+.gb-switcher {
+    position: relative;
+    width: 100%;
+    margin: 10px 0 2px;
+    padding: 12px 34px 12px 14px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+}
+.gb-switcher:hover {
+    background: var(--gb-surface-2);
+}
+.gb-switcher > span:not(.gb-dots) {
+    flex: 1;
+    min-width: 0;
+}
+.gb-switcher-chevron {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    width: 14px;
+    height: 14px;
+    transform: translateY(-50%);
+    color: var(--gb-text-3);
+}

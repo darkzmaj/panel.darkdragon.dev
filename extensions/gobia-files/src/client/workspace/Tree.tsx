@@ -14,6 +14,10 @@ import { basename, dirname } from './paths';
 import type { TreeState } from './useTree';
 
 export const MOVE_TYPE = 'application/x-gobia-file';
+/** Names the pane a drag started in (the type itself carries it, because only types are readable while dragging over). */
+export const PANE_TYPE_PREFIX = 'application/x-gobia-pane-';
+const originOf = (types: readonly string[]) =>
+    types.find((type) => type.startsWith(PANE_TYPE_PREFIX))?.slice(PANE_TYPE_PREFIX.length) ?? null;
 export const ROOT = '/';
 
 export type SelectMode = 'single' | 'toggle' | 'range';
@@ -126,6 +130,10 @@ interface TreeProps {
     dirtyPaths: ReadonlySet<string>;
     canMove: boolean;
     canUpload: boolean;
+    /** Which pane this explorer is, so a drag from the other explorer is a transfer and not a move. */
+    paneId: string;
+    /** Files dropped here from the other explorer (copy by default). */
+    onCrossDrop?: (origin: string, paths: string[], directory: string) => void;
     onSelect: (path: string, mode: SelectMode) => void;
     /** Keyboard arrows move the selection to the previous or next visible path. */
     onClear: () => void;
@@ -155,6 +163,8 @@ interface RowProps {
     dirty: boolean;
     canMove: boolean;
     canUpload: boolean;
+    paneId: string;
+    onCrossDrop?: (origin: string, paths: string[], directory: string) => void;
     onClick: (event: MouseEvent) => void;
     onMenu: (x: number, y: number) => void;
     onDragStart: (path: string) => string[];
@@ -179,6 +189,8 @@ function Row({
     dirty,
     canMove,
     canUpload,
+    paneId,
+    onCrossDrop,
     onClick,
     onMenu,
     onDragStart,
@@ -197,10 +209,15 @@ function Row({
 
     const dragOver = (event: DragEvent) => {
         if (!directory) return;
-        const internal = event.dataTransfer.types.includes(MOVE_TYPE);
-        const allowed = internal
-            ? canMove && (dragging === null || dragging.every((item) => validTarget(item, path, taken)))
-            : canUpload;
+        const types = event.dataTransfer.types;
+        const origin = originOf(types);
+        const cross = origin !== null && origin !== paneId;
+        const internal = types.includes(MOVE_TYPE) && !cross;
+        const allowed = cross
+            ? canUpload && onCrossDrop !== undefined
+            : internal
+              ? canMove && (dragging === null || dragging.every((item) => validTarget(item, path, taken)))
+              : canUpload;
         event.preventDefault();
         event.dataTransfer.dropEffect = allowed ? (internal ? 'move' : 'copy') : 'none';
         setOver(allowed ? 'ok' : 'denied');
@@ -215,7 +232,10 @@ function Row({
         // The dragged row may unmount once the move lands, so its own dragend can never clear the highlights.
         onDragging(null);
         const moved = event.dataTransfer.getData(MOVE_TYPE);
-        if (moved) {
+        const origin = originOf(event.dataTransfer.types);
+        if (moved && origin !== null && origin !== paneId) {
+            if (canUpload) onCrossDrop?.(origin, JSON.parse(moved) as string[], path);
+        } else if (moved) {
             if (canMove) onMove(JSON.parse(moved) as string[], path);
         } else if (canUpload) {
             onDropFiles(event.dataTransfer, path);
@@ -250,7 +270,8 @@ function Row({
                     if (!entry) return;
                     const traveling = onDragStart(entry.path);
                     event.dataTransfer.setData(MOVE_TYPE, JSON.stringify(traveling));
-                    event.dataTransfer.effectAllowed = 'move';
+                    event.dataTransfer.setData(`${PANE_TYPE_PREFIX}${paneId}`, paneId);
+                    event.dataTransfer.effectAllowed = 'copyMove';
                     // A compact chip instead of the browser's translucent copy of the whole row.
                     const chip = document.createElement('div');
                     chip.className = 'gb-drag-chip';
@@ -393,6 +414,8 @@ export default function Tree(props: TreeProps) {
                             dirty={dirtyPaths.has(entry.path)}
                             canMove={canMove}
                             canUpload={canUpload}
+                            paneId={props.paneId}
+                            onCrossDrop={props.onCrossDrop}
                             onClick={(event) => {
                                 const mode = event.shiftKey
                                     ? 'range'
@@ -438,6 +461,8 @@ export default function Tree(props: TreeProps) {
                 dirty={false}
                 canMove={false}
                 canUpload={canUpload}
+                paneId={props.paneId}
+                onCrossDrop={props.onCrossDrop}
                 onClick={() => props.onSelect(ROOT, 'single')}
                 onMenu={(x, y) => {
                     props.onSelect(ROOT, 'single');
