@@ -18,19 +18,21 @@ interface Resolved {
 /** The icon of a file name, from the Material Icon Theme: by file name first, then by extension. */
 export function fileIcon(name: string): Resolved {
     const lower = name.toLowerCase();
-    const byName = BY_NAME[lower];
-    if (byName) return { dark: byName, light: BY_NAME_LIGHT[lower] ?? null };
+    const byName = BY_NAME.get(lower);
+    if (byName) return { dark: byName, light: BY_NAME_LIGHT.get(lower) ?? null };
     let extension = lower.includes('.') ? lower.slice(lower.lastIndexOf('.') + 1) : '';
     if (lower === '.env' || lower.startsWith('.env.')) extension = 'env';
-    const found = extension ? BY_EXTENSION[extension] : undefined;
-    return found ? { dark: found, light: BY_EXTENSION_LIGHT[extension] ?? null } : { dark: GENERIC.file, light: null };
+    const found = extension ? BY_EXTENSION.get(extension) : undefined;
+    return found
+        ? { dark: found, light: BY_EXTENSION_LIGHT.get(extension) ?? null }
+        : { dark: GENERIC.file, light: null };
 }
 
 /** The icon of a folder: special names (config, plugins, src…) have their own, the rest the plain folder. */
 export function folderIcon(name: string, open: boolean, root = false): Resolved {
     const lower = name.toLowerCase();
     if (root) return { dark: open ? GENERIC.rootOpen : GENERIC.root, light: null };
-    const special = (open ? BY_FOLDER_OPEN : BY_FOLDER)[lower];
+    const special = (open ? BY_FOLDER_OPEN : BY_FOLDER).get(lower);
     return { dark: special ?? (open ? GENERIC.folderOpen : GENERIC.folder), light: null };
 }
 
@@ -54,7 +56,7 @@ export default function FileTypeIcon({
 }: Props) {
     const icon = folder ? folderIcon(name, open, root) : fileIcon(name);
     const classes = 'gb-ftype' + (className ? ` ${className}` : '');
-    const source = (key: string) => ICONS[key] ?? ICONS[GENERIC.file] ?? '';
+    const source = (key: string) => ICONS.get(key) ?? ICONS.get(GENERIC.file) ?? '';
     const key = icon.dark;
 
     if (icon.light) {

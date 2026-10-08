@@ -347,12 +347,9 @@ export async function dualFlows({ browser, context, login, scheme, baseUrl, root
                 await page.keyboard.type(`content of ${pane}`);
             }
             // The two servers hold the same path with different text, each its own document.
+            const settled = (await textBecomes('a', 'content of a')) && (await textBecomes('b', 'content of b'));
             const texts = await Promise.all(['a', 'b'].map((pane) => textOf(pane)));
-            if (
-                !texts[0].includes('content of a') ||
-                !texts[1].includes('content of b') ||
-                texts[0].includes('content of b')
-            )
+            if (!settled || texts[0].includes('content of b') || texts[1].includes('content of a'))
                 throw new Error(`documents mixed: ${JSON.stringify(texts)}`);
             await editor('a')
                 .locator('.monaco-editor')

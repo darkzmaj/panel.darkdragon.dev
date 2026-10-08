@@ -26,10 +26,15 @@ interface Listed {
     }>;
 }
 
+interface ServerQuery {
+    per_page: number;
+    'filter[*]'?: string;
+}
+
 export async function fetchServers(search: string): Promise<PickableServer[]> {
-    const response = await http.get<Listed>('/api/client', {
-        params: { per_page: 40, ...(search.trim() ? { 'filter[*]': search.trim() } : {}) },
-    });
+    const params: ServerQuery = { per_page: 40 };
+    if (search.trim()) params['filter[*]'] = search.trim();
+    const response = await http.get<Listed>('/api/client', { params });
     return response.data.data.map(({ attributes }) => ({
         uuid: attributes.uuid,
         identifier: attributes.identifier,

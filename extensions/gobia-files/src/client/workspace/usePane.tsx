@@ -131,14 +131,14 @@ function ToolButton({
 }
 
 type SaveState = 'clean' | 'modified' | 'saving' | 'saved' | 'error' | 'conflict';
-const SAVE_LABELS: Record<SaveState, string> = {
+const SAVE_LABELS = {
     clean: '',
     modified: 'Modified',
     saving: 'Saving…',
     saved: 'Saved',
     error: 'Save failed',
     conflict: 'Conflict',
-};
+} satisfies Record<SaveState, string>;
 const saveState = (tab: Tab): SaveState =>
     tab.saving
         ? 'saving'

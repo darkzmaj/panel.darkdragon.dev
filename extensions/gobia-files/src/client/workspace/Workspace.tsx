@@ -41,7 +41,7 @@ const readDual = (): DualState => {
         return {
             on: parsed.on === true,
             layout: parsed.layout === 'side' ? 'side' : 'stacked',
-            second: typeof parsed.second === 'string' ? parsed.second : null,
+            second: parsed.second ? String(parsed.second) : null,
         };
     } catch {
         return { on: false, layout: 'stacked', second: null };
