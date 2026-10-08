@@ -85,8 +85,14 @@ install approved, signed Gobia releases, never `pterodactyl/panel` directly:
 
 upstream release -> Gobia integration branch -> Gobia CI -> compatibility verification -> Gobia release -> production updater.
 
-Every update must pass the compatibility gate documented in `MAJCEK_HANDOFF.md`. The Update button is enabled only when a
+Every update must pass the compatibility gate documented in `MAJCEK_HANDOFF.md` (preflight, then the safe lifecycle there). A mandatory preflight failure keeps the Update button unavailable. The Update button is enabled only when a
 compatible approved Gobia release exists AND the local preflight reports the installation ready.
+
+## Access policy
+
+* **Account, Access** (`gobia-core`) is the single place to share instances with other people. The per server Users page was removed; its addresses redirect to Account, Access with the server selected. Subuser models, APIs and permission enforcement are unchanged and still back it.
+* Client access (subusers, shared per instance, managed in Account, Access) is not the same as administrator accounts (Admin, Users). Never merge the two.
+* Delegation: the owner manages access; a subuser holding `user.create`, `user.read`, `user.update` and `user.delete` on a server may too, but only hands out permissions they hold and cannot change anyone who holds more than them. Presets (View Only, Manage Server, Full Access) are lists of real permission ids in `extensions/gobia-core/src/client/access/permissions.ts`; ids are never renamed.
 
 ## Extension policy
 

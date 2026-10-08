@@ -133,3 +133,53 @@ development tools only and are never part of a release.
 **Known limitations for the release process.** Linux is the authoritative platform: run the Gobia CI workflow (`.github/workflows/gobia-ci.yaml`) before tagging; local Windows runs
 only cover the frontend and the Gobia Pest tests. Wings reports file times in nanoseconds on a real node; the file workspace uses time and size as a file's version.
 
+
+## 9. Architecture summary (for the person who ships it)
+
+* **Base.** Pterodactyl 2.0 `2.0-develop` (still alpha), commit `240aaf62ea53b1d6956a643a872f44d2f5956031`. Gobia = three extensions (`extensions/gobia-core`, `gobia-files`, `gobia-templates`), the `themes/gobia` theme, `resources/scripts/gobia/**` (shell) and the small core patches listed in `docs/gobia-core-patches.md`.
+* **Access.** Account, Access (`gobia-core`, `/api/client/extensions/gobia-core/access`) is the one place to share instances. The per server Users page is removed (its addresses redirect). Subusers, their permissions and enforcement are the unchanged upstream ones; Gobia only wraps `CreatesSubusers`/`UpdatesSubusers`/`DeletesSubusers`. Delegated managers (all four `user.*` permissions on a server) are supported, limited to permissions they hold themselves.
+* **Updater boundary.** The frontend (Admin, Updates) and the read only compatibility endpoint exist. Nothing in this repository installs, replaces files or runs a shell for an update. That is Majcek's.
+
+## 10. Safe update lifecycle (the order the privileged updater must follow)
+
+1. Fetch the release manifest (`gobia-release.json`) and the artifact URL from the Gobia release feed only.
+2. Verify the signature and the sha256 of the manifest and artifact.
+3. Run the local preflight (section 4). Any mandatory failure stops here and the Update button stays unavailable.
+4. Take the exclusive update lock; refuse a second run.
+5. Enter maintenance mode (`php artisan down` with a secret) and stop queue workers and the scheduler.
+6. Take a database backup, verify size and that it restores into a scratch database.
+7. Extract the artifact into a new release directory (never over the live tree) and copy `.env`, storage and extension data in.
+8. Run Composer/asset checks on the staged tree (no network at this point if the artifact is self contained) and a staged health check (`php artisan about`, config load).
+9. Run migrations from the staged tree; stop and go to rollback on the first failure.
+10. Rebuild caches, publish extension assets (`p:extension:enable gobia-core gobia-files gobia-templates`, `p:theme:apply gobia`).
+11. Switch the live symlink atomically.
+12. Restart queue workers, the scheduler, PHP-FPM / web server and the template SFTP service; leave maintenance mode.
+13. Smoke test (sign in page, `/api/client`, compatibility endpoint, one Wings call per node). Failure goes to rollback.
+14. Write the history entry (sanitised log, versions, durations) and release the lock.
+
+**Rollback.** Switch the symlink back, restart services. A release whose manifest says `rollback: requires-db-restore` (and any release that ran a destructive migration) cannot be rolled back by files alone: the database snapshot of step 6 must be restored, which loses everything written after it. Some migrations can never be undone safely without that restore; the updater must refuse a file only rollback for them.
+
+## 11. Gobia Updates frontend contract (summary; full text in `docs/gobia-updates-frontend-contract.md`)
+
+| Call | Purpose | State |
+| --- | --- | --- |
+| Compatibility | versions, extensions, migrations, health (read only) | implemented |
+| Check | is a compatible approved release available | frontend ready, backend missing |
+| Preflight | list of checks with pass/fail and the reason | frontend ready, backend missing |
+| Status / Progress | current step and log tail | frontend ready, backend missing |
+| Install | start the run | frontend ready (button gated), backend missing |
+| History | past runs | frontend ready, backend missing |
+| Rollback eligibility and Rollback | whether files only or a DB restore is needed | frontend ready, backend missing |
+| Errors | structured `{code, message, step}` shown verbatim | frontend ready |
+
+## 12. Exact remaining work
+
+**Implemented.** Gobia extensions and manifests with compatibility fields; `gobia-release.json` (partial); the compatibility endpoint and its tests; Updates screen gated on `update_available && preflight.ready`; the contract document; CI mirror workflow.
+
+**Placeholders.** `gobia-release.json` has no artifact (url, sha256, signature), no extension version map and no migration summary.
+
+**Missing (Majcek).** Check, Preflight (disk space, ownership and write access, Wings reachability, signature and checksum, upgrade path), Install, Progress, History, Rollback endpoints and the privileged helper behind them; the release pipeline that builds, signs and publishes; the test environment that runs the lifecycle above.
+
+**Must never run as the web server user.** Extraction and file replacement, symlink switching, `composer`, service restarts, database dump/restore, key material for signing, anything with `sudo`. The web process may only write a request file or call a narrow socket; a separate privileged helper (systemd unit or root owned CLI with a fixed command set, no user supplied arguments) does the work and writes status the web process can read.
+
+**Tests required before production updates are enabled.** End to end upgrade and rollback on a disposable Linux install with real Wings; a failed migration mid run; a corrupted artifact and a bad signature; disk full; a release with `requires-db-restore`; a concurrent second run; an interrupted run (kill the helper) that resumes or rolls back cleanly; permission tests proving the web user cannot reach the privileged paths.
