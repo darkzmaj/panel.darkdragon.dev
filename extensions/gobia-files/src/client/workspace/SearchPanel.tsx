@@ -12,7 +12,7 @@ import {
     type SearchOutcome,
 } from './search';
 
-export type ReplaceResult = { ok: true } | { ok: false; reason: string };
+export type ReplaceResult = { ok: true; undo?: () => Promise<void> } | { ok: false; reason: string };
 
 interface Props {
     uuid: string;
@@ -55,6 +55,8 @@ export default function SearchPanel({ uuid, buffers, canReplace, onOpen, onRepla
     const [error, setError] = useState<string | null>(null);
     const [confirm, setConfirm] = useState(false);
     const [notes, setNotes] = useState<string[]>([]);
+    // What the last replacement can undo: one entry per file it changed.
+    const [undos, setUndos] = useState<Array<{ path: string; undo: () => Promise<void> }>>([]);
     const run = useRef(0);
 
     const options = { query, caseSensitive, wholeWord, regex };
@@ -105,17 +107,44 @@ export default function SearchPanel({ uuid, buffers, canReplace, onOpen, onRepla
     const replaceFiles = async (files: readonly FileResult[]) => {
         if (pattern === null) return;
         const problems: string[] = [];
+        const reverts: Array<{ path: string; undo: () => Promise<void> }> = [];
         let changed = 0;
         for (const file of files) {
             // eslint-disable-next-line no-await-in-loop
             const result = await onReplace(file, (text) => replaceAll(text, pattern, replacement, regex));
-            if (result.ok) changed += file.hits.length;
-            else problems.push(`${file.path}: ${result.reason}`);
+            if (result.ok) {
+                changed += file.hits.length;
+                if (result.undo) reverts.push({ path: file.path, undo: result.undo });
+            } else problems.push(`${file.path}: ${result.reason}`);
         }
-        setNotes(problems);
+        setNotes(
+            problems.length > 0
+                ? [
+                      `${changed} ${changed === 1 ? 'match was' : 'matches were'} replaced, ${problems.length} ${problems.length === 1 ? 'file was' : 'files were'} left unchanged:`,
+                      ...problems,
+                  ]
+                : []
+        );
+        setUndos(reverts);
         if (changed > 0) toast.success(`Replaced ${changed} ${changed === 1 ? 'match' : 'matches'}.`);
         if (problems.length > 0)
             toast.error(`${problems.length} ${problems.length === 1 ? 'file was' : 'files were'} not changed.`);
+        void search();
+    };
+
+    const undoLast = async () => {
+        const failed: string[] = [];
+        for (const { path, undo } of undos) {
+            try {
+                // eslint-disable-next-line no-await-in-loop
+                await undo();
+            } catch (error) {
+                failed.push(`${path}: ${error instanceof Error ? error.message : 'could not be restored'}`);
+            }
+        }
+        setUndos([]);
+        setNotes(failed);
+        if (failed.length === 0) toast.success('The replacement was undone.');
         void search();
     };
 
@@ -210,6 +239,13 @@ export default function SearchPanel({ uuid, buffers, canReplace, onOpen, onRepla
                 </div>
             </form>
 
+            {undos.length > 0 && (
+                <div className={'gb-search-summary'}>
+                    <button type={'button'} className={'gb-btn gb-btn-sm'} onClick={() => void undoLast()}>
+                        Undo the last replacement ({undos.length} {undos.length === 1 ? 'file' : 'files'})
+                    </button>
+                </div>
+            )}
             <div className={'gb-search-summary'} role={'status'} aria-live={'polite'}>
                 {error && <span style={{ color: 'rgb(var(--gb-danger))' }}>{error}</span>}
                 {running && <span>Searching… {scanned} files read</span>}

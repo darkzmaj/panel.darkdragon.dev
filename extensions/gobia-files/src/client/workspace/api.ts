@@ -23,16 +23,23 @@ export async function writeFile(uuid: string, path: string, content: string): Pr
 }
 
 interface ListedFile {
-    attributes: { name: string; modified_at: string };
+    attributes: { name: string; modified_at: string; size: number };
 }
 
-/** Modification time Wings reports for a file, or null when it no longer exists. */
+/**
+ * The identity of one version of a file: the modification time Wings reports (nanoseconds on a real node) together
+ * with its size, so two writes in the same timestamp tick are still told apart whenever the length changed.
+ */
+export const versionOf = (entry: { modifiedAt: string; size: number }): string => `${entry.modifiedAt}|${entry.size}`;
+
+/** The current version of a file, or null when it no longer exists. */
 export async function modifiedAt(uuid: string, path: string): Promise<string | null> {
     const response = await http.get<{ data: ListedFile[] }>(`${base(uuid)}/list`, {
         params: { directory: dirname(path) },
     });
     const name = basename(path);
-    return response.data.data.find((file) => file.attributes.name === name)?.attributes.modified_at ?? null;
+    const found = response.data.data.find((file) => file.attributes.name === name)?.attributes;
+    return found ? versionOf({ modifiedAt: found.modified_at, size: found.size }) : null;
 }
 
 export interface TreeEntry {

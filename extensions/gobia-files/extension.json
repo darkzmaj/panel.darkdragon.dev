@@ -13,9 +13,6 @@
         "entry": "dist/client.js",
         "mode": "native",
         "prefix": "gf",
-        "components": [
-            "server.files.manager",
-            "server.files.editor"
-        ]
+        "components": ["server.files.manager", "server.files.editor"]
     }
 }

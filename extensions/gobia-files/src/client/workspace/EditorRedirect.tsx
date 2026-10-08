@@ -1,6 +1,7 @@
 import { useCurrentServer, usePanelNavigate, type ReplacementProps } from '@pterodactyl/sdk';
 import { useEffect } from 'react';
-import { OPEN_KEY } from './session';
+// The same key as `OPEN_KEY` in session.ts; not imported so the redirect and the workspace share no extra chunk.
+const OPEN_KEY = (uuid: string) => `gobia-files:open:${uuid}`;
 
 /**
  * Replaces the core file editor page: a link that points at it (an activity entry, a bookmark) lands in the workspace

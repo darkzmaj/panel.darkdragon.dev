@@ -27,6 +27,7 @@ import {
     modifiedAt,
     readFile,
     renameEntries,
+    versionOf,
     writeFile,
     type TreeEntry,
 } from './api';
@@ -40,7 +41,7 @@ import Tree, { ROOT, validTarget, type Inline } from './Tree';
 import { mark } from './timing';
 import UploadPanel from './UploadPanel';
 import { pickedFromDrop, pickedFromInput, useUploadQueue } from './uploads';
-import { useTree } from './useTree';
+import { useTree, type TreeSource } from './useTree';
 import { formatOf, validate, type Problem } from './validation';
 
 // CodeMirror and the language packs are only fetched once a file is actually opened.
@@ -51,7 +52,7 @@ const loadEditor = () => {
         return loaded;
     });
 };
-const CodeEditor = lazy(loadEditor);
+type EditorModule = Awaited<ReturnType<typeof loadEditor>>;
 const DiffView = lazy(() => import('./DiffView'));
 
 // Not in the DOM typings; the folder picker needs both spellings.
@@ -129,7 +130,26 @@ function ToolButton({
 export default function Workspace({ model }: ReplacementProps<'server.files.manager'>) {
     const uuid = useCurrentServer((server) => server.attributes.uuid) ?? '';
     const [state, dispatch] = useReducer(tabsReducer, uuid, loadTabs);
-    const tree = useTree(uuid);
+    // The Panel has usually listed the root already; the explorer takes that listing instead of asking again.
+    const [waited, setWaited] = useState(false);
+    useEffect(() => {
+        const timer = window.setTimeout(() => setWaited(true), 1500);
+        return () => window.clearTimeout(timer);
+    }, []);
+    const treeSource = useMemo<TreeSource>(() => {
+        if (model.directory !== '/' || model.truncated) return 'fetch';
+        if (model.loading) return waited ? 'fetch' : 'wait';
+        if (model.entries.length === 0 || model.entries.some((entry) => entry.kind === 'symlink')) return 'fetch';
+        return model.entries.map((entry) => ({
+            name: entry.name,
+            path: entry.path,
+            directory: entry.kind === 'directory',
+            size: entry.size,
+            mimetype: entry.mimetype,
+            modifiedAt: entry.modifiedAt,
+        }));
+    }, [model.directory, model.truncated, model.loading, model.entries, waited]);
+    const tree = useTree(uuid, treeSource);
     const [prompt, setPrompt] = useState<Prompt | null>(null);
     const [menu, setMenu] = useState<MenuState | null>(null);
     const [selection, setSelection] = useState<string | null>(null);
@@ -165,11 +185,23 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
     useEffect(() => {
         if (tree.listings['/'] && tree.listings['/'] !== 'loading') mark('explorer-visible', true);
     }, [tree.listings]);
-    // The editor chunk is fetched once the explorer is up, so the first file opens without waiting for it.
+    // The editor chunk is fetched as soon as the explorer is on screen (a moment later, so evaluating it never delays
+    // the first paint) and kept in state: rendering the editor never suspends, because React holds back the reveal of a
+    // suspended boundary for 300 ms even when its module is already loaded.
+    const [editorModule, setEditorModule] = useState<EditorModule | null>(null);
+    const explorerReady = tree.listings['/'] !== undefined && tree.listings['/'] !== 'loading';
     useEffect(() => {
-        const timer = window.setTimeout(() => void loadEditor(), 600);
+        if (!explorerReady) return;
+        const timer = window.setTimeout(
+            () =>
+                void loadEditor().then((loaded) => {
+                    setEditorModule(loaded);
+                    window.setTimeout(loaded.warmUp, 0);
+                }),
+            50
+        );
         return () => window.clearTimeout(timer);
-    }, []);
+    }, [explorerReady]);
 
     useEffect(() => {
         const query = window.matchMedia('(max-width: 767px)');
@@ -230,6 +262,11 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
     }, [anyDirty]);
 
     const active = state.tabs.find((tab) => tab.path === state.active) ?? null;
+    const needsEditor = active?.status === 'ready';
+    useEffect(() => {
+        // A file opened before the prefetch finished: load now instead of waiting for it.
+        if (needsEditor && !editorModule) void loadEditor().then(setEditorModule);
+    }, [needsEditor, editorModule]);
 
     // The problem list of the file in front, checked a moment after typing stops.
     useEffect(() => {
@@ -250,10 +287,19 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
     }, [active?.path, active?.name, active?.content, active?.status]);
     const problems = problem ? [problem] : [];
 
+    // Files closed a moment ago open again without a request while their version is unchanged.
+    const recent = useRef(new Map<string, { content: string; version: string | null; at: number }>());
+
     const load = useCallback(
-        async (path: string) => {
+        async (path: string, known?: string) => {
             try {
-                const [content, remote] = await Promise.all([readFile(uuid, path), modifiedAt(uuid, path)]);
+                mark('content-request');
+                // A version already known from the listing saves a second round trip.
+                const [content, remote] = await Promise.all([
+                    readFile(uuid, path),
+                    known === undefined ? modifiedAt(uuid, path) : Promise.resolve(known),
+                ]);
+                mark('content-response');
                 dispatch({ type: 'loaded', path, content, modifiedAt: remote });
             } catch (error) {
                 dispatch({ type: 'failed', path, error: httpErrorToHuman(error as Error) });
@@ -272,7 +318,14 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
             const exists = latest.current.state.tabs.some((tab) => tab.path === entry.path);
             dispatch({ type: 'open', path: entry.path, name: entry.name });
             setDrawer(false);
-            if (!exists) void load(entry.path);
+            if (exists) return;
+            const version = versionOf(entry);
+            const cached = recent.current.get(entry.path);
+            if (cached && cached.version === version && Date.now() - cached.at < 60_000) {
+                dispatch({ type: 'loaded', path: entry.path, content: cached.content, modifiedAt: version });
+            } else {
+                void load(entry.path, version);
+            }
         },
         [load]
     );
@@ -345,8 +398,9 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
         const tab = latest.current.state.tabs.find((candidate) => candidate.path === result.path);
         if (tab) {
             if (tab.status !== 'ready') return { ok: false, reason: 'it is still loading' };
-            dispatch({ type: 'edit', path: tab.path, content: change(tab.content) });
-            return { ok: true };
+            const before = tab.content;
+            dispatch({ type: 'edit', path: tab.path, content: change(before) });
+            return { ok: true, undo: async () => dispatch({ type: 'edit', path: tab.path, content: before }) };
         }
         try {
             if ((await modifiedAt(uuid, result.path)) !== result.modifiedAt) {
@@ -361,8 +415,18 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
                 if (!before && after) return { ok: false, reason: `it would no longer be valid (${after.message})` };
             }
             await writeFile(uuid, result.path, next);
+            const written = await modifiedAt(uuid, result.path);
             void tree.reload([dirname(result.path)]);
-            return { ok: true };
+            return {
+                ok: true,
+                undo: async () => {
+                    // Only a file nobody touched since the replacement is put back.
+                    if ((await modifiedAt(uuid, result.path)) !== written)
+                        throw new Error('it changed after the replacement');
+                    await writeFile(uuid, result.path, text);
+                    void tree.reload([dirname(result.path)]);
+                },
+            };
         } catch (error) {
             return { ok: false, reason: httpErrorToHuman(error as Error) };
         }
@@ -420,8 +484,18 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
 
     const requestClose = useCallback((path: string) => {
         const tab = latest.current.state.tabs.find((candidate) => candidate.path === path);
-        if (tab && isDirty(tab)) setPrompt({ kind: 'close', path });
-        else dispatch({ type: 'close', path });
+        if (tab && isDirty(tab)) {
+            setPrompt({ kind: 'close', path });
+            return;
+        }
+        if (tab?.status === 'ready') {
+            recent.current.set(path, { content: tab.content, version: tab.modifiedAt, at: Date.now() });
+            // Only the last few files are remembered.
+            for (const key of [...recent.current.keys()].slice(0, Math.max(0, recent.current.size - 20))) {
+                recent.current.delete(key);
+            }
+        }
+        dispatch({ type: 'close', path });
     }, []);
 
     // ---- explorer operations: each one updates the tree at once and then confirms with the server -------------
@@ -1097,27 +1171,24 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
                                     </button>
                                 </div>
                             </div>
+                        ) : editorModule ? (
+                            <editorModule.default
+                                path={active.path}
+                                content={active.content}
+                                readOnly={!permissions.update}
+                                wordWrap={wrap}
+                                mark={mark}
+                                openPaths={editorPaths}
+                                problem={problem}
+                                reveal={reveal}
+                                onChange={(content) => dispatch({ type: 'edit', path: active.path, content })}
+                                onSave={() => void save(active.path)}
+                            />
                         ) : (
-                            <Suspense
-                                fallback={
-                                    <div
-                                        className={'gb-skeleton'}
-                                        style={{ position: 'absolute', inset: 16, borderRadius: 10 }}
-                                    />
-                                }
-                            >
-                                <CodeEditor
-                                    path={active.path}
-                                    content={active.content}
-                                    readOnly={!permissions.update}
-                                    wordWrap={wrap}
-                                    openPaths={editorPaths}
-                                    problem={problem}
-                                    reveal={reveal}
-                                    onChange={(content) => dispatch({ type: 'edit', path: active.path, content })}
-                                    onSave={() => void save(active.path)}
-                                />
-                            </Suspense>
+                            <div
+                                className={'gb-skeleton'}
+                                style={{ position: 'absolute', inset: 16, borderRadius: 10 }}
+                            />
                         )}
                     </div>
                 </section>

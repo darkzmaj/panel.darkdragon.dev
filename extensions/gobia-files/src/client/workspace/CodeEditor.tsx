@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react';
 import { applyTheme, languageOf, monaco } from './monaco';
-import { mark } from './timing';
 import type { Problem } from './validation';
 
 export interface CodeEditorProps {
@@ -11,6 +10,8 @@ export interface CodeEditorProps {
     onChange: (content: string) => void;
     onSave: () => void;
     wordWrap?: boolean;
+    /** Reports a named point of the load path (see timing.ts); passed in so this chunk shares no module with the workspace. */
+    mark: (name: string, once?: boolean) => void;
     /** Paths with an open tab. Models of any other path are disposed. */
     openPaths: readonly string[];
     /** Syntax problem of the file in front, drawn as an editor marker. */
@@ -33,6 +34,7 @@ export default function CodeEditor({
     onChange,
     onSave,
     wordWrap = false,
+    mark,
     openPaths,
     problem = null,
     reveal = null,
@@ -45,6 +47,7 @@ export default function CodeEditor({
     callbacks.current = { onChange, onSave };
 
     useEffect(() => {
+        mark('editor-create', true);
         const instance = monaco.editor.create(host.current as HTMLElement, {
             model: null,
             automaticLayout: true,
@@ -153,4 +156,27 @@ export default function CodeEditor({
     }, [reveal]);
 
     return <div ref={host} className={'gf:h-full gf:min-h-0 gf:overflow-hidden'} data-testid={'code-editor'} />;
+}
+
+let warmed = false;
+
+/**
+ * Initialises Monaco's shared services (themes, fonts, the first tokenizer) on a detached editor, so the first real
+ * editor of the session does not pay for them while the user waits for a file. Safe to call more than once.
+ */
+export function warmUp() {
+    if (warmed) return;
+    warmed = true;
+    const host = document.createElement('div');
+    host.style.cssText = 'position:fixed;left:-9999px;top:0;width:400px;height:120px;visibility:hidden';
+    document.body.append(host);
+    try {
+        applyTheme(isDark());
+        const model = monaco.editor.createModel('{"warm": [1, 2, 3]}', 'json');
+        const editor = monaco.editor.create(host, { model, minimap: { enabled: false }, automaticLayout: false });
+        editor.dispose();
+        model.dispose();
+    } finally {
+        host.remove();
+    }
 }

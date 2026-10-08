@@ -2,11 +2,18 @@ import { httpErrorToHuman } from '@pterodactyl/sdk';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { listDirectory, type TreeEntry } from './api';
 import { dirname } from './paths';
+import { mark } from './timing';
 
 export type Listing = { items: TreeEntry[] } | { error: string } | 'loading';
 export type Listings = Record<string, Listing>;
 
 const REFRESH_MS = 20_000;
+
+/**
+ * Where the root listing comes from: 'wait' while the Panel is still listing it (the explorer must not ask for it a
+ * second time), 'fetch' to ask the server, or the entries the Panel already holds.
+ */
+export type TreeSource = 'wait' | 'fetch' | readonly TreeEntry[];
 
 export interface TreeState {
     listings: Listings;
@@ -77,7 +84,7 @@ export function removeFromListings(current: Listings, paths: readonly string[]):
  * The explorer's data: every directory that has been opened, kept up to date. Mutations patch the listing
  * immediately and then reload it; visible directories also reload when the tab regains focus and now and then.
  */
-export function useTree(uuid: string): TreeState {
+export function useTree(uuid: string, source: TreeSource = 'fetch'): TreeState {
     const [listings, setListings] = useState<Listings>({});
     const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set(['/']));
     const latest = useRef({ listings, expanded });
@@ -94,7 +101,9 @@ export function useTree(uuid: string): TreeState {
                     : { ...current, [directory]: 'loading' };
             });
             try {
+                if (directory === '/') mark('tree-request', true);
                 const items = await listDirectory(uuid, directory);
+                if (directory === '/') mark('tree-response', true);
                 setListings((current) => ({ ...current, [directory]: { items } }));
             } catch (error) {
                 setListings((current) => ({ ...current, [directory]: { error: httpErrorToHuman(error as Error) } }));
@@ -160,11 +169,20 @@ export function useTree(uuid: string): TreeState {
         return () => setListings(before);
     }, []);
 
+    const mode = source === 'wait' ? 'wait' : source === 'fetch' ? 'fetch' : 'seed';
+    const initial = useRef(source);
+    initial.current = source;
     useEffect(() => {
-        setListings({});
+        if (mode === 'wait') return;
         setExpanded(new Set(['/']));
-        void load('/');
-    }, [uuid, load]);
+        const entries = initial.current;
+        if (mode === 'seed' && Array.isArray(entries)) {
+            setListings({ '/': { items: [...entries].sort(order) } });
+        } else {
+            setListings({});
+            void load('/');
+        }
+    }, [uuid, mode, load]);
 
     useEffect(() => {
         const visible = () => [...latest.current.expanded];
