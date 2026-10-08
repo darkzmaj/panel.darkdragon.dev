@@ -96,6 +96,14 @@ export async function dualFlows({ browser, context, login, scheme, baseUrl, root
     // Monaco writes spaces as non breaking spaces.
     const textOf = async (pane) =>
         (await editor(pane).locator('.monaco-editor .view-lines').first().innerText()).replaceAll(' ', ' ');
+    /** Waits up to two seconds for the editor text to become the expected one. */
+    const textBecomes = async (pane, expected) => {
+        for (let attempt = 0; attempt < 20; attempt++) {
+            if ((await textOf(pane)) === expected) return true;
+            await page.waitForTimeout(100);
+        }
+        return false;
+    };
     const saveState = (pane) => editor(pane).locator('.gb-save-state');
 
     await page.goto(`${baseUrl}/server/${ids[0]}/files`);
@@ -452,13 +460,11 @@ export async function dualFlows({ browser, context, login, scheme, baseUrl, root
         const undone = await textOf('a');
         if (undone === typed) throw new Error('Ctrl+Z did nothing');
         await page.keyboard.press('Control+y');
-        await page.waitForTimeout(200);
-        if ((await textOf('a')) !== typed) throw new Error('Ctrl+Y did not redo');
+        if (!(await textBecomes('a', typed))) throw new Error('Ctrl+Y did not redo');
         await page.keyboard.press('Control+z');
         await page.waitForTimeout(200);
         await page.keyboard.press('Control+Shift+z');
-        await page.waitForTimeout(200);
-        if ((await textOf('a')) !== typed) throw new Error('Ctrl+Shift+Z did not redo');
+        if (!(await textBecomes('a', typed))) throw new Error('Ctrl+Shift+Z did not redo');
         // Save all: edit both editors, one shortcut saves both servers.
         await editor('b').locator('.monaco-editor').first().click();
         await page.keyboard.type(' BB');
