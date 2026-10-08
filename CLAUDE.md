@@ -41,6 +41,10 @@ Upstream base SHA at migration start: `0d8cd97d00852aa7b251ea39d05a6df168874db1`
 
 ## Design policy
 
+* The file workspace is Monaco (`extensions/gobia-files`): one editor, one model per tab, no minimap, workspace search and replace, outside change detection with Compare, structured
+  validation as markers. CodeMirror is not the Gobia editor; it stays only in upstream admin egg editors. Gobia pages follow `docs/gobia-visual-parity.md`: every new page gets the
+  Gobia page head (`PageHeading`: title and one line of context), titled cards, tokens only, skeletons instead of spinners, and is added to the browser matrix.
+
 * Gobia design is the visual source of truth, expressed through Pterodactyl 2.0 design tokens (`packages/sdk/theme*.css`,
   Tailwind 4). Dark, light and system.
 * Do not reintroduce Blade, AdminLTE, Bootstrap, webpack or 1.x CSS hacks.
@@ -65,6 +69,14 @@ Upstream base SHA at migration start: `0d8cd97d00852aa7b251ea39d05a6df168874db1`
 ## Testing policy
 
 Run the official upstream checks plus Gobia tests before calling any work finished. Report failures honestly.
+
+* **Linux is authoritative.** Pterodactyl assumes Linux. The Gobia CI workflow (`.github/workflows/gobia-ci.yaml`: Frontend on PHP 8.4 and 8.3, Static Analysis, Tests on PHP 8.3 and
+  8.4 against MariaDB 11 and MySQL 8) is the verdict; a Windows pass is a convenience. When the GitHub organisation cannot run CI, push the branch to a private mirror and run the
+  same workflow there. Never call work finished on a Windows result alone.
+* **Gobia browser suite** (needs `npm run dev:gobia`): `GOBIA_VISUAL_USER=... GOBIA_VISUAL_PASSWORD=... node scripts/gobia/visual.mjs [visual|responsive|smoke|flows|a11y]`,
+  `GOBIA_FLOWS=dashboard|files|mobile|bundle`, `GOBIA_SCHEME=light`, `--update` to store baselines. Details in `docs/gobia-visual-parity.md`.
+* **Gobia extension unit tests**: `npm run sdk:testing` once, then `npx vitest run --config extensions/<name>/vitest.config.ts` from the repository root.
+* **Gobia Pest tests**: `vendor/bin/pest tests/Integration/Gobia` (tests must not depend on rows other tests leave behind; use unique names).
 
 ## Update compatibility policy (critical)
 

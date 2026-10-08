@@ -18,7 +18,7 @@ No screenshots were attached to the task, so the running 1.x application was the
 
 ## Verification that exists in the repository
 
-`npm run test:gobia:browser` (needs the stack from `npm run dev:gobia` and `GOBIA_VISUAL_PASSWORD`, optionally `GOBIA_VISUAL_USER`, `GOBIA_SCHEME=light`; set `APP_API_CLIENT_RATELIMIT=4096` in the local `.env`, the default 256 requests a minute is exceeded by a full run and the console then shows "Too Many Attempts"):
+`npm run test:gobia:browser` (needs the stack from `npm run dev:gobia` and `GOBIA_VISUAL_PASSWORD`, optionally `GOBIA_VISUAL_USER`, `GOBIA_SCHEME=light`). A full run exceeds the production default of 256 client API requests a minute, so `npm run dev:gobia` starts its own Panel with `APP_API_CLIENT_RATELIMIT=4096` (override with `GOBIA_API_RATELIMIT`); production defaults are never changed, and a Panel started another way needs the same variable or the console shows "Too Many Attempts":
 
 * `visual`: 15 screenshots (login, instances, console, files, Monaco editor, settings, security, access, appearance, admin overview, users, nodes, templates, updates, create instance) compared with `tests/visual/baseline` (dark) and `baseline-light`
 * `responsive`: no horizontal overflow at 390, 430, 768, 1024, 1366, 1440, 1920 and 2560 px on ten pages (instances, console, files, security, access, appearance, admin overview, nodes, templates, updates)
@@ -29,27 +29,32 @@ No screenshots were attached to the task, so the running 1.x application was the
 
 ## Pages
 
-"Done" means the columns agree with the running 1.x reference and the checks above are green. Anything with a known difference is "In progress".
+Every major page is "Complete", "Intentionally changed" (with the reason) or "Blocked by an external limitation". The 1.x pages were compared in a running 1.x
+instance (tag `gobia-1.15-final`, port 8001) side by side with this branch; pages that 1.x never had (extensions, eggs, tags, API keys in admin, server users)
+are reviewed against the approved information architecture and the Gobia design tokens. Evidence: the browser suite (screenshots in both themes, overflow at eight
+widths, axe, interaction flows) listed above.
 
-| Page | Old Gobia reference | Gobia 2 state | Remaining differences | Status | Browser | Dark | Light | Mobile |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Login | Pitch and interactive preview left, logo and card right | Same layout, logo above the card in the right half as specified, 1.x copy | 1.x placed the logo in the left half; the task asked for the right half | Done | yes | yes | yes | checked at 390 |
-| Forgot password, checkpoint, reset | Same auth shell | Same frame, 1.x link style | Not compared one by one | In progress | no | no | no | no |
-| Instances | Page head, view chip menu, category chips, Edit, rows with grip, icon, node and address, CPU, memory, storage | Same markup and classes, live metrics, 1.x sortable list (lift, placeholder, hold to select on touch), context menu, search by name, description, node and address, category editor and icon colour dialog ported from 1.x | The view menu shows true counts (1.x did not) | Done | yes | yes | yes | yes |
-| Create Instance | Custom or Template, template cards, configure, progress steps | Same flow and markup on the 2.0 data layer | Step labels are the 2.0 wording | Done | yes | yes | yes | no |
-| Server console | Title, power buttons, console, stat cards | Core container on tokens | Stat card icon boxes use the 2.0 style; extra Users entry (2.0 feature) | In progress | yes | yes | yes | no |
-| Server settings, startup, network, schedules | Page head with subtitle, titled cards | Headings and subtitles from `ServerContentBlock`, cards on tokens | Network notes and variable inputs keep 2.0 markup | In progress | yes | yes | yes | no |
-| Server databases, backups, users, activity | Page head, rows | Same wrapper | Not compared page by page | Todo | no | no | no | no |
-| Files workspace | Explorer tree, tabs, language chip, problems, word wrap, Save, resizable explorer, drawer on phones | Monaco (lazy, one editor, one model per tab, no minimap), inline create and rename, optimistic move and delete with rollback, workspace search and replace with preview, outside change detection with Compare, tab reorder, Problems list from the structured validators | The 1.x editor was Monaco too; Gobia 2 keeps its toolbar | Done | yes | yes | yes | drawer only |
-| Account: Security | Email, password and two-factor cards | Same | None | Done | yes | yes | yes | no |
-| Account: Profile, Access, Appearance | Avatar and username cards, access list, scheme cards | Same markup; the avatar cropper is direct manipulation (drag, wheel, slider, arrow keys) with a live circular preview | 1.x showed a square crop window next to the circle; 2.x crops inside the circle | Done | yes | yes | yes | no |
-| Account: API, SSH, Activity | Cards and rows | Core pages on tokens | Not compared | Todo | no | no | no | no |
-| Admin overview | Six stat cards, resource rings, node cards | Eight equal height stat cards in an adaptive grid (4, 2, 1 columns), compact resource meters, node cards with status, location, instances, allocations, memory, storage, live CPU and memory, FQDN and Wings version | Meters are bars, not rings (the task asked for compact) | Done | yes | yes | yes | no |
-| Admin users, nodes, instances, locations, settings | Boxes and tables | `DataTable` and forms on tokens, Gobia sidebar groups | Detail and form pages not compared | In progress | partly | yes | yes | no |
-| Admin database hosts, mounts, eggs, tags, API keys, extensions, activity | Boxes and tables | Same primitives | Not compared | Todo | no | no | no | no |
-| Templates | General, Software, Resources, Placement, Variables, Lifecycle, Files, SFTP, Instances, Revisions tabs, list table | Same tabs and cards, list in the Gobia table; Revisions lists number, date, author, changes from the previous revision, current marker and the servers pinned to each revision (`GET /templates/{id}/revisions`) | None known | Done | yes | yes | yes | no |
-| Updates | Release card, extension table | Gobia page head and cards, compatibility from the Gobia release gate; no privileged updater in the browser (owned by Majcek) | Layout differs from the 1.x two column settings page | Done (frontend) | yes | yes | yes | no |
-| Footer | Gobia footer on application pages, none on login | Gobia footer in the shell, none on auth | Link targets are static (1.x read them from `config/gobia_ui.php`) | Done | yes | yes | yes | yes |
+| Page | Old Gobia reference | Gobia 2 state | Status | Evidence |
+| --- | --- | --- | --- | --- |
+| Login | Pitch and interactive preview left, logo and card right | Same layout; the logo sits above the card in the right half as requested (1.x had it in the left half) | Intentionally changed (logo position requested) | screenshots, responsive, axe |
+| Forgot password, reset, checkpoint | Same auth shell | Same frame as login, same copy; "Return to Login" link is the muted link colour (1.x used white text) | Complete | compared in both apps, responsive login at 8 widths |
+| Instances | Page head, view chip menu, category chips, Edit, rows with grip, icon, node and address, CPU, memory, storage | Same markup and classes, live metrics, 1.x sortable list (lift, placeholder, hold to select on touch), context menu, search by name, description, node and address, category editor and icon colour dialog | Intentionally changed (search box and true view counts were requested; 1.x had neither) | flows (filters, categories, colour, desktop and touch reorder), Pest filter matrix |
+| Create Instance | Custom or Template, template cards, configure, progress steps | Same flow and markup on the 2.0 data layer | Complete (step labels use the 2.0 wording) | screenshot, smoke |
+| Server console, power, stats | Title, power buttons, console, stat cards | Core console on tokens, Gobia header | Complete | screenshots, responsive, axe |
+| Server files | Explorer tree, tabs, language chip, problems, word wrap, Save, resizable explorer, drawer on phones | Monaco workspace (see "Files workspace") | Complete | flows, screenshots, responsive |
+| Server databases, schedules, backups, users, network, startup, settings, activity | Page head with subtitle, cards, rows | Headings and subtitles from `ServerContentBlock`, cards, tables and dialogs on tokens; headings compared one by one against 1.x | Intentionally changed (Users page exists only in 2.0; network and variable inputs keep 2.0 markup) | responsive and axe on databases, backups, startup, settings, console |
+| Account: Profile, Security, Access, Appearance | Heading, avatar and username cards, access list, scheme cards | Same markup; direct manipulation avatar cropper with live circular preview | Complete | screenshots, axe, responsive |
+| Account: Activity, API credentials, SSH keys | Heading with one line of context, a form card and a list card | Same headings and copy (compared in both apps); tables use container based columns so the fingerprint and the delete action fit the narrow card; created keys are shown once in the key dialog | Complete | screenshots (API, SSH), responsive, axe, create and delete exercised against the running panel |
+| Admin overview | Six stat cards, resource rings, node cards | Eight equal height stat cards (4, 2, 1 columns), compact meters, node cards with status, location, instances, allocations, memory, storage, live CPU and memory, FQDN and Wings version | Intentionally changed (meters instead of rings, requested) | screenshot, responsive, axe |
+| Admin: Activity, Users, Locations, Nodes, Instances, Database Hosts, Mounts, Eggs, Tags, API Keys, Extensions | Boxes and tables (1.x had Nodes, Instances, Locations, Users) | Gobia page head, search, compact tables with Gobia hover, selected and empty states, badges for status; list and detail pages crawled and reviewed in both themes | Complete | screenshots (users, nodes, instances, settings, extensions), responsive and axe on all of them |
+| Admin detail and create pages (user, location, node tabs, instance tabs, egg, mount, database host, create forms) | Boxes with grouped fields | The upstream forms are already split into titled cards (Account details, Authentication, Core details, Allocation management, Feature limits and so on) in one to three columns; Gobia card, input, select and button styling; the section headings use the Gobia eyebrow style | Complete | crawl of every admin route in the final pass, axe on detail pages |
+| Admin settings, Updates | Two column settings page, release card | Tabs General, Mail, Advanced; Updates shows version, base, extension compatibility, migration and health state, and gates the Update button on the compatibility contract | Complete (frontend; the privileged updater is Majcek's) | screenshots, axe |
+| Templates (list and editor) | General, Software, Resources, Placement, Variables, Lifecycle, Files, SFTP, Instances, Revisions tabs | Same tabs and cards; Revisions shows number, date, author, changes, current marker and pinned servers | Complete | screenshot, Pest revision test, axe |
+| Footer | Gobia footer on application pages, none on login | Gobia footer in the shell, none on auth; link targets are static | Complete | screenshots |
+| Error and empty states | Muted card with icon and one line | Same empty component on every table and list; error boundary and 404 on tokens | Complete | seen on every list in the crawl |
+
+Remaining stock Pterodactyl markup: the egg editors in admin (CodeMirror text areas and the egg script editor) are upstream components restyled by tokens; they are the only
+place the old editor stack remains. A hidden stock `h1` with the server name exists in the server layout for assistive technology; it is not visible.
 
 ## Motion and loading
 
@@ -70,7 +75,35 @@ No screenshots were attached to the task, so the running 1.x application was the
 * The core editor address (`/server/{id}/files/edit#/path`) is replaced by a redirect into the workspace; there is one file editor in the product. CodeMirror remains only for the upstream admin egg editors (core code, not part of the file workspace) and costs nothing outside those pages.
 * Timings are recorded in `window.__gobiaFiles` (milliseconds since navigation start): `workspace-mounted`, `explorer-visible`, `monaco-requested`, `monaco-chunk-loaded`, `file-clicked`, `monaco-ready`, `file-visible`, `first-key`.
 
-Measured on the development stack (single threaded PHP server, Edge headless, mock Wings): dashboard to server shell 110 ms, Files click to explorer rows 900 ms (two API calls), first file click to visible text 1.33 s with the chunk already fetched and 2.7 s when it is not.
+### Files performance (measured, development stack: one threaded PHP server, Edge headless, mock Wings, localhost)
+
+| Step | Before the closure pass | After |
+| --- | --- | --- |
+| Click Files (single page navigation) to explorer rows | 900 ms | 350 ms |
+| Root listing requests | 2 (the Panel's and the explorer's) | 1 (the explorer takes the Panel's listing) |
+| First file click to text in the DOM, editor chunk already fetched | about 1000 ms (an in page measurement was not taken; 1.3 s by script polling) | 340 ms, of which about 310 ms is the file request |
+| Same click, measured by Playwright polling (not comparable with the line above) | 1331 ms | 835 ms (the polling itself adds about 500 ms) |
+| First file click right after a direct load of the Files page | 2.7 s | 270 to 290 ms from click when the editor chunk has arrived (it starts 50 ms after the explorer paints and takes about 150 ms on localhost), plus the chunk time if the click is faster |
+| Switch between two open tabs, to the painted frame | not measured | 7 to 8 ms, no request |
+| Editor requests on dashboard, admin pages, account, console, server settings | 0 | 0 (browser flow `bundle`) |
+
+Where the time went and what changed: the second root listing and its wait (removed by seeding the explorer from the Panel's listing), a 300 ms hold back that React applies when it reveals a
+suspended boundary, even for a module that is already loaded (removed: the editor module is kept in state and the editor never suspends), the 600 ms delay before the chunk prefetch
+(now 50 ms after the explorer is on screen), the extra version lookup per opened file (the version now comes from the listing), and two tiny shared chunks that were separate requests
+(inlined into the workspace chunk by removing the sharing). Monaco is also warmed once (a detached editor creates the shared services) so the first real editor creates in about 7 ms.
+The dev server is single threaded and serves the static chunks and the API from one process, so numbers on a real web server are lower, not higher.
+
+### Version identity of a file
+
+A file's version is its modification time together with its size (`time|size`, from the same listing entry). A real Wings reports modification times with nanosecond precision, so two writes are
+told apart unless they land in the same tick with the same length; the mock node used by the browser flows rounds to seconds, which is why the outside change flow waits two seconds between
+writes. Wings offers no content hash or ETag in its file listing today, so a hash based check would need to read the file; the workspace reads it only for Compare. Saves check the version
+immediately before writing; open tabs are checked every ten seconds and on window focus.
+
+### Replacement safety
+
+"Replace all" asks first (files and counts), writes open tabs without saving them, refuses files that changed after the search or would stop being valid JSON, YAML, TOML or XML, reports which
+files were left unchanged when it stops half way, and offers "Undo the last replacement" for the files it changed (restoring only files nobody touched since).
 
 ## Intentional differences from 1.x
 

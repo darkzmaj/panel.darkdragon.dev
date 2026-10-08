@@ -80,7 +80,7 @@ Verified by running code, not by reading:
 
 Not exercised against a real Wings: websocket events, file mutation and backup/startup hooks beyond what upstream tests cover, console state events. These are verified later with the mock where possible.
 
-Editor note: upstream ships CodeMirror (lazy chunk of 1.1 MB, 400 kB gzip). Monaco is not present.
+Editor note: upstream ships CodeMirror (lazy chunk of 1.1 MB, 400 kB gzip) for its own file editor and the admin egg editors. The Gobia file workspace uses Monaco in the `gobia-files` extension (lazy chunk, loaded only by the workspace); the core file editor address redirects into the workspace.
 
 ## Performance baseline (clean upstream, extension disabled, uncompressed, cold cache, local `artisan serve`)
 
@@ -106,7 +106,7 @@ areas, slots, component replacement, per user and per server settings, permissio
 
 * No upstream light/dark switch (handled by `gobia-core`; a pre paint script would need a one line core patch to the wrapper view, tracked as a possible patch).
 * The login page has no logo or split layout slot beyond `auth.login.*` slots; the Gobia login composition may need slots plus tokens, and a core patch only if proven necessary.
-* The file editor is CodeMirror. A Monaco workspace stays optional and lazy.
+* The core file editor is CodeMirror; Gobia replaces `server.files.manager` and `server.files.editor` with the Monaco workspace (extension API, no core patch).
 * The extension SDK is `2.0.0-beta.x`; its ABI is semver governed after 2.0, so pin the SDK range per extension.
 
 ## Known alpha limitations and risks

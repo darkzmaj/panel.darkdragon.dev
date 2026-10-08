@@ -12,7 +12,9 @@ Every modification Gobia makes to official Pterodactyl files outside Gobia owned
 | `.github/workflows/*` (upstream `ci.yaml`, `docker.yaml`, `release.yaml`, `staging.yaml`, `build.yaml`, `react-doctor.yml` deleted; `gobia-ci.yaml` added) | Upstream workflows publish to `ghcr.io/pterodactyl/panel` and dispatch staging; they must never run from the Gobia repository | CI is repository configuration | None (deleted files) | n/a | Keep deleted |
 | `resources/scripts/extensions/componentTypes.ts`, `resources/scripts/components/dashboard/DashboardContainer.tsx`, `resources/scripts/sdk/testing.tsx`, `app/Services/Extensions/ExtensionManifest.php`, `packages/sdk/manifest.schema.json`, `packages/sdk/README.md`, `tests/Unit/Services/Extensions/ExtensionManifestTest.php`, generated `packages/sdk/types/**` | New replaceable component `dashboard.page` (a whole page replacement, about 30 hand written lines plus generated types) | The dashboard list needs Gobia filters (All, You, Other), categories, a persisted per user order and its own data source. Slots only add content beside the native list, and `dashboard.serverCard` only restyles one row of a fixed, paginated native list. A replacement that owns the page also stops the native query from running | Medium: `componentTypes.ts`, `testing.tsx` and the manifest name lists change whenever upstream adds a replaceable component. Each hunk is a one line list entry, so conflicts are small but real | `resources/scripts/extensions/dashboardPage.spec.tsx` (3 tests), `ExtensionManifestTest` | Delete the patch if upstream adds an equivalent point (for example a dashboard list slot with replace semantics); otherwise re-apply with the sync checklist in `MAJCEK_HANDOFF.md` |
 
-## Temporary patches (identical to open upstream pull requests, remove after the sync that contains the merge)
+## Temporary patches (identical to upstream pull requests, remove after the sync that contains the merge)
+
+Reviewed in the final pass: all five pull requests below are now merged upstream (7250 and 7251 on 2026-10-06, 7249, 7252 and 7253 on 2026-10-07). The hunks stay until the next upstream sync, which deletes them; they are not needed afterwards.
 
 These make Gobia CI green on clean upstream. They are the same hunks as the pull requests, so merging upstream later resolves cleanly.
 
@@ -58,3 +60,12 @@ These are presentation patches. The extension API can replace five components (`
 | `resources/scripts/gobia/shell/Sidebars.tsx` | Admin groups Dashboard, Network, Services, System in the 1.x order (new Gobia file, not an upstream path) | Sidebar is Gobia code | None | Browser comparison | None |
 
 Extension level changes that are not core patches: `gobia-files` replaces `server.files.manager` (workspace) and `server.files.editor` (redirect into the workspace); `gobia-templates` gained `GET /api/admin/extensions/gobia-templates/templates/{id}/revisions` and a nullable `created_by` column on its revision table; `gobia-core` gained view counts and search in the instance list API.
+
+## Review of the registry (final closure pass)
+
+Every permanent and visual patch above was re-read against the current extension API. None can move into an extension today: the shell, auth frame, shared primitives
+and router options are not replaceable components, and the one theme hook the shell needs (stored scheme before first paint) has no extension point. Two entries became
+smaller than they were: the view transition stylesheet is gone, and the files editor no longer needs any core file (it is an extension replacement of `server.files.editor`).
+Core edits made since: the loading skeleton (`gobia/PageSkeleton.tsx`, a busy indicator with the progressbar role so pages keep a single status region), the account
+activity, API credentials and SSH keys headings, card heading consistency in the location and node pages, and container based columns in the two account key tables. They
+are presentation only and are covered by the same browser checks.

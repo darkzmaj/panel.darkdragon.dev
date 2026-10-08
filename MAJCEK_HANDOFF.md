@@ -2,8 +2,8 @@
 
 Audience: Majcek, who owns the privileged updater and the production upgrade process. Claude builds the Gobia Updates
 frontend and the compatibility API contract only. This file is concrete where the repository is concrete and explicit
-where something is still a design. Sections marked **(PLANNED)** describe the contract that will exist when the migration
-is finished and must be reconciled with the final implementation before release.
+where something is still a design. Sections marked **(PLANNED)** are design that is not implemented; everything else describes what exists in the repository
+at the end of the frontend migration (section 8 lists the exact state).
 
 ## 1. The rule: no blind core updates
 
@@ -37,7 +37,7 @@ Facts verified against upstream `2.0-develop` at `0d8cd97d00852aa7b251ea39d05a6d
 * The Gobia 1.x updater (`app/Services/Updater/*`, `docs/updates.md` on branch `gobia-1.x-preserved`) is a reference for ideas
   (runners, providers, progress). It is NOT ported to 2.0.
 
-## 3. Compatibility metadata **(PLANNED, reconcile at the end)**
+## 3. Compatibility metadata (extension manifests implemented; release manifest partly)
 
 Each Gobia extension manifest states:
 
@@ -103,8 +103,33 @@ Detect upstream release; create Gobia upstream-sync branch; merge or rebase; det
 migration, browser, accessibility, security tests and performance budgets; build release candidate; deploy test environment; smoke
 test; approval; publish signed release. Only then do production installs see "Update Available".
 
-## 8. Items to be finalized at the end of the migration
+## 8. Final state of the migration (what exists, what Majcek still owns)
 
-Final extension list and versions, version metadata location, health-check endpoints, service restart list, release artifact
-layout, security requirements, known limitations. This section is intentionally empty until they exist; do not rely on
-theoretical examples above where the final implementation differs.
+**Versions and metadata.** `gobia-release.json` at the repository root carries `gobia_version` (`2.0.0-dev`), `pterodactyl_base` (branch `2.0-develop`, commit
+`240aaf62ea53b1d6956a643a872f44d2f5956031`), `min_upgrade_from` (null: no earlier 2.x), `php` (`>=8.3 <8.6`), `database`, `post_install` and `security_update`.
+It does NOT yet carry the artifact (url, sha256, signature), the extension version map or the migration summary from the example in section 3; those are release time
+fields that the release pipeline must add. Extension versions come from each `extension.json`: `gobia-core`, `gobia-files`, `gobia-templates`, all `1.0.0`, with
+`requires.panel`, `requires.sdk` (`>=2.0.0-beta.4 <3.0`) and `requires.php`.
+
+**Compatibility endpoint (implemented, read only).** `GET /api/admin/extensions/gobia-core/compatibility` (root administrator or admin API key) returns
+`gobia_version`, `pterodactyl_base {version, commit}`, `php`, `database {driver, version}`, `extensions[] {id, name, version, enabled, requires, depends_on,
+compatible, reason}` (from `ExtensionCompatibility`), `migrations {pending, ran}` (pending is -1 when it cannot be read), `health {database, cache, queue}` and
+`release {min_upgrade_from, security_update}`. The Updates screen renders this. Everything else in `docs/gobia-updates-frontend-contract.md` (`/check`, `/preflight`,
+`/install`, `/progress`, `/history`, `/rollback*`) is the contract Majcek implements; the frontend already gates the Update button on `update_available && preflight.ready`
+and shows "No update service available" while those endpoints do not exist.
+
+**Pre-update checks Majcek must implement** (section 4 lists them): the compatibility report above covers versions, extension compatibility, pending migrations and
+database/cache/queue health. Not covered and required: disk space, ownership and write access, Wings connectivity, release signature and checksum, upgrade path.
+Migration state check: refuse when `migrations.pending` is -1, and compare the release's migration list with the installed ones before running anything.
+
+**Database backup and rollback.** A verified database backup must exist before `php artisan migrate`. The extensions' migrations are additive (new tables and columns); the
+1.x import tooling is a separate, explicit command (`docs/gobia-upgrade-from-1x.md`). A release with a destructive migration must say `rollback: requires-db-restore`; a file
+only rollback after such a release leaves the schema ahead of the code.
+
+**Restart list after a release.** Queue workers, the scheduler, PHP-FPM or the web server, the template SFTP service (`services/template-sftp`), then `php artisan p:theme:apply gobia`,
+`p:extension:enable gobia-core gobia-files gobia-templates` (publishes the extension assets) and the cache rebuild commands. `services/mock-wings` and `scripts/gobia/dev.mjs` are
+development tools only and are never part of a release.
+
+**Known limitations for the release process.** Linux is the authoritative platform: run the Gobia CI workflow (`.github/workflows/gobia-ci.yaml`) before tagging; local Windows runs
+only cover the frontend and the Gobia Pest tests. Wings reports file times in nanoseconds on a real node; the file workspace uses time and size as a file's version.
+
