@@ -68,7 +68,9 @@ const StartupContainer = () => {
             <div className={'md:flex'}>
                 <TitledGreyBox title={'Startup Command'} className={'flex-1'}>
                     <div className={'px-1 py-2'}>
-                        <p className={'rounded-md bg-terminal px-4 py-2 font-mono text-terminal-foreground'}>{data.meta?.startup_command}</p>
+                        <p className={'rounded-md bg-terminal px-4 py-2 font-mono text-terminal-foreground'}>
+                            {data.meta?.startup_command}
+                        </p>
                     </div>
                 </TitledGreyBox>
                 <TitledGreyBox title={'Docker Image'} className={'flex-1 lg:flex-none lg:w-1/3 mt-8 md:mt-0 md:ml-10'}>
