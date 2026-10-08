@@ -364,7 +364,7 @@ try {
     }
 
     if (run('flows')) {
-        const { bundleFlows, dashboardFlows, fileFlows, mobileFlows } = await import('./flows.mjs');
+        const { bundleFlows, dashboardFlows, fileFlows, keyboardFlows, mobileFlows } = await import('./flows.mjs');
         const check = async (label, work) => {
             try {
                 await work();
@@ -377,6 +377,7 @@ try {
         const only = process.env.GOBIA_FLOWS;
         if (!only || only === 'dashboard') await dashboardFlows({ context, baseUrl, check });
         if (!only || only === 'files') await fileFlows({ context, baseUrl, check });
+        if (!only || only === 'keyboard') await keyboardFlows({ context, baseUrl, check });
         if (!only || only === 'bundle') await bundleFlows({ context, baseUrl, check });
         if (!only || only === 'mobile') await mobileFlows({ browser, login, scheme, baseUrl, check });
     }

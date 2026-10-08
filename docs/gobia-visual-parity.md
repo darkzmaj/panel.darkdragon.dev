@@ -24,7 +24,7 @@ No screenshots were attached to the task, so the running 1.x application was the
 * `responsive`: no horizontal overflow at 390, 430, 768, 1024, 1366, 1440, 1920 and 2560 px on ten pages (instances, console, files, security, access, appearance, admin overview, nodes, templates, updates)
 * `a11y`: axe-core on twelve pages, serious and critical violations fail the run (clean in dark and light)
 * `smoke`: profile menu, instance view menu, Create Instance dialog, row menu, instance navigation, file create, rename and delete in the live tree, admin navigation and the mobile drawer
-* `flows` (`scripts/gobia/flows.mjs`, `GOBIA_FLOWS=dashboard|files` runs half): every view lists the count it shows, search composes with the view, category create, rename, delete and reload, icon colour, context menu Escape; the file workspace creates inline, saves with Ctrl+S, refuses an existing name, flags broken JSON, moves by drag keeping the tab and its unsaved text, refuses a folder dropped into itself, searches and replaces with a preview, renames inline, detects an outside change (Compare, Cancel), forwards the core editor address, deletes
+* `flows` (`scripts/gobia/flows.mjs`, `GOBIA_FLOWS=dashboard|files|mobile|bundle|keyboard` runs one group): every view lists the count it shows, search composes with the view, category create, rename, delete and reload, icon colour, desktop and touch reorder (swipe scrolls, hold lifts, long hold opens actions), context menu opens at the pointer and closes on Escape; the file workspace creates inline, saves with Ctrl+S, refuses an existing name, flags broken JSON, moves by drag keeping the tab and its unsaved text, refuses a folder dropped into itself or its child, keeps tabs and the explorer in step through nested rename, move and delete, rolls back when the node refuses, searches and replaces with a preview, detects an outside change (Compare, Cancel), forwards the core editor address; `bundle` asserts that only the file workspace requests editor code; `keyboard` covers the dialog Tab trap and focus return, menu arrow keys, F2 and Delete in the tree, Monaco Find and Replace shortcuts and reduced motion
 * Backend: `tests/Integration/Gobia/ServerFilterMatrixTest.php` (view by category by search with counts and rows), `ServerOrganizationTest`, `Templates/AdminTemplateApiTest` (revision list)
 
 ## Pages
@@ -92,6 +92,20 @@ suspended boundary, even for a module that is already loaded (removed: the edito
 (now 50 ms after the explorer is on screen), the extra version lookup per opened file (the version now comes from the listing), and two tiny shared chunks that were separate requests
 (inlined into the workspace chunk by removing the sharing). Monaco is also warmed once (a detached editor creates the shared services) so the first real editor creates in about 7 ms.
 The dev server is single threaded and serves the static chunks and the API from one process, so numbers on a real web server are lower, not higher.
+
+### Bundle sizes (production build; JavaScript requested by a cold page load, raw bytes because the dev server does not compress)
+
+| Page | JS files | Raw KiB |
+| --- | --- | --- |
+| Panel entry (initial, gzip 236 KiB) | 50 | 765 |
+| Dashboard | 113 | 1244 |
+| Admin overview | 105 | 1193 |
+| Admin nodes | 126 | 1224 |
+| Server console (terminal included) | 118 | 2134 |
+| Files, explorer plus the editor prefetch | 134 | 4966 |
+
+Extension bundles (gobia-core 84 KiB, gobia-templates 37 KiB, gobia-files without the editor about 190 KiB) are part of those numbers. The editor chunk is 2.7 MB (685 KB gzip) plus its worker (254 KB) and
+CSS (101 KB) and only the file workspace requests it. The previous pass recorded the same entry size, so nothing in this pass grew the shared bundle.
 
 ### Version identity of a file
 

@@ -55,6 +55,26 @@ export default function DialogComponent({
         onClose();
     };
 
+    // Tab and Shift+Tab wrap inside the dialog. The library's focus guards let focus escape to the page behind in some
+    // browsers (found by the Gobia keyboard checks), so the wrap is done here as well.
+    const keepFocusInside = (event: React.KeyboardEvent<HTMLDivElement>) => {
+        if (event.key !== 'Tab') return;
+        const nodes = Array.from(popupRef.current?.querySelectorAll<HTMLElement>(focusableSelector) ?? []).filter(
+            (node) => node.getClientRects().length > 0
+        );
+        const first = nodes[0];
+        const last = nodes[nodes.length - 1];
+        if (!first || !last) return;
+        const active = document.activeElement;
+        if (event.shiftKey && (active === first || active === popupRef.current)) {
+            event.preventDefault();
+            last.focus();
+        } else if (!event.shiftKey && active === last) {
+            event.preventDefault();
+            first.focus();
+        }
+    };
+
     const context = useMemo(() => ({ setIcon, setIconPosition }), [setIcon, setIconPosition]);
 
     const items = React.Children.toArray(children);
@@ -70,7 +90,12 @@ export default function DialogComponent({
                     <BaseDialog.Backdrop className={backdropClass} />
                     <div className={'fixed inset-0 overflow-y-auto z-50'}>
                         <div className={dialogContainerClass}>
-                            <BaseDialog.Popup ref={popupRef} className={panelClass} initialFocus={initialFocus}>
+                            <BaseDialog.Popup
+                                ref={popupRef}
+                                className={panelClass}
+                                initialFocus={initialFocus}
+                                onKeyDown={keepFocusInside}
+                            >
                                 <div className={'flex min-h-0 flex-1 overflow-y-auto px-6 pt-5 pb-0'}>
                                     {iconPosition === 'container' && icon}
                                     <div className={'flex-1 min-w-0'}>

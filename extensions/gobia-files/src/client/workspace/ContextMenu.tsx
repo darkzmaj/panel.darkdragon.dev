@@ -67,7 +67,17 @@ export default function ContextMenu({ menu, onClose }: { menu: MenuState | null;
     }, [menu, onClose]);
 
     useEffect(() => {
-        if (position) root.current?.querySelector<HTMLElement>('[role=menuitem]')?.focus();
+        if (!position) return;
+        // The browser refuses focus for the first frames of the opening animation, so ask again until it is accepted.
+        let frame = 0;
+        let tries = 0;
+        const focusFirst = () => {
+            const first = root.current?.querySelector<HTMLElement>('[role=menuitem]');
+            first?.focus({ preventScroll: true });
+            if (first && document.activeElement !== first && tries++ < 12) frame = requestAnimationFrame(focusFirst);
+        };
+        frame = requestAnimationFrame(focusFirst);
+        return () => cancelAnimationFrame(frame);
     }, [position]);
 
     if (!menu) return null;

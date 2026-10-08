@@ -170,8 +170,16 @@ export async function dashboardFlows({ context, baseUrl, check: plain }) {
     await check('context menu: Escape closes it and focus returns', async () => {
         const first = rows(page).first();
         await first.focus();
+        const target = await first.boundingBox();
         await first.click({ button: 'right' });
-        await page.getByRole('menu').waitFor();
+        const menu = page.getByRole('menu');
+        await menu.waitFor();
+        // The menu opens at the pointer (the page content must not become the containing block of fixed elements).
+        const opened = await menu.boundingBox();
+        const centreX = target.x + target.width / 2;
+        const centreY = target.y + target.height / 2;
+        if (Math.abs(opened.x - centreX) > 4 || Math.abs(opened.y - centreY) > 4)
+            throw new Error(`menu opened at ${opened.x},${opened.y}, pointer at ${centreX},${centreY}`);
         await page.keyboard.press('Escape');
         await page.getByRole('menu').waitFor({ state: 'detached' });
     });
@@ -535,5 +543,100 @@ export async function bundleFlows({ context, baseUrl, check }) {
         await page.waitForFunction(() => window.__gobiaFiles?.['monaco-chunk-loaded'], null, { timeout: 15000 });
         if (hits.length === 0) throw new Error('no editor request was made');
     });
+    await page.close();
+}
+
+/** Keyboard, focus and reduced motion: dialogs trap and return focus, the tree and the editor work without a mouse. */
+export async function keyboardFlows({ context, baseUrl, check: plain }) {
+    const page = await context.newPage();
+    const check = withScreenshot(page, plain);
+    await page.goto(baseUrl + '/');
+    await rows(page).first().waitFor({ timeout: 30000 });
+    const id = (await rows(page).first().getAttribute('href')).split('/')[2];
+
+    await check('keyboard: a dialog traps Tab, closes on Escape and gives focus back', async () => {
+        const trigger = page.getByRole('button', { name: /create instance/i });
+        await trigger.focus();
+        await page.keyboard.press('Enter');
+        await page.getByRole('dialog').waitFor();
+        for (let step = 0; step < 14; step++) {
+            await page.keyboard.press('Tab');
+            const inside = await page.evaluate(() => document.activeElement?.closest('[role=dialog]') !== null);
+            if (!inside) throw new Error(`focus left the dialog after ${step + 1} Tab presses`);
+        }
+        await page.keyboard.press('Escape');
+        await page.getByRole('dialog').waitFor({ state: 'detached' });
+        const back = await page.evaluate(() => document.activeElement?.textContent?.includes('Create Instance'));
+        if (!back) throw new Error('focus did not return to the button that opened the dialog');
+    });
+
+    await check('keyboard: menus follow the arrow keys and return focus on Escape', async () => {
+        const more = page.getByRole('button', { name: /^Actions for /i }).first();
+        await more.focus();
+        await page.keyboard.press('Enter');
+        await page.getByRole('menu').waitFor();
+        // Focus moves to the first item as soon as the browser accepts it.
+        await page.waitForFunction(() => document.activeElement?.getAttribute('role') === 'menuitem');
+        await page.keyboard.press('ArrowDown');
+        const second = await page.evaluate(() => document.activeElement?.textContent?.trim());
+        if (!second?.includes('Change icon colour')) throw new Error(`ArrowDown reached "${second}"`);
+        await page.keyboard.press('Escape');
+        await page.getByRole('menu').waitFor({ state: 'detached' });
+        const focused = await page.evaluate(() => document.activeElement?.getAttribute('aria-label') ?? '');
+        if (!focused.startsWith('Actions for')) throw new Error(`focus is on "${focused}" after Escape`);
+    });
+
+    const name = `kbd-${stamp()}.txt`;
+    await page.goto(`${baseUrl}/server/${id}/files`);
+    await page.waitForSelector('.gb-tree-name', { timeout: 30000 });
+    await check('keyboard: the file tree renames with F2, deletes with Delete and Escape backs out', async () => {
+        await page.getByRole('button', { name: 'New file' }).first().click();
+        await page.getByLabel('File name').fill(name);
+        await page.getByLabel('File name').press('Enter');
+        await page.locator('.gb-tree-name', { hasText: name }).waitFor();
+        const row = page.locator('.gb-tree-row', { hasText: name }).first().locator('button').first();
+        await row.focus();
+        await page.keyboard.press('F2');
+        await page.getByLabel('New name').waitFor();
+        await page.keyboard.press('Escape');
+        await page.getByLabel('New name').waitFor({ state: 'detached' });
+        const kept = await page.evaluate((n) => document.activeElement?.textContent?.includes(n), name);
+        if (!kept) throw new Error('focus was lost when the rename was cancelled');
+        await row.focus();
+        await page.keyboard.press('Delete');
+        await page.getByRole('dialog').waitFor();
+        await page.keyboard.press('Escape');
+        await page.getByRole('dialog').waitFor({ state: 'detached' });
+        await page.locator('.gb-tree-name', { hasText: name }).waitFor();
+    });
+
+    await check('keyboard: the editor takes Find and Replace shortcuts', async () => {
+        await page.locator('.monaco-editor').first().click();
+        await page.keyboard.press('Control+f');
+        await page.locator('.monaco-editor .find-widget.visible').waitFor();
+        await page.keyboard.press('Escape');
+        await page.keyboard.press('Control+h');
+        await page.locator('.monaco-editor .find-widget.visible.replaceToggled').waitFor();
+        await page.keyboard.press('Escape');
+    });
+
+    await check('keyboard: reduced motion switches menu and page animations off', async () => {
+        await page.emulateMedia({ reducedMotion: 'reduce' });
+        await page.goto(baseUrl + '/');
+        await rows(page).first().click({ button: 'right' });
+        const animation = await page.getByRole('menu').evaluate((menu) => getComputedStyle(menu).animationName);
+        await page.emulateMedia({ reducedMotion: 'no-preference' });
+        if (animation !== 'none') throw new Error(`menu animation is "${animation}"`);
+    });
+
+    // Clean up the file made above.
+    await page.goto(`${baseUrl}/server/${id}/files`);
+    await page.waitForSelector('.gb-tree-name', { timeout: 30000 });
+    const left = page.locator('.gb-tree-row', { hasText: name }).first();
+    if (await left.count()) {
+        await left.locator('button.gb-tree-more').click({ force: true });
+        await page.getByRole('menuitem', { name: 'Delete' }).click();
+        await page.getByRole('button', { name: 'Delete', exact: true }).click();
+    }
     await page.close();
 }
