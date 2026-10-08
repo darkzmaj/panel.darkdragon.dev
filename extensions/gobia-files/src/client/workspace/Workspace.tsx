@@ -251,7 +251,18 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
     });
     const addUploads = uploads.add;
 
-    useEffect(() => saveTabs(uuid, state), [uuid, state]);
+    // Tabs belong to one server. When the page moves to another server the open tabs (and, through the editor, their
+    // models) are replaced by that server's remembered ones; nothing of the old server is saved under the new one.
+    const owner = useRef(uuid);
+    useEffect(() => {
+        if (owner.current !== uuid) {
+            owner.current = uuid;
+            recent.current.clear();
+            dispatch({ type: 'restore', state: loadTabs(uuid) });
+            return;
+        }
+        saveTabs(uuid, state);
+    }, [uuid, state]);
 
     const anyDirty = state.tabs.some(isDirty);
     useEffect(() => {

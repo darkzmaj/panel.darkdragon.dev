@@ -421,6 +421,29 @@ export async function fileFlows({ context, baseUrl, check: plain }) {
         await page.locator('.gb-tab', { hasText: 'a.txt' }).locator('.gb-tab-close').click();
         await page.getByRole('button', { name: 'Discard changes' }).click();
     });
+    await check('files: moving to another server replaces the open tabs', async () => {
+        if ((await page.locator('.gb-tab').count()) === 0) throw new Error('this check needs an open tab');
+        await page.getByRole('link', { name: 'All instances' }).click();
+        const rowsNow = page.locator('a.gb-server-row');
+        await rowsNow.first().waitFor();
+        if ((await rowsNow.count()) < 2) return;
+        const currentHref = `/server/${id}`;
+        const href = await rowsNow.evaluateAll(
+            (links, current) => links.map((link) => link.getAttribute('href')).find((value) => value !== current),
+            currentHref
+        );
+        await page.locator(`a.gb-server-row[href="${href}"]`).click();
+        await page.getByRole('link', { name: 'Files' }).click();
+        await page.waitForSelector('.gb-tree-name');
+        if ((await page.locator('.gb-tab').count()) !== 0)
+            throw new Error('tabs of the previous server are still open');
+        // Back to the first server for the checks that follow; its tabs come back from the session.
+        await page.getByRole('link', { name: 'All instances' }).click();
+        await page.locator(`a.gb-server-row[href="${currentHref}"]`).click();
+        await page.getByRole('link', { name: 'Files' }).click();
+        await page.waitForSelector('.gb-tree-name');
+        await page.locator('.gb-tab').first().waitFor();
+    });
     await check('files: delete the folder and files closes their tabs', async () => {
         for (const name of [folder, 'renamed-' + note]) {
             const row = page.locator('.gb-tree-row', { hasText: name }).first();
