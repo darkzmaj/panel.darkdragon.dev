@@ -112,3 +112,111 @@ test('granted people see the shared servers in their list and lose them on remov
     $this->actingAs($owner)->deleteJson(ACCESS.'/'.$guest->uuid)->assertOk();
     expect($this->actingAs($guest)->getJson($list)->json('data'))->toBe([]);
 });
+
+function sharedWith(User $user, Server $server, array $permissions): void
+{
+    Subuser::query()->create(['user_id' => $user->id, 'server_id' => $server->id, 'permissions' => $permissions]);
+}
+
+const MANAGER = ['websocket.connect', 'user.create', 'user.read', 'user.update', 'user.delete', 'control.start', 'file.read'];
+
+test('the people someone shares with see the server under Other, the owner under You and both under All', function (): void {
+    $owner = User::factory()->create();
+    $guest = User::factory()->create(['email' => 'seen@example.test']);
+    $a = server($owner, 'Shared A');
+    $this->actingAs($owner);
+    $this->postJson(ACCESS, ['email' => 'seen@example.test', 'servers' => [$a->uuid], 'permissions' => ['websocket.connect', 'file.read']])->assertCreated();
+
+    $names = fn (string $view): array => array_column($this->getJson('/api/client/extensions/gobia-core/servers?view='.$view)->assertOk()->json('data'), 'name');
+    expect($names('you'))->toBe(['Shared A']);
+    expect($names('all'))->toBe(['Shared A']);
+
+    $this->actingAs($guest);
+    expect($names('other'))->toBe(['Shared A']);
+    expect($names('all'))->toBe(['Shared A']);
+    expect($names('you'))->toBe([]);
+
+    // Revoking removes it again, immediately.
+    $this->actingAs($owner);
+    $this->deleteJson(ACCESS.'/'.$guest->uuid)->assertOk();
+    $this->actingAs($guest);
+    expect($names('all'))->toBe([]);
+});
+
+test('an owner lists their servers as owned with nothing withheld', function (): void {
+    $owner = User::factory()->create();
+    server($owner, 'Mine');
+    $this->actingAs($owner);
+
+    $servers = $this->getJson(ACCESS)->assertOk()->json('servers');
+    expect($servers)->toHaveCount(1);
+    expect($servers[0]['owned'])->toBeTrue();
+    expect($servers[0]['grantable'])->toBeNull();
+});
+
+test('someone given the whole user management set can share the server but only with permissions they hold', function (): void {
+    $owner = User::factory()->create();
+    $manager = User::factory()->create();
+    $guest = User::factory()->create(['email' => 'new@example.test']);
+    $a = server($owner, 'Delegated');
+    sharedWith($manager, $a, MANAGER);
+    $this->actingAs($manager);
+
+    $servers = $this->getJson(ACCESS)->assertOk()->json('servers');
+    expect(array_column($servers, 'name'))->toBe(['Delegated']);
+    expect($servers[0]['owned'])->toBeFalse();
+    expect($servers[0]['grantable'])->toEqualCanonicalizing(MANAGER);
+
+    $this->postJson(ACCESS, ['email' => 'new@example.test', 'servers' => [$a->uuid], 'permissions' => ['websocket.connect', 'control.start']])->assertCreated();
+    expect(Subuser::query()->where('user_id', $guest->id)->count())->toBe(1);
+
+    // Escalation: a permission the manager does not hold cannot be given, on grant or on edit.
+    $this->postJson(ACCESS, ['email' => 'new@example.test', 'servers' => [$a->uuid], 'permissions' => ['file.update']])->assertUnprocessable();
+    $this->putJson(ACCESS.'/'.$guest->uuid, ['servers' => [$a->uuid], 'permissions' => ['control.start', 'backup.restore']])->assertUnprocessable();
+    expect(Subuser::query()->where('user_id', $guest->id)->first()->permissions)->toBe(['websocket.connect', 'control.start']);
+
+    // The manager does not appear in their own list and cannot be changed through it.
+    expect(array_column($this->getJson(ACCESS)->json('grants'), 'email'))->toBe(['new@example.test']);
+    $this->deleteJson(ACCESS.'/'.$manager->uuid)->assertNotFound();
+});
+
+test('a manager cannot change or remove someone who holds more than they do', function (): void {
+    $owner = User::factory()->create();
+    $manager = User::factory()->create();
+    $power = User::factory()->create();
+    $a = server($owner, 'Guarded');
+    sharedWith($manager, $a, MANAGER);
+    sharedWith($power, $a, ['websocket.connect', 'file.update', 'control.start']);
+    $this->actingAs($manager);
+
+    $this->putJson(ACCESS.'/'.$power->uuid, ['servers' => [$a->uuid], 'permissions' => ['control.start']])->assertForbidden();
+    $this->deleteJson(ACCESS.'/'.$power->uuid)->assertForbidden();
+    expect(Subuser::query()->where('user_id', $power->id)->first()->permissions)->toContain('file.update');
+});
+
+test('a partial user permission does not make someone a manager and an unrelated user manages nothing', function (): void {
+    $owner = User::factory()->create();
+    $reader = User::factory()->create();
+    $other = User::factory()->create();
+    $a = server($owner, 'Partial');
+    sharedWith($reader, $a, ['websocket.connect', 'user.read']);
+
+    $this->actingAs($reader);
+    expect($this->getJson(ACCESS)->json('servers'))->toBe([]);
+    $this->postJson(ACCESS, ['email' => $other->email, 'servers' => [$a->uuid], 'permissions' => ['websocket.connect']])->assertUnprocessable();
+
+    $this->actingAs($other);
+    expect($this->getJson(ACCESS)->json('servers'))->toBe([]);
+    $this->postJson(ACCESS, ['email' => $reader->email, 'servers' => [$a->uuid], 'permissions' => ['websocket.connect']])->assertUnprocessable();
+});
+
+test('invalid input is refused with a message and already shared people are updated, not duplicated', function (): void {
+    $owner = User::factory()->create(['email' => 'owner@example.test']);
+    $a = server($owner, 'Input');
+    $this->actingAs($owner);
+
+    $this->postJson(ACCESS, ['email' => 'not-an-email', 'servers' => [$a->uuid], 'permissions' => ['websocket.connect']])->assertUnprocessable();
+    $this->postJson(ACCESS, ['email' => 'x@example.test', 'servers' => [], 'permissions' => ['websocket.connect']])->assertUnprocessable();
+    $this->postJson(ACCESS, ['email' => 'owner@example.test', 'servers' => [$a->uuid], 'permissions' => ['websocket.connect']])->assertUnprocessable();
+    $this->postJson(ACCESS, ['email' => 'x@example.test', 'servers' => [$a->uuid], 'permissions' => ['made.up']])->assertUnprocessable();
+});

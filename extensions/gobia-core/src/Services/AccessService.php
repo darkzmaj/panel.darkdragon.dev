@@ -16,15 +16,19 @@ use Pterodactyl\Models\Server;
 use Pterodactyl\Models\Subuser;
 use Pterodactyl\Models\User;
 use Pterodactyl\Services\Servers\SubuserPermissionCatalog;
-use stdClass;
 
 /**
  * Account level management of who can open the servers a user owns. It is a thin layer over the panel's subuser actions,
  * so every grant is an ordinary subuser row and the panel's own permission checks, SFTP revocation and activity log
- * apply unchanged. Only servers the caller owns can ever be touched.
+ * apply unchanged. The caller can touch the servers they own and the servers where they were given the whole user
+ * management set (user.create, user.read, user.update and user.delete); on the second kind they can only hand out
+ * permissions they hold themselves and cannot change anyone who holds more than they do.
  */
 class AccessService
 {
+    /** The permissions that make someone a delegated manager of a server's access. */
+    public const array MANAGEMENT = ['user.create', 'user.read', 'user.update', 'user.delete'];
+
     public function __construct(
         private readonly CreatesSubusers $creator,
         private readonly UpdatesSubusers $updater,
@@ -32,10 +36,19 @@ class AccessService
         private readonly SubuserPermissionCatalog $catalog,
     ) {}
 
-    /** @return Collection<int, stdClass> */
-    public function ownedServers(User $owner): Collection
+    /**
+     * The servers the caller may share, with what they may hand out: null means every permission (they own it).
+     *
+     * @return list<array{uuid: string, name: string, owned: bool, grantable: list<string>|null}>
+     */
+    public function manageable(User $actor): array
     {
-        return Server::query()->where('owner_id', $owner->id)->orderBy('name')->toBase()->get(['id', 'uuid', 'uuidShort', 'name']);
+        return $this->managed($actor)->map(fn (Server $server): array => [
+            'uuid' => $server->uuid,
+            'name' => $server->name,
+            'owned' => $server->owner_id === $actor->id,
+            'grantable' => $this->authority($actor, $server),
+        ])->all();
     }
 
     /**
@@ -47,7 +60,8 @@ class AccessService
     {
         $rows = Subuser::query()
             ->with(['user', 'server'])
-            ->whereHas('server', fn ($query) => $query->where('owner_id', $owner->id))
+            ->whereIn('server_id', $this->managed($owner)->pluck('id'))
+            ->where('user_id', '!=', $owner->id)
             ->get();
 
         return $rows->groupBy('user_id')->map(function (Collection $group): array {
@@ -73,8 +87,9 @@ class AccessService
     {
         $servers = $this->owned($owner, $serverUuids);
         $permissions = $this->permissions($permissions);
+        $this->assertDelegable($owner, $servers, $permissions);
         if (mb_strtolower($owner->email) === mb_strtolower($email)) {
-            throw ValidationException::withMessages(['email' => 'You already own these servers.']);
+            throw ValidationException::withMessages(['email' => 'You already have access to these servers.']);
         }
 
         DB::transaction(function () use ($email, $servers, $permissions): void {
@@ -107,6 +122,8 @@ class AccessService
         $person = $this->person($owner, $personUuid);
         $target = $this->owned($owner, $serverUuids);
         $permissions = $this->permissions($permissions);
+        $this->assertDelegable($owner, $target, $permissions);
+        $this->assertNotMorePrivileged($owner, $person);
 
         DB::transaction(function () use ($owner, $person, $target, $permissions): void {
             $current = $this->rows($owner, $person)->keyBy('server_id');
@@ -131,6 +148,7 @@ class AccessService
     public function revoke(User $owner, string $personUuid): void
     {
         $person = $this->person($owner, $personUuid);
+        $this->assertNotMorePrivileged($owner, $person);
         DB::transaction(function () use ($owner, $person): void {
             foreach ($this->rows($owner, $person) as $row) {
                 $this->deleter->delete($row->server, $row);
@@ -145,17 +163,46 @@ class AccessService
         return $this->catalog->groups()->all();
     }
 
+    /** @return Collection<int, Server> */
+    private function managed(User $actor): Collection
+    {
+        $owned = Server::query()->where('owner_id', $actor->id)->get();
+        $delegated = Server::query()
+            ->where('owner_id', '!=', $actor->id)
+            ->whereHas('subusers', fn ($query) => $query->where('user_id', $actor->id))
+            ->get()
+            ->filter(fn (Server $server): bool => array_diff(self::MANAGEMENT, $this->authority($actor, $server) ?? self::MANAGEMENT) === []);
+
+        return $owned->concat($delegated)->sortBy('name')->values();
+    }
+
+    /**
+     * What the caller holds on a server: null for the owner (everything), the subuser permissions otherwise. An
+     * administrator account is not special here: this page is about the caller's own servers and shares.
+     *
+     * @return list<string>|null
+     */
+    private function authority(User $actor, Server $server): ?array
+    {
+        if ($server->owner_id === $actor->id) {
+            return null;
+        }
+        $row = Subuser::query()->where('server_id', $server->id)->where('user_id', $actor->id)->first();
+
+        return $row === null ? [] : array_values($row->permissions);
+    }
+
     /** @return Collection<int, Subuser> */
     private function rows(User $owner, User $person): Collection
     {
-        return Subuser::query()->with(['server', 'user'])->where('user_id', $person->id)->whereHas('server', fn ($query) => $query->where('owner_id', $owner->id))->get();
+        return Subuser::query()->with(['server', 'user'])->where('user_id', $person->id)->whereIn('server_id', $this->managed($owner)->pluck('id'))->get();
     }
 
     /** The person must currently have access to at least one of the owner's servers; anyone else is a 404. */
     private function person(User $owner, string $uuid): User
     {
         $person = User::query()->where('uuid', $uuid)->first();
-        if ($person === null || Subuser::query()->where('user_id', $person->id)->whereHas('server', fn ($query) => $query->where('owner_id', $owner->id))->doesntExist()) {
+        if ($person === null || $person->id === $owner->id || Subuser::query()->where('user_id', $person->id)->whereIn('server_id', $this->managed($owner)->pluck('id'))->doesntExist()) {
             abort(404);
         }
 
@@ -169,12 +216,39 @@ class AccessService
     private function owned(User $owner, array $uuids): Collection
     {
         $unique = array_values(array_unique($uuids));
-        $servers = Server::query()->where('owner_id', $owner->id)->whereIn('uuid', $unique)->get();
+        $servers = $this->managed($owner)->whereIn('uuid', $unique)->values();
         if ($unique === [] || $servers->count() !== count($unique)) {
-            throw ValidationException::withMessages(['servers' => 'Choose at least one server you own.']);
+            throw ValidationException::withMessages(['servers' => 'Choose at least one server you can share.']);
         }
 
         return $servers;
+    }
+
+    /**
+     * A manager who does not own a server can only hand out permissions they hold themselves there.
+     *
+     * @param  Collection<int, Server>  $servers
+     * @param  list<string>  $permissions
+     */
+    private function assertDelegable(User $actor, Collection $servers, array $permissions): void
+    {
+        foreach ($servers as $server) {
+            $held = $this->authority($actor, $server);
+            if ($held !== null && array_diff(array_diff($permissions, ['websocket.connect']), $held) !== []) {
+                throw ValidationException::withMessages(['permissions' => 'You can only give permissions you have yourself on '.$server->name.'.']);
+            }
+        }
+    }
+
+    /** Someone who holds more than the caller on a shared server is not the caller's to change or remove. */
+    private function assertNotMorePrivileged(User $actor, User $person): void
+    {
+        foreach ($this->rows($actor, $person) as $row) {
+            $held = $this->authority($actor, $row->server);
+            if ($held !== null && array_diff($row->permissions, $held) !== []) {
+                abort(403, 'This person holds more permissions than you on '.$row->server->name.'.');
+            }
+        }
     }
 
     /**

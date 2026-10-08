@@ -22,19 +22,19 @@ class AccessController
 
     public function __construct(private readonly AccessService $access) {}
 
-    #[Endpoint('List access', 'Everyone with access to the signed in user\'s servers, the servers they own and the grantable permissions.')]
+    #[Endpoint('List access', 'Everyone with access to the signed in user\'s servers, those servers with what may be granted on each, and the permission catalog.')]
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
 
         return new JsonResponse([
             'grants' => $this->access->grants($user),
-            'servers' => $this->access->ownedServers($user)->map(fn ($server): array => ['uuid' => $server->uuid, 'name' => $server->name])->all(),
+            'servers' => $this->access->manageable($user),
             'permission_groups' => $this->access->permissionGroups(),
         ]);
     }
 
-    #[Endpoint('Grant access', 'Gives a person access to one or more servers the signed in user owns.')]
+    #[Endpoint('Grant access', 'Gives a person access to one or more servers the signed in user owns or manages. Managers can only give permissions they hold.')]
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate(['email' => ['required', 'email:strict', 'max:191']] + self::RULES);
