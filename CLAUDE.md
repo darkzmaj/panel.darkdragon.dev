@@ -141,7 +141,7 @@ Requirements: PHP ^8.3 (ext intl, mbstring, pdo_mysql, posix, zip, bcmath, gd), 
 | OpenAPI contract | `composer docs:openapi:verify` |
 | Extension validation | `npm run build:vite` builds `packages/hello-world`; `node scripts/check-extension-runtime.mjs`; `packages/sdk` specs via `npm test` |
 
-Windows note: use `php`/`composer` from `C:\Users\majko\devtools` (`php`, `mariadb-*\bin` on PATH). Keep the 1.x dev stack
+Windows note: keep `php`, `composer` and the MariaDB `bin` directory on PATH (`scripts/gobia/dev.mjs` also reads `GOBIA_PHP_DIR`, `GOBIA_MARIADB_DIR` and `GOBIA_MARIADB_DATA`). Keep the 1.x dev stack
 (Panel :8000) untouched; run 2.0 on another port.
 
 ## Repository layout notes
