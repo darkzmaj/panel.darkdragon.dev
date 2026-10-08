@@ -23,9 +23,7 @@ export function fileIcon(name: string): Resolved {
     let extension = lower.includes('.') ? lower.slice(lower.lastIndexOf('.') + 1) : '';
     if (lower === '.env' || lower.startsWith('.env.')) extension = 'env';
     const found = extension ? BY_EXTENSION[extension] : undefined;
-    return found
-        ? { dark: found, light: BY_EXTENSION_LIGHT[extension] ?? null }
-        : { dark: GENERIC.file, light: null };
+    return found ? { dark: found, light: BY_EXTENSION_LIGHT[extension] ?? null } : { dark: GENERIC.file, light: null };
 }
 
 /** The icon of a folder: special names (config, plugins, src…) have their own, the rest the plain folder. */
@@ -46,9 +44,16 @@ interface Props {
 }
 
 /** The explorer, tab and search result icon: real VS Code (Material Icon Theme) artwork, decorative, fixed size. */
-export default function FileTypeIcon({ name, folder = false, open = false, root = false, size = 16, className }: Props) {
+export default function FileTypeIcon({
+    name,
+    folder = false,
+    open = false,
+    root = false,
+    size = 16,
+    className,
+}: Props) {
     const icon = folder ? folderIcon(name, open, root) : fileIcon(name);
-    const classes = 'gb-file-icon' + (className ? ` ${className}` : '');
+    const classes = 'gb-ftype' + (className ? ` ${className}` : '');
     const source = (key: string) => ICONS[key] ?? ICONS[GENERIC.file] ?? '';
     const key = icon.dark;
 

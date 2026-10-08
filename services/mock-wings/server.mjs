@@ -38,6 +38,15 @@ const entry = (full, name) => {
         symlink: false, mime: s.isDirectory() ? 'inode/directory' : 'text/plain',
     };
 };
+// What a running server reports. `mock-stats` (dev only) overrides it so the colour thresholds of the Panel can be exercised.
+const usage = (s) => ({
+    memory_bytes: s.state === 'running' ? (s.override?.memory ?? 268435456) : 0,
+    cpu_absolute: s.state === 'running' ? (s.override?.cpu ?? 1.5) : 0,
+    disk_bytes: s.override?.disk ?? 0,
+});
+const statsPayload = (s) => JSON.stringify({ ...usage(s), memory_limit_bytes: 0, network: { rx_bytes: 0, tx_bytes: 0 }, state: s.state, uptime: s.state === 'running' ? Date.now() - s.started : 0 });
+const pushStats = (uuid) => emit(uuid, 'stats', statsPayload(state(uuid)));
+setInterval(() => { for (const uuid of servers.keys()) if (state(uuid).sockets.size) pushStats(uuid); }, 1000);
 const state = (uuid) => servers.get(uuid) ?? (servers.set(uuid, { state: 'offline', logs: [], sockets: new Set(), started: 0 }), servers.get(uuid));
 const emit = (uuid, event, ...args) => { for (const ws of state(uuid).sockets) ws.send(JSON.stringify({ event, args })); };
 function console_(uuid, line) { const s = state(uuid); s.logs.push(line); s.logs = s.logs.slice(-200); emit(uuid, 'console output', line); }
@@ -120,9 +129,10 @@ const http = createServer(async (req, res) => {
         const s = state(uuid);
         if (rest === '' && req.method === 'GET') {
             const up = s.state === 'running' ? Date.now() - s.started : 0;
-            return send(res, 200, { state: s.state, is_suspended: false, utilization: { memory_bytes: s.state === 'running' ? 268435456 : 0, cpu_absolute: s.state === 'running' ? 1.5 : 0, disk_bytes: 0, uptime: up, network: { rx_bytes: 0, tx_bytes: 0 } } });
+            return send(res, 200, { state: s.state, is_suspended: false, utilization: { ...usage(s), uptime: up, network: { rx_bytes: 0, tx_bytes: 0 } } });
         }
         if (rest === '' && req.method === 'DELETE') { servers.delete(uuid); rmSync(root(uuid), { recursive: true, force: true }); return send(res, 204); }
+        if (rest === 'mock-stats') { s.override = json(); pushStats(uuid); return send(res, 204); }
         if (rest === 'sync') return send(res, 204);
         if (rest === 'reinstall') { install(uuid); return send(res, 202); }
         if (rest === 'power') { power(uuid, json().action); return send(res, 202); }
@@ -165,7 +175,7 @@ http.on('upgrade', (req, socket, head) => {
             const { event, args = [] } = JSON.parse(raw.toString());
             if (event === 'auth') { ws.send(JSON.stringify({ event: 'auth success', args: [] })); s.sockets.add(ws); ws.send(JSON.stringify({ event: 'status', args: [s.state] })); }
             if (event === 'send logs') for (const l of s.logs) ws.send(JSON.stringify({ event: 'console output', args: [l] }));
-            if (event === 'send stats') ws.send(JSON.stringify({ event: 'stats', args: [JSON.stringify({ memory_bytes: 0, memory_limit_bytes: 0, cpu_absolute: 0, network: { rx_bytes: 0, tx_bytes: 0 }, state: s.state, disk_bytes: 0 })] }));
+            if (event === 'send stats') ws.send(JSON.stringify({ event: 'stats', args: [statsPayload(s)] }));
             if (event === 'set state') power(uuid, args[0]);
             if (event === 'send command') console_(uuid, `> ${args[0]}`);
         });

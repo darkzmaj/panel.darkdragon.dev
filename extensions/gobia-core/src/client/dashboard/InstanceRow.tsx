@@ -1,7 +1,10 @@
 import { PanelLink, useServerResources } from '@pterodactyl/sdk';
-import { Cpu, Ellipsis, GripVertical, HardDrive, MemoryStick, Server as ServerIcon } from 'lucide-react';
+import { Ellipsis, GripVertical, Server as ServerIcon } from 'lucide-react';
 import { memo, useEffect, useState, type CSSProperties } from 'react';
 import { formatBytes, formatCpu, formatLimit } from './format';
+import { levelOf, powerLevel } from './levels';
+import { useLiveStats, type Live } from './liveStats';
+import StatusDots from './StatusDots';
 import type { useSortable } from './useSortable';
 import type { Instance } from './types';
 
@@ -14,18 +17,6 @@ const STATE_LABEL = {
     running: 'Running',
     stopping: 'Stopping',
 } satisfies Record<PowerState, string>;
-
-function dotClass(state: PowerState | null): string {
-    switch (state) {
-        case 'running':
-            return 'gb-dot-success';
-        case 'starting':
-        case 'stopping':
-            return 'gb-dot-warning';
-        default:
-            return '';
-    }
-}
 
 /** True once the element has been on screen, so off screen rows never poll for live stats. */
 function useEverVisible(): [(element: HTMLElement | null) => void, boolean] {
@@ -47,29 +38,14 @@ function useEverVisible(): [(element: HTMLElement | null) => void, boolean] {
     return [setElement, seen];
 }
 
-/** One metric: icon, the live value, and the limit under it. Turns red at 90 percent of the limit. */
-function Metric({
-    icon: Icon,
-    label,
-    value,
-    limit,
-    alarm,
-}: {
-    icon: typeof Cpu;
-    label: string;
-    value: string;
-    limit: string;
-    alarm: boolean;
-}) {
+/** One metric: the live value, and the limit under it. Turns red at 90 percent of the limit. */
+function Metric({ label, value, limit, alarm }: { label: string; value: string; limit: string; alarm: boolean }) {
     const danger = alarm ? 'rgb(var(--gb-danger))' : undefined;
 
     return (
         <div className={'gb-metric'} aria-label={label}>
-            <Icon aria-hidden style={{ color: danger }} />
-            <span>
-                <strong style={{ color: danger }}>{value}</strong>
-                <small>of {limit}</small>
-            </span>
+            <strong style={{ color: danger }}>{value}</strong>
+            <small>of {limit}</small>
         </div>
     );
 }
@@ -90,18 +66,28 @@ function StatusNote({ status }: { status: string }) {
     return <span className={`gb-badge gb-badge-${tone}`}>{text}</span>;
 }
 
-interface Live {
-    attributes: {
-        current_state: string;
-        resources: { cpu_absolute: number; memory_bytes: number; disk_bytes: number };
-    };
-}
-
-/** Polls the live numbers; only mounted for a row that has been on screen. */
+/** Pushed numbers win over the polled ones; until the first frame the polled ones show. */
 function LiveBody({ instance }: { instance: Instance }) {
     const { data } = useServerResources(instance.uuid);
+    const pushed = useLiveStats(instance.uuid);
+    const polled = data as
+        | {
+              attributes: {
+                  current_state: string;
+                  resources: { cpu_absolute: number; memory_bytes: number; disk_bytes: number };
+              };
+          }
+        | undefined;
+    const live: Live | null = polled
+        ? {
+              state: pushed?.state ?? polled.attributes.current_state,
+              cpu: pushed ? pushed.cpu : polled.attributes.resources.cpu_absolute,
+              memory: pushed ? pushed.memory : polled.attributes.resources.memory_bytes,
+              disk: pushed ? pushed.disk : polled.attributes.resources.disk_bytes,
+          }
+        : pushed;
 
-    return <RowDetails instance={instance} live={data as Live | undefined} />;
+    return <RowDetails instance={instance} live={live} />;
 }
 
 function RowBody({ instance, visible }: { instance: Instance; visible: boolean }) {
@@ -112,18 +98,37 @@ function RowBody({ instance, visible }: { instance: Instance; visible: boolean }
     );
 }
 
-function RowDetails({ instance, live }: { instance: Instance; live: Live | undefined }) {
+function RowDetails({ instance, live }: { instance: Instance; live: Live | null | undefined }) {
     const unavailable = instance.status !== null;
-    const state = (live?.attributes.current_state ?? null) as PowerState | null;
-    const resources = live?.attributes.resources;
-    const dot = unavailable ? 'gb-dot-' + (instance.status === 'installing' ? 'warning' : 'danger') : dotClass(state);
-    const label = state ? STATE_LABEL[state] : 'Checking';
+    const state = (live?.state ?? null) as PowerState | null;
+    const label = unavailable ? 'Unavailable' : state ? STATE_LABEL[state] : 'Checking';
+    const running = state === 'running' || state === 'starting' || state === 'stopping';
+    const mib = 1024 * 1024;
+    const cpu = running ? (live?.cpu ?? null) : null;
+    const memory = running ? (live?.memory ?? null) : null;
+    const disk = live?.disk ?? null;
 
     return (
         <>
             <span className={'gb-server-name'}>
                 <span className={'gb-server-title'}>
-                    <span className={'gb-dot ' + dot} role={'img'} aria-label={label} title={label} />
+                    <StatusDots
+                        power={powerLevel(state, unavailable && instance.status !== 'installing')}
+                        installing={instance.status === 'installing'}
+                        powerLabel={label}
+                        cpu={{
+                            level: levelOf(cpu, instance.limits.cpu),
+                            text: cpu === null ? 'not measured' : formatCpu(cpu),
+                        }}
+                        memory={{
+                            level: levelOf(memory, instance.limits.memory * mib),
+                            text: memory === null ? 'not measured' : formatBytes(memory),
+                        }}
+                        disk={{
+                            level: levelOf(disk, instance.limits.disk * mib),
+                            text: disk === null ? 'not measured' : formatBytes(disk),
+                        }}
+                    />
                     <strong>{instance.name}</strong>
                     {unavailable && <StatusNote status={instance.status ?? ''} />}
                 </span>
@@ -133,35 +138,32 @@ function RowDetails({ instance, live }: { instance: Instance; live: Live | undef
                 <strong>{instance.node ?? 'No node'}</strong>
                 <small>{instance.address ?? 'No allocation'}</small>
             </span>
-            {resources && !unavailable ? (
+            {live && !unavailable ? (
                 <span className={'gb-server-stats'}>
                     <Metric
-                        icon={Cpu}
                         label={'CPU'}
-                        value={formatCpu(resources.cpu_absolute)}
+                        value={cpu === null ? '–' : formatCpu(cpu)}
                         limit={instance.limits.cpu === 0 ? 'Unlimited' : `${instance.limits.cpu} %`}
-                        alarm={instance.limits.cpu > 0 && resources.cpu_absolute >= instance.limits.cpu * 0.9}
+                        alarm={instance.limits.cpu > 0 && (cpu ?? 0) >= instance.limits.cpu * 0.9}
                     />
                     <Metric
-                        icon={MemoryStick}
                         label={'Memory'}
-                        value={formatBytes(resources.memory_bytes)}
+                        value={memory === null ? '–' : formatBytes(memory)}
                         limit={formatLimit(instance.limits.memory)}
-                        alarm={alarmed(resources.memory_bytes, instance.limits.memory)}
+                        alarm={alarmed(memory ?? 0, instance.limits.memory)}
                     />
                     <Metric
-                        icon={HardDrive}
                         label={'Storage'}
-                        value={formatBytes(resources.disk_bytes)}
+                        value={disk === null ? '–' : formatBytes(disk)}
                         limit={formatLimit(instance.limits.disk)}
-                        alarm={alarmed(resources.disk_bytes, instance.limits.disk)}
+                        alarm={alarmed(disk ?? 0, instance.limits.disk)}
                     />
                 </span>
             ) : (
                 <span className={'gb-server-stats gb-muted'}>
                     <span
-                        className={'gb-skeleton'}
-                        style={{ height: 14, width: '60%', display: unavailable ? 'none' : 'block' }}
+                        className={'gb-skeleton gb-stats-skeleton'}
+                        style={{ display: unavailable ? 'none' : 'block' }}
                     />
                 </span>
             )}

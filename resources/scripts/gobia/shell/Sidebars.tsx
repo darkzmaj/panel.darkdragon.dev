@@ -27,6 +27,10 @@ import {
 } from 'lucide-react';
 import { useCurrentUser } from '@/api/account/queries';
 import { useServerStatus } from '@/state/server';
+import { useLiveStats } from '@/gobia/liveStats';
+import StatusDots from '@/gobia/StatusDots';
+import { levelOf, powerLevel } from '@/gobia/statusLevels';
+import { bytesToString } from '@/lib/formatters';
 import Can from '@/components/elements/Can';
 import NavigationLabel from '@/extensions/NavigationLabel';
 import { ScreenGate } from '@/extensions/screenNavigation';
@@ -73,6 +77,8 @@ const serverIcons = new Map<string, LucideIcon>([
     ['activity', Activity],
 ]);
 
+const MIB = 1024 * 1024;
+
 interface ServerSidebarProps {
     id: string;
     name: string;
@@ -86,6 +92,9 @@ export function ServerSidebar({ id, name, node, internalId, server }: ServerSide
     const rootAdmin = useCurrentUser().rootAdmin;
     const power = useServerStatus();
     const to = (segment: string) => `/server/${id}${segment ? `/${segment}` : ''}`;
+    const live = useLiveStats(server.attributes.uuid);
+    const limits = server.attributes.limits;
+    const running = power === 'running' || power === 'starting' || power === 'stopping';
 
     return (
         <>
@@ -96,13 +105,22 @@ export function ServerSidebar({ id, name, node, internalId, server }: ServerSide
                 className={'gb-subcard'}
                 style={{ margin: '10px 0 2px', padding: '12px 14px', display: 'flex', gap: 10, alignItems: 'center' }}
             >
-                <span
-                    className={
-                        'gb-dot ' +
-                        (power === 'running' ? 'gb-dot-success' : power && power !== 'offline' ? 'gb-dot-warning' : '')
-                    }
-                    role={'img'}
-                    aria-label={power || 'offline'}
+                <StatusDots
+                    vertical
+                    power={powerLevel(power || null)}
+                    powerLabel={power || 'offline'}
+                    cpu={{
+                        level: levelOf(running ? (live?.cpu ?? null) : null, limits?.cpu ?? 0),
+                        text: `${Math.round(live?.cpu ?? 0)}%`,
+                    }}
+                    memory={{
+                        level: levelOf(running ? (live?.memory ?? null) : null, (limits?.memory ?? 0) * MIB),
+                        text: bytesToString(live?.memory ?? 0),
+                    }}
+                    disk={{
+                        level: levelOf(live?.disk ?? null, (limits?.disk ?? 0) * MIB),
+                        text: bytesToString(live?.disk ?? 0),
+                    }}
                 />
                 <span style={{ minWidth: 0 }}>
                     <strong

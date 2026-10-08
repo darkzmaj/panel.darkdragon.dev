@@ -406,6 +406,7 @@ try {
     }
 
     if (run('flows')) {
+        const { statusFlows } = await import('./status-flows.mjs');
         const { accessFlows } = await import('./access-flows.mjs');
         const { adminFlows } = await import('./admin-flows.mjs');
         const { explorerFlows } = await import('./explorer-flows.mjs');
@@ -425,6 +426,7 @@ try {
         if (!only || only === 'access') await accessFlows({ browser, context, login, scheme, baseUrl, check });
         if (!only || only === 'explorer') await explorerFlows({ browser, context, login, scheme, baseUrl, check });
         if (!only || only === 'admin') await adminFlows({ browser, context, login, scheme, baseUrl, check });
+        if (!only || only === 'status') await statusFlows({ browser, context, login, scheme, baseUrl, root, check });
         if (!only || only === 'keyboard') await keyboardFlows({ context, baseUrl, check });
         if (!only || only === 'bundle') await bundleFlows({ context, baseUrl, check });
         if (!only || only === 'mobile') await mobileFlows({ browser, login, scheme, baseUrl, check });

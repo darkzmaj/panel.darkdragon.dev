@@ -311,9 +311,12 @@ export default function DashboardPage({ model }: ReplacementProps<'dashboard.pag
                     {() => (
                         <div className={'gb-list gb-server-list gb-enter'}>
                             <div className={'gb-list-head gb-server-head'} aria-hidden>
+                                <span />
                                 <span>Instance</span>
                                 <span className={'gb-col-where'}>Node &amp; address</span>
-                                <span className={'gb-col-stats'}>CPU &middot; Memory &middot; Storage</span>
+                                <span>CPU</span>
+                                <span>Memory</span>
+                                <span>Storage</span>
                             </div>
                             <ul
                                 ref={sortable.list}

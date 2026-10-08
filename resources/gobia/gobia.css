@@ -4156,7 +4156,9 @@ html {
     opacity: 0.55;
 }
 .gb-tree-row.drop-ok {
-    transition: background 120ms ease, box-shadow 120ms ease;
+    transition:
+        background 120ms ease,
+        box-shadow 120ms ease;
 }
 .gb-file-badge {
     flex: none;
@@ -4171,4 +4173,154 @@ html {
     .gb-tree-row.drop-ok {
         transition: none;
     }
+}
+
+/* File and folder icons (Material Icon Theme artwork): fixed box, never shifts the row. */
+.gb-ftype {
+    flex: none;
+    display: block;
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+.gb-tab-name .gb-ftype,
+.gb-explorer .gb-ftype {
+    margin-right: 0;
+}
+
+/* ------------------------------------------------------------------ status dots: power, CPU, memory, storage */
+.gb-dots {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    flex: none;
+}
+.gb-dots-vertical {
+    flex-direction: column;
+    gap: 6px;
+}
+.gb-sdot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex: none;
+    background: rgb(var(--n-500));
+    transition: background-color 120ms linear;
+}
+.gb-sdot.ok {
+    background: rgb(var(--gb-success));
+}
+.gb-sdot.high {
+    background: rgb(var(--gb-warning));
+}
+.gb-sdot.max {
+    background: rgb(var(--gb-danger));
+    box-shadow: 0 0 6px 1px rgb(var(--gb-danger) / 0.55);
+}
+.gb-sdot.flash {
+    animation: gb-flash 1.6s ease-in-out infinite;
+}
+.gb-sdot.flash.high {
+    animation-duration: 0.9s;
+}
+@keyframes gb-flash {
+    0%,
+    100% {
+        opacity: 1;
+        box-shadow: 0 0 6px 1px currentColor;
+    }
+    50% {
+        opacity: 0.35;
+        box-shadow: none;
+    }
+}
+.gb-sdot.flash.ok {
+    color: rgb(var(--gb-success) / 0.6);
+}
+.gb-sdot.flash.high {
+    color: rgb(var(--gb-warning) / 0.6);
+}
+@media (prefers-reduced-motion: reduce) {
+    .gb-sdot.flash {
+        animation: none;
+    }
+}
+
+/* ------------------------------------------------------------------ instance list: one grid for the head and every row */
+.gb-server-head {
+    grid-template-columns: 44px minmax(0, 2.4fr) minmax(0, 1.4fr) repeat(3, minmax(88px, 1fr));
+    gap: 20px;
+    padding-left: 36px;
+    padding-right: 52px;
+}
+.gb-server-row {
+    grid-template-columns: 44px minmax(0, 2.4fr) minmax(0, 1.4fr) repeat(3, minmax(88px, 1fr));
+    gap: 20px;
+    padding: 18px 8px 18px 0;
+}
+.gb-server-stats {
+    display: contents;
+}
+.gb-server-stats.gb-muted {
+    display: block;
+    grid-column: span 3;
+}
+.gb-stats-skeleton {
+    height: 14px;
+    width: 60%;
+}
+.gb-metric {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    min-width: 0;
+}
+.gb-metric strong {
+    font-size: 14px;
+    line-height: 1.2;
+}
+.gb-metric small {
+    line-height: 1.2;
+}
+.gb-server-name {
+    justify-content: center;
+}
+.gb-server-title {
+    gap: 12px;
+}
+@media (max-width: 1100px) {
+    .gb-server-head,
+    .gb-server-row {
+        grid-template-columns: 44px minmax(0, 2fr) repeat(3, minmax(72px, 1fr));
+        gap: 16px;
+    }
+    .gb-server-head .gb-col-where,
+    .gb-server-where {
+        display: none;
+    }
+}
+@media (max-width: 720px) {
+    .gb-server-row {
+        grid-template-columns: 44px minmax(0, 1fr);
+        row-gap: 10px;
+    }
+    .gb-server-stats {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-column: 1 / -1;
+        gap: 10px;
+    }
+    .gb-server-stats .gb-metric:nth-child(3) {
+        display: flex;
+    }
+}
+.gb-metric {
+    align-items: flex-start;
+    text-align: left;
+}
+.gb-server-head > span {
+    text-align: left;
 }

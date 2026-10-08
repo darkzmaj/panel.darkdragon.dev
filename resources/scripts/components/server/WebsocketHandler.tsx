@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { getServerWebsocketCredentials, useCurrentServer, useCurrentServerUuid } from '@/api/server/queries';
+import { pushLiveStats } from '@/gobia/liveStats';
+import { parseServerStatsPayload } from '@/components/server/console/stats';
 import type { Server } from '@/api/server/queries';
 import { Websocket } from '@/plugins/Websocket';
 import { useServerStore } from '@/state/server';
@@ -64,6 +66,8 @@ export default function WebsocketHandler() {
 
             // react-doctor-disable-next-line react-doctor/effect-needs-cleanup
             socket.on('auth success', () => {
+                // One frame at once, so the instance card shows numbers before the first push.
+                socket.send('send stats');
                 setReconnecting(false);
                 setConnectionState(true);
                 dismissNotification(serverErrorToasts.connection);
@@ -86,6 +90,15 @@ export default function WebsocketHandler() {
             socket.on('SOCKET_ERROR', () => {
                 setReconnecting(true);
                 setConnectionState(false);
+            });
+            socket.on('stats', (payload) => {
+                const stats = parseServerStatsPayload(payload);
+                if (stats)
+                    pushLiveStats(uuid, {
+                        cpu: stats.cpu_absolute,
+                        memory: stats.memory_bytes,
+                        disk: stats.disk_bytes,
+                    });
             });
             socket.on('status', (status) => {
                 if (isServerStatus(status)) {
