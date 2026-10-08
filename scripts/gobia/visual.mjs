@@ -156,7 +156,31 @@ try {
         ['account-appearance', '/account/appearance'],
         ['admin-templates', '/panel/templates'],
         ['admin-updates', '/panel/updates'],
+        ['admin-instances', '/panel/servers'],
+        ['admin-settings', '/panel/settings'],
+        ['admin-extensions', '/panel/extensions'],
+        ['account-api', '/account/api'],
+        ['account-ssh', '/account/ssh'],
     ];
+    // Pages that are checked for overflow and accessibility but not compared pixel by pixel (live or dated content).
+    const more = [
+        ['account-profile', '/account/profile'],
+        ['account-activity', '/account/activity'],
+        ['admin-activity', '/panel/activity'],
+        ['admin-locations', '/panel/locations'],
+        ['admin-databases', '/panel/databases'],
+        ['admin-mounts', '/panel/mounts'],
+        ['admin-eggs', '/panel/eggs'],
+        ['admin-tags', '/panel/tags'],
+        ['admin-api', '/panel/api'],
+        ['admin-node-detail', '/panel/nodes/1'],
+        ['admin-user-detail', '/panel/users/1'],
+        ['admin-new-server', '/panel/servers/new'],
+        ['server-databases', `/server/${server}/databases`],
+        ['server-backups', `/server/${server}/backups`],
+        ['server-startup', `/server/${server}/startup`],
+    ];
+    const everything = [...pages, ...more];
 
     if (run('visual')) {
         for (const [name, path] of pages) {
@@ -204,21 +228,16 @@ try {
     if (run('responsive')) {
         for (const width of WIDTHS) {
             const narrow = await browser.newContext({ viewport: { width, height: 900 }, colorScheme: scheme });
+            const guest = await browser.newContext({ viewport: { width, height: 900 }, colorScheme: scheme });
+            const signIn = await guest.newPage();
+            await signIn.goto(`${baseUrl}/auth/login`);
+            await signIn.waitForSelector('input[type=password]', { timeout: 30000 });
+            const loginOverflow = await signIn.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+            if (loginOverflow > 1) fail(`responsive login at ${width}px overflows horizontally by ${loginOverflow}px`);
+            else note(`ok responsive login at ${width}px`);
+            await guest.close();
             await login(narrow);
-            for (const [name, path] of pages.filter(([page]) =>
-                [
-                    'dashboard',
-                    'server-console',
-                    'server-files',
-                    'account-security',
-                    'account-access',
-                    'account-appearance',
-                    'admin-overview',
-                    'admin-nodes',
-                    'admin-templates',
-                    'admin-updates',
-                ].includes(page)
-            )) {
+            for (const [name, path] of everything) {
                 const page = await narrow.newPage();
                 try {
                     await openShell(page, baseUrl + path);
@@ -231,7 +250,7 @@ try {
                             .catch(() => '')
                     )
                         .slice(0, 200)
-                        .replace(/s+/g, ' ');
+                        .replace(/\s+/g, ' ');
                     fail(`responsive ${name} at ${width}px: no application shell at ${page.url()} (${text})`);
                     await page.close();
                     continue;
@@ -364,7 +383,7 @@ try {
 
     if (run('a11y')) {
         const axe = readFileSync(join(root, 'node_modules/axe-core/axe.min.js'), 'utf8');
-        for (const [name, path] of pages) {
+        for (const [name, path] of everything) {
             const page = await context.newPage();
             await openShell(page, baseUrl + path);
             await page.waitForLoadState('networkidle').catch(() => undefined);
