@@ -48,6 +48,15 @@ const anchorFiles = [
     '../../resources/scripts/components/admin/overview/OverviewContainer.tsx',
 ];
 
+// The per server Users page is replaced by Account, Access (redirect in routeTree.ts), so its four page slots have no
+// anchor any more. They stay in the public catalog so extensions that register them keep loading.
+const unmounted = new Set([
+    'server.users.before',
+    'server.users.after',
+    'server.users.create.before',
+    'server.users.create.after',
+]);
+
 const anchorSource = anchorFiles.map((file) => readFileSync(resolve(__dirname, file), 'utf8')).join('\n');
 const sdkTypes = readFileSync(resolve(__dirname, './types/extensions/registry.d.ts'), 'utf8');
 
@@ -70,7 +79,7 @@ describe('extension slot coverage', () => {
         expect(publishedSlotNames()).toEqual([...SLOT_NAMES]);
     });
 
-    it.each(SLOT_NAMES)('mounts the %s slot in the application', (name) => {
+    it.each(SLOT_NAMES.filter((name) => !unmounted.has(name)))('mounts the %s slot in the application', (name) => {
         expect(anchorSource, `${name} is public but has no core anchor`).toContain(`'${name}'`);
     });
 });
