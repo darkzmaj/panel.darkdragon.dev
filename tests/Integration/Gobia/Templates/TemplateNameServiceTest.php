@@ -103,11 +103,11 @@ class TemplateNameServiceTest extends IntegrationTestCase
 
         $names = [];
         for ($i = 0; $i < 3; $i++) {
-            [$instance] = $service->request($template, ['name' => 'Hub %number%', 'owner_id' => $owner->id]);
+            [$instance] = $service->request($template, ['name' => 'Seq Hub %number%', 'owner_id' => $owner->id]);
             $names[] = $instance->name;
         }
 
-        $this->assertSame(['Hub 1', 'Hub 2', 'Hub 3'], $names);
+        $this->assertSame(['Seq Hub 1', 'Seq Hub 2', 'Seq Hub 3'], $names);
     }
 
     public function test_retrying_an_idempotent_request_does_not_consume_a_new_number(): void
@@ -117,13 +117,13 @@ class TemplateNameServiceTest extends IntegrationTestCase
         $owner = \Pterodactyl\Models\User::factory()->create();
         $service = app(TemplateInstanceService::class);
 
-        [$first] = $service->request($template, ['name' => 'Hub %number%', 'owner_id' => $owner->id], null, 'key-1');
-        [$again, $created] = $service->request($template, ['name' => 'Hub %number%', 'owner_id' => $owner->id], null, 'key-1');
+        [$first] = $service->request($template, ['name' => 'Seq Hub %number%', 'owner_id' => $owner->id], null, 'key-1');
+        [$again, $created] = $service->request($template, ['name' => 'Seq Hub %number%', 'owner_id' => $owner->id], null, 'key-1');
 
         $this->assertFalse($created);
         $this->assertSame($first->id, $again->id);
-        $this->assertSame('Hub 1', $again->name);
-        $this->assertSame('Hub 2', $this->names()->expand('Hub %number%'));
+        $this->assertSame('Seq Hub 1', $again->name);
+        $this->assertSame('Seq Hub 2', $this->names()->expand('Seq Hub %number%'));
     }
 
     private function names(): TemplateNameService

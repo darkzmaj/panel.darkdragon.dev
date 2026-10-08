@@ -167,12 +167,12 @@ class AdminTemplateApiTest extends IntegrationTestCase
     public function test_the_next_number_is_proposed_deterministically(): void
     {
         $this->makeNode();
-        $template = $this->makeTemplate(['name' => 'Hub %number%']);
-        $this->createServerModel(['name' => 'Hub 1']);
-        $this->createServerModel(['name' => 'Hub 2']);
+        $template = $this->makeTemplate(['name' => 'Proposal Hub %number%']);
+        $this->createServerModel(['name' => 'Proposal Hub 1']);
+        $this->createServerModel(['name' => 'Proposal Hub 2']);
         $this->actingAs($this->admin);
 
-        $this->getJson(self::CLIENT."/templates/{$template->id}")->assertJsonPath('proposed_name', 'Hub 3');
+        $this->getJson(self::CLIENT."/templates/{$template->id}")->assertJsonPath('proposed_name', 'Proposal Hub 3');
         $this->assertInstanceOf(ServerTemplate::class, $template);
     }
 }
