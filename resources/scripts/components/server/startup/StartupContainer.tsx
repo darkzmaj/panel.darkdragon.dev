@@ -76,6 +76,7 @@ const StartupContainer = () => {
                         <>
                             <InputSpinner visible={updateDockerImage.isPending}>
                                 <Select
+                                    aria-label={'Docker image'}
                                     disabled={Object.keys(dockerImages).length < 2}
                                     value={server.attributes.docker_image}
                                     onChange={(value) => updateSelectedDockerImage(String(value))}

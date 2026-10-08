@@ -78,6 +78,27 @@ async function openShell(page, url) {
     }
 }
 
+/**
+ * The Panel allows five console connections a minute per server (a production limit, not changed for tests). A run that
+ * opens the console more often sees "Too Many Attempts" and a console that never connects; wait out the minute once and
+ * load the page again so the screenshot shows a connected console.
+ */
+async function waitOutConsoleLimit(page) {
+    const throttled = () =>
+        page
+            .getByText('Too Many Attempts')
+            .first()
+            .isVisible({ timeout: 1500 })
+            .catch(() => false);
+    if (await throttled()) {
+        note('console connections are throttled; waiting a minute');
+        await page.waitForTimeout(62000);
+        await page.reload();
+        await page.waitForSelector('.gb-app', { timeout: 30000 });
+        await page.waitForTimeout(2500);
+    }
+}
+
 async function settle(page) {
     await page.addStyleTag({ content: FREEZE });
     await page.waitForLoadState('networkidle').catch(() => undefined);
@@ -188,6 +209,7 @@ try {
             await openShell(page, baseUrl + path);
             if (name === 'server-files')
                 await page.waitForSelector('.gb-tree-name:not(.root)', { timeout: 30000 }).catch(() => undefined);
+            if (name === 'server-console') await waitOutConsoleLimit(page);
             await settle(page);
             compare(name, await page.screenshot());
             await page.close();
@@ -231,7 +253,12 @@ try {
             const guest = await browser.newContext({ viewport: { width, height: 900 }, colorScheme: scheme });
             const signIn = await guest.newPage();
             await signIn.goto(`${baseUrl}/auth/login`);
-            await signIn.waitForSelector('input[type=password]', { timeout: 30000 });
+            try {
+                await signIn.waitForSelector('input[type=password]', { timeout: 20000 });
+            } catch {
+                await signIn.reload();
+                await signIn.waitForSelector('input[type=password]', { timeout: 30000 });
+            }
             const loginOverflow = await signIn.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
             if (loginOverflow > 1) fail(`responsive login at ${width}px overflows horizontally by ${loginOverflow}px`);
             else note(`ok responsive login at ${width}px`);
