@@ -48,20 +48,23 @@ export async function explorerFlows({ browser, context, login, scheme, baseUrl, 
         if (!(await isSelected(c))) throw new Error('the new file is not selected');
     });
 
-    await check('explorer: a selected file and a selected folder stay highlighted when the pointer leaves', async () => {
-        await button(a).click();
-        await away();
-        if (!(await isSelected(a))) throw new Error('file lost its highlight');
-        await button(f1).click();
-        await away();
-        if (!(await isSelected(f1))) throw new Error('folder lost its highlight');
-        if (await isSelected(a)) throw new Error('two items are selected after a plain click');
-        // The whole row is painted, not only the label.
-        await page.waitForTimeout(400);
-        const background = await row(f1).evaluate((element) => getComputedStyle(element).backgroundColor);
-        if (background === 'rgba(0, 0, 0, 0)') throw new Error('selected row has no background');
-        await button(f1).click(); // collapse again
-    });
+    await check(
+        'explorer: a selected file and a selected folder stay highlighted when the pointer leaves',
+        async () => {
+            await button(a).click();
+            await away();
+            if (!(await isSelected(a))) throw new Error('file lost its highlight');
+            await button(f1).click();
+            await away();
+            if (!(await isSelected(f1))) throw new Error('folder lost its highlight');
+            if (await isSelected(a)) throw new Error('two items are selected after a plain click');
+            // The whole row is painted, not only the label.
+            await page.waitForTimeout(400);
+            const background = await row(f1).evaluate((element) => getComputedStyle(element).backgroundColor);
+            if (background === 'rgba(0, 0, 0, 0)') throw new Error('selected row has no background');
+            await button(f1).click(); // collapse again
+        }
+    );
 
     await check('explorer: ctrl and shift click select several rows that all stay highlighted', async () => {
         await button(a).click();
@@ -79,12 +82,17 @@ export async function explorerFlows({ browser, context, login, scheme, baseUrl, 
         await button(a).click();
         await button(b).click({ modifiers: ['Control'] });
         await button(b).dragTo(row(f1));
-        await page.getByText(a, { exact: true }).waitFor({ state: 'detached', timeout: 15000 }).catch(() => undefined);
+        await page
+            .getByText(a, { exact: true })
+            .waitFor({ state: 'detached', timeout: 15000 })
+            .catch(() => undefined);
         // The folder opens at the destination; both moved files are listed and highlighted.
         await row(a).waitFor();
         await row(b).waitFor();
         if (!(await isSelected(a)) || !(await isSelected(b))) throw new Error('moved files lost the selection');
-        const leftover = await page.locator('.gb-tree-row.drop-ok, .gb-tree-row.drop-valid, .gb-tree-row.dragged').count();
+        const leftover = await page
+            .locator('.gb-tree-row.drop-ok, .gb-tree-row.drop-valid, .gb-tree-row.dragged')
+            .count();
         if (leftover !== 0) throw new Error(`${leftover} rows keep a drag highlight`);
     });
 
@@ -115,21 +123,29 @@ export async function explorerFlows({ browser, context, login, scheme, baseUrl, 
         if (!(await isSelected(f1))) throw new Error('folder lost selection on expand');
     });
 
-    await check('explorer: switching editor tabs keeps the explorer selection and tabs show language icons', async () => {
-        await row(a).waitFor();
-        await button(a).click(); // opens the json file
-        await page.locator('.gb-tab', { hasText: a }).first().waitFor();
-        await button(b).click();
-        await page.locator('.gb-tab', { hasText: b }).first().waitFor();
-        await button(a).click({ modifiers: ['Control'] });
-        await page.locator('.gb-tab-name', { hasText: a }).first().click();
-        await away();
-        if (!(await isSelected(a))) throw new Error('selection lost after switching tabs');
-        const marks = await page.locator('.gb-tab .gb-file-badge').evaluateAll((nodes) => nodes.map((node) => node.dataset.kind));
-        if (!marks.includes('{}') || !marks.includes('RS')) throw new Error(`tab icons: ${marks.join(',')}`);
-        const tree = await page.locator('.gb-tree .gb-file-badge').evaluateAll((nodes) => nodes.map((node) => node.dataset.kind));
-        if (!tree.includes('{}') || !tree.includes('RS') || !tree.includes('PY')) throw new Error(`tree icons: ${tree.join(',')}`);
-    });
+    await check(
+        'explorer: switching editor tabs keeps the explorer selection and tabs show language icons',
+        async () => {
+            await row(a).waitFor();
+            await button(a).click(); // opens the json file
+            await page.locator('.gb-tab', { hasText: a }).first().waitFor();
+            await button(b).click();
+            await page.locator('.gb-tab', { hasText: b }).first().waitFor();
+            await button(a).click({ modifiers: ['Control'] });
+            await page.locator('.gb-tab-name', { hasText: a }).first().click();
+            await away();
+            if (!(await isSelected(a))) throw new Error('selection lost after switching tabs');
+            const marks = await page
+                .locator('.gb-tab .gb-file-badge')
+                .evaluateAll((nodes) => nodes.map((node) => node.dataset.kind));
+            if (!marks.includes('{}') || !marks.includes('RS')) throw new Error(`tab icons: ${marks.join(',')}`);
+            const tree = await page
+                .locator('.gb-tree .gb-file-badge')
+                .evaluateAll((nodes) => nodes.map((node) => node.dataset.kind));
+            if (!tree.includes('{}') || !tree.includes('RS') || !tree.includes('PY'))
+                throw new Error(`tree icons: ${tree.join(',')}`);
+        }
+    );
 
     await check('explorer: an empty area clears the selection, delete removes the selected set', async () => {
         await page.locator('.gb-tree').evaluate((element) => element.parentElement.click());
@@ -149,7 +165,12 @@ export async function explorerFlows({ browser, context, login, scheme, baseUrl, 
     });
     await page.close();
 
-    const phone = await browser.newContext({ viewport: { width: 390, height: 844 }, colorScheme: scheme, hasTouch: true, isMobile: true });
+    const phone = await browser.newContext({
+        viewport: { width: 390, height: 844 },
+        colorScheme: scheme,
+        hasTouch: true,
+        isMobile: true,
+    });
     await login(phone);
     const small = await phone.newPage();
     await plain('explorer: on a phone a selected row stays highlighted', async () => {

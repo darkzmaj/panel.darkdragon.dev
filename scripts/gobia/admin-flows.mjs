@@ -23,19 +23,32 @@ export async function adminFlows({ browser, context, login, scheme, baseUrl, che
     };
     const current = async (group, label) => {
         await tab(group, label).waitFor();
-        if ((await tab(group, label).getAttribute('aria-current')) !== 'page') throw new Error(`${label} is not the active tab`);
+        if ((await tab(group, label).getAttribute('aria-current')) !== 'page')
+            throw new Error(`${label} is not the active tab`);
     };
 
-    await check('admin: the sidebar has the final structure and no Activity, Tags, Extensions or API Keys entry', async () => {
-        await go('/panel');
-        const side = page.locator('.gb-sidebar, aside').first();
-        for (const name of ['Overview', 'Nodes & Instances', 'Locations', 'Templates', 'Eggs & Mounts', 'Settings', 'Updates']) {
-            await side.getByRole('link', { name, exact: true }).first().waitFor();
+    await check(
+        'admin: the sidebar has the final structure and no Activity, Tags, Extensions or API Keys entry',
+        async () => {
+            await go('/panel');
+            const side = page.locator('.gb-sidebar, aside').first();
+            for (const name of [
+                'Overview',
+                'Nodes & Instances',
+                'Locations',
+                'Templates',
+                'Eggs & Mounts',
+                'Settings',
+                'Updates',
+            ]) {
+                await side.getByRole('link', { name, exact: true }).first().waitFor();
+            }
+            for (const name of ['Activity', 'Tags', 'Extensions', 'API Keys', 'Nodes', 'Instances', 'Mounts', 'Eggs']) {
+                if ((await side.getByRole('link', { name, exact: true }).count()) !== 0)
+                    throw new Error(`${name} is still a sidebar entry`);
+            }
         }
-        for (const name of ['Activity', 'Tags', 'Extensions', 'API Keys', 'Nodes', 'Instances', 'Mounts', 'Eggs']) {
-            if ((await side.getByRole('link', { name, exact: true }).count()) !== 0) throw new Error(`${name} is still a sidebar entry`);
-        }
-    });
+    );
 
     await check('admin: Nodes and Instances are tabs of one page and switch without a reload', async () => {
         await go('/panel/nodes');
@@ -59,11 +72,15 @@ export async function adminFlows({ browser, context, login, scheme, baseUrl, che
     await check('admin: Eggs and Mounts are tabs, the egg importer stays, the sidebar stays highlighted', async () => {
         await go('/panel/eggs');
         await current('Eggs & Mounts', 'Eggs');
-        await page.getByRole('button', { name: /import/i }).first().waitFor();
+        await page
+            .getByRole('button', { name: /import/i })
+            .first()
+            .waitFor();
         await tab('Eggs & Mounts', 'Mounts').click();
         await page.waitForURL('**/panel/mounts');
         await current('Eggs & Mounts', 'Mounts');
-        if ((await page.locator('a.gb-nav-item.active', { hasText: 'Eggs & Mounts' }).count()) !== 1) throw new Error('sidebar not highlighted');
+        if ((await page.locator('a.gb-nav-item.active', { hasText: 'Eggs & Mounts' }).count()) !== 1)
+            throw new Error('sidebar not highlighted');
     });
 
     await check('admin: every Settings section is a tab with its own address that survives a refresh', async () => {
@@ -83,52 +100,82 @@ export async function adminFlows({ browser, context, login, scheme, baseUrl, che
             await page.reload();
             await current('Settings', label);
             if (path() !== to) throw new Error(`${label} moved to ${path()}`);
-            if ((await page.locator('a.gb-nav-item.active', { hasText: 'Settings' }).count()) !== 1) throw new Error(`${label}: sidebar not highlighted`);
+            if ((await page.locator('a.gb-nav-item.active', { hasText: 'Settings' }).count()) !== 1)
+                throw new Error(`${label}: sidebar not highlighted`);
         }
-        await page.getByRole('button', { name: /create|new/i }).first().waitFor();
+        await page
+            .getByRole('button', { name: /create|new/i })
+            .first()
+            .waitFor();
     });
 
-    await check('admin: the overview shows real recent activity on its own and View all opens the full log', async () => {
-        await go('/panel');
-        await page.getByRole('region', { name: 'Recent Activity' }).waitFor({ timeout: 30000 });
-        await page.getByRole('region', { name: 'Recent Activity' }).getByRole('link', { name: 'View all' }).click();
-        await page.waitForURL('**/panel/activity');
-        await page.getByRole('heading', { name: 'Activity' }).first().waitFor();
-    });
+    await check(
+        'admin: the overview shows real recent activity on its own and View all opens the full log',
+        async () => {
+            await go('/panel');
+            await page.getByRole('region', { name: 'Recent Activity' }).waitFor({ timeout: 30000 });
+            await page.getByRole('region', { name: 'Recent Activity' }).getByRole('link', { name: 'View all' }).click();
+            await page.waitForURL('**/panel/activity');
+            await page.getByRole('heading', { name: 'Activity' }).first().waitFor();
+        }
+    );
 
     await check('admin: old addresses still work', async () => {
-        for (const to of ['/panel/servers', '/panel/mounts', '/panel/activity', '/panel/tags', '/panel/extensions', '/panel/api', '/panel/eggs']) {
+        for (const to of [
+            '/panel/servers',
+            '/panel/mounts',
+            '/panel/activity',
+            '/panel/tags',
+            '/panel/extensions',
+            '/panel/api',
+            '/panel/eggs',
+        ]) {
             await go(to);
             if (path() !== to) throw new Error(`${to} redirected to ${path()}`);
             await page.locator('h1, h2').first().waitFor();
         }
     });
 
-    await check('footer: no Account column, Cryvex logo fades in on hover, Discord opens gobia.cloud/discord', async () => {
-        await go('/panel/settings');
-        const footer = page.locator('footer.gb-footer');
-        await footer.scrollIntoViewIfNeeded();
-        if ((await footer.getByText('ACCOUNT', { exact: true }).count()) !== 0) throw new Error('the Account column is still there');
-        if ((await footer.getByRole('link', { name: 'Login' }).count()) + (await footer.getByRole('link', { name: 'Register' }).count()) !== 0) throw new Error('login links remain');
-        const cryvex = footer.getByRole('link', { name: /Cryvex/ });
-        if ((await cryvex.getAttribute('href')) !== 'https://cryvex.org') throw new Error('wrong Cryvex address');
-        const logo = cryvex.locator('img:visible').first();
-        const rest = await logo.evaluate((element) => getComputedStyle(element).opacity);
-        if (rest !== '0.5') throw new Error(`resting opacity ${rest}`);
-        await cryvex.hover();
-        await page.waitForTimeout(700);
-        const hover = await logo.evaluate((element) => getComputedStyle(element).opacity);
-        if (hover !== '1') throw new Error(`hover opacity ${hover}`);
-        const discord = footer.getByRole('link', { name: /Discord/ });
-        if ((await discord.getAttribute('href')) !== 'https://gobia.cloud/discord') throw new Error('wrong Discord address');
-        const box = await discord.boundingBox();
-        const copy = await footer.getByText('All Rights Reserved').boundingBox();
-        if (box.x < copy.x + copy.width) throw new Error('the Discord button is not on the right');
-        await footer.screenshot({ path: `tests/visual/actual/footer-${scheme}.png` });
-    });
+    await check(
+        'footer: no Account column, Cryvex logo fades in on hover, Discord opens gobia.cloud/discord',
+        async () => {
+            await go('/panel/settings');
+            const footer = page.locator('footer.gb-footer');
+            await footer.scrollIntoViewIfNeeded();
+            if ((await footer.getByText('ACCOUNT', { exact: true }).count()) !== 0)
+                throw new Error('the Account column is still there');
+            if (
+                (await footer.getByRole('link', { name: 'Login' }).count()) +
+                    (await footer.getByRole('link', { name: 'Register' }).count()) !==
+                0
+            )
+                throw new Error('login links remain');
+            const cryvex = footer.getByRole('link', { name: /Cryvex/ });
+            if ((await cryvex.getAttribute('href')) !== 'https://cryvex.org') throw new Error('wrong Cryvex address');
+            const logo = cryvex.locator('img:visible').first();
+            const rest = await logo.evaluate((element) => getComputedStyle(element).opacity);
+            if (rest !== '0.5') throw new Error(`resting opacity ${rest}`);
+            await cryvex.hover();
+            await page.waitForTimeout(700);
+            const hover = await logo.evaluate((element) => getComputedStyle(element).opacity);
+            if (hover !== '1') throw new Error(`hover opacity ${hover}`);
+            const discord = footer.getByRole('link', { name: /Discord/ });
+            if ((await discord.getAttribute('href')) !== 'https://gobia.cloud/discord')
+                throw new Error('wrong Discord address');
+            const box = await discord.boundingBox();
+            const copy = await footer.getByText('All Rights Reserved').boundingBox();
+            if (box.x < copy.x + copy.width) throw new Error('the Discord button is not on the right');
+            await footer.screenshot({ path: `tests/visual/actual/footer-${scheme}.png` });
+        }
+    );
     await page.close();
 
-    const phone = await browser.newContext({ viewport: { width: 390, height: 844 }, colorScheme: scheme, hasTouch: true, isMobile: true });
+    const phone = await browser.newContext({
+        viewport: { width: 390, height: 844 },
+        colorScheme: scheme,
+        hasTouch: true,
+        isMobile: true,
+    });
     await login(phone);
     const small = await phone.newPage();
     await plain('footer: the footer fits a 390 px phone and the admin tabs do not overflow', async () => {
