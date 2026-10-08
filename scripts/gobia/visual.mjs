@@ -68,11 +68,11 @@ async function resetAppearance(context) {
     if (!response.ok()) note(`could not reset the stored appearance (${response.status()})`);
 }
 
-async function login(context) {
+async function login(context, email = user, secret = password) {
     const page = await context.newPage();
     await page.goto(`${baseUrl}/auth/login`);
-    await page.getByLabel('Email').fill(user);
-    await page.getByLabel('Password').fill(password);
+    await page.getByLabel('Email').fill(email);
+    await page.getByLabel('Password').fill(secret);
     await page.getByRole('button', { name: /^login$/i }).click();
     await page.waitForURL((url) => !url.pathname.startsWith('/auth'), { timeout: 30000 });
     await page.close();
@@ -406,6 +406,7 @@ try {
     }
 
     if (run('flows')) {
+        const { accessFlows } = await import('./access-flows.mjs');
         const { bundleFlows, dashboardFlows, fileFlows, keyboardFlows, mobileFlows } = await import('./flows.mjs');
         const check = async (label, work) => {
             try {
@@ -419,6 +420,7 @@ try {
         const only = process.env.GOBIA_FLOWS;
         if (!only || only === 'dashboard') await dashboardFlows({ context, baseUrl, check });
         if (!only || only === 'files') await fileFlows({ context, baseUrl, check });
+        if (!only || only === 'access') await accessFlows({ browser, context, login, scheme, baseUrl, check });
         if (!only || only === 'keyboard') await keyboardFlows({ context, baseUrl, check });
         if (!only || only === 'bundle') await bundleFlows({ context, baseUrl, check });
         if (!only || only === 'mobile') await mobileFlows({ browser, login, scheme, baseUrl, check });
