@@ -20,7 +20,12 @@ export function levelOf(value: number | null, limit: number): Level {
 }
 
 /** The power dot: running flashes green, starting and stopping flash yellow, anything unavailable is red, off is grey. */
-export function powerLevel(state: string | null, problem = false): { level: Level; flashing: boolean } {
+export interface PowerView {
+    level: Level;
+    flashing: boolean;
+}
+
+export function powerLevel(state: string | null, problem = false): PowerView {
     if (problem) return { level: 'max', flashing: false };
     switch (state) {
         case 'running':
@@ -33,9 +38,9 @@ export function powerLevel(state: string | null, problem = false): { level: Leve
     }
 }
 
-export const LEVEL_TEXT: Record<Level, string> = {
+export const LEVEL_TEXT = {
     idle: 'not measured',
     ok: 'normal',
     high: 'high',
     max: 'at its limit',
-};
+} satisfies Record<Level, string>;
