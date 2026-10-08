@@ -50,11 +50,17 @@ test('all, you and other show exactly the servers a user can open', function ():
     expect($this->getJson(BASE.'/servers?view=bogus')->status())->toBe(422);
 });
 
-test('an administrator does not see servers they cannot open as theirs', function (): void {
+test('an administrator sees every instance: theirs under You, the rest under Other', function (): void {
     $admin = User::factory()->create(['root_admin' => true]);
     ownedBy(User::factory()->create(), 'Someone elses');
     ownedBy($admin, 'Admin owned');
-    expect(names($this->actingAs($admin)->getJson(BASE.'/servers')))->toBe(['Admin owned']);
+    $this->actingAs($admin);
+    expect(names($this->getJson(BASE.'/servers')))->toBe(['Admin owned', 'Someone elses']);
+    expect(names($this->getJson(BASE.'/servers?view=you')))->toBe(['Admin owned']);
+    expect(names($this->getJson(BASE.'/servers?view=other')))->toBe(['Someone elses']);
+    expect($this->getJson(BASE.'/servers')->json('meta.counts'))->toBe(['all' => 2, 'you' => 1, 'other' => 1]);
+    // A person who is not an administrator still sees only what they own or were invited to.
+    expect(names($this->actingAs(User::factory()->create())->getJson(BASE.'/servers')))->toBe([]);
 });
 
 test('search matches the name, the identifier and the address and escapes wildcards', function (): void {

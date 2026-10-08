@@ -32,9 +32,16 @@ class ServerLayoutService
 
     public const string COLOR_PATTERN = '/\A#[0-9a-f]{6}\z/';
 
-    /** Servers the user owns or has been invited to, as two indexed predicates (no join, no grouping). */
+    /**
+     * Servers the user can open: the ones they own or were invited to, as two indexed predicates (no join, no grouping).
+     * A root administrator can open every server, so the list does not hide any of them.
+     */
     public function accessible(User $user): Builder
     {
+        if ($user->root_admin) {
+            return Server::query();
+        }
+
         return Server::query()->where(function (Builder $query) use ($user): void {
             $query->where('servers.owner_id', $user->id)->orWhereExists(function (QueryBuilder $subusers) use ($user): void {
                 $subusers->selectRaw('1')->from('subusers')->whereColumn('subusers.server_id', 'servers.id')->where('subusers.user_id', $user->id);

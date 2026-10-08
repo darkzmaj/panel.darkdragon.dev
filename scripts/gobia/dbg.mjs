@@ -8,18 +8,24 @@ await page.getByLabel('Email').fill(process.env.GOBIA_VISUAL_USER);
 await page.getByLabel('Password').fill(process.env.GOBIA_VISUAL_PASSWORD);
 await page.getByRole('button', { name: /^login$/i }).click();
 await page.waitForURL((u) => !u.pathname.startsWith('/auth'));
-await page.waitForSelector('.gb-app');
-console.log(
-    await page.evaluate(() => {
-        const svg = document.querySelector('.gb-user-btn svg, .gb-user svg, header svg[viewBox="0 0 36 36"]');
-        return svg
-            ? svg.outerHTML.slice(0, 900)
-            : 'none: ' + document.querySelector('.gb-user-menu, .gb-user-btn')?.outerHTML.slice(0, 600);
-    })
-);
-await page
-    .locator('header, .gb-topbar')
-    .first()
-    .screenshot({ path: 'tests/visual/actual/dbg-avatar.png' })
-    .catch(() => undefined);
+await page.locator('li.gb-server-item').first().waitFor();
+await page.waitForTimeout(2500);
+const times = {};
+for (const view of ['You', 'Other', 'All']) {
+    await page.getByRole('button', { name: /^(All|You|Other)/ }).click();
+    const option = page.getByRole('option', { name: new RegExp('^' + view) });
+    await option.waitFor();
+    await page.waitForTimeout(400);
+    await page.evaluate(() => (window.__t0 = performance.now()));
+    await option.dispatchEvent('click');
+    const t = Date.now();
+    await page.waitForFunction(
+        (v) => document.querySelector('[aria-label="Instance views"] button')?.textContent?.startsWith(v),
+        view
+    );
+    times[view + 'Chip'] = Math.round(await page.evaluate(() => performance.now() - window.__t0));
+    await page.waitForFunction(() => document.querySelector('.gb-server-list')?.getAttribute('aria-busy') !== 'true');
+    times[view] = Date.now() - t;
+}
+console.log(JSON.stringify(times));
 await browser.close();

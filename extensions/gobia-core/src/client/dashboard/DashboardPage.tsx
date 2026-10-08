@@ -6,15 +6,15 @@ import CategoryEditor from './CategoryEditor';
 import ContextMenu, { type MenuState } from './ContextMenu';
 import IconColorDialog from './IconColorDialog';
 import InstanceRow from './InstanceRow';
-import { keys, useInstances, useReorder, useSummary } from './queries';
+import { fetchInstances, keys, useInstances, useReorder, useSummary } from './queries';
 import type { CategoryFilter, Instance, InstancePage, View } from './types';
 import { useSortable } from './useSortable';
 import CreateInstanceDialog from '../create/CreateInstanceDialog';
 
 const VIEWS: { id: View; label: string; hint: string }[] = [
-    { id: 'all', label: 'All', hint: 'Every instance you can access' },
+    { id: 'all', label: 'All', hint: 'Every instance you can open' },
     { id: 'you', label: 'You', hint: 'Instances you own' },
-    { id: 'other', label: 'Other', hint: 'Instances shared with you by someone else' },
+    { id: 'other', label: 'Other', hint: 'Instances someone else owns' },
 ];
 
 /** The "All / You / Other" chip: opens a small menu to pick which instances are listed, with true counts. */
@@ -128,8 +128,23 @@ export default function DashboardPage({ model }: ReplacementProps<'dashboard.pag
     }, [search]);
 
     const params = useMemo(() => ({ view, category, q, page }), [view, category, q, page]);
-    const { data, isPending, isError, refetch } = useInstances(params);
+    const { data, isPending, isError, isPlaceholderData, refetch } = useInstances(params);
     const { data: summary } = useSummary();
+
+    // Once a list is on screen the other views of the same category and search are fetched quietly, so choosing All,
+    // You or Other shows the answer at once instead of the old list for a moment.
+    useEffect(() => {
+        if (!data || isPlaceholderData || page !== 1) return;
+        for (const other of VIEWS) {
+            if (other.id === view) continue;
+            const next = { ...params, view: other.id, page: 1 };
+            void queryClient.prefetchQuery({
+                queryKey: keys.list(next),
+                queryFn: () => fetchInstances(next),
+                staleTime: 15_000,
+            });
+        }
+    }, [data, isPlaceholderData, page, params, queryClient, view]);
     const persist = useReorder();
 
     // A category that was deleted (here or elsewhere) must never stay selected: its list would be empty for no visible reason.
@@ -309,7 +324,11 @@ export default function DashboardPage({ model }: ReplacementProps<'dashboard.pag
             ) : data && items.length > 0 ? (
                 <Pagination data={data} onPageSelect={setPage}>
                     {() => (
-                        <div className={'gb-list gb-server-list gb-enter'}>
+                        <div
+                            className={'gb-list gb-server-list gb-enter'}
+                            aria-busy={isPlaceholderData}
+                            style={{ opacity: isPlaceholderData ? 0.55 : 1, transition: 'opacity 120ms linear' }}
+                        >
                             <div className={'gb-list-head gb-server-head'} aria-hidden>
                                 <span />
                                 <span>Instance</span>

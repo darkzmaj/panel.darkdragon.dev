@@ -25,10 +25,14 @@ function listQuery(params: ListParams): ListQuery {
     return query;
 }
 
+export async function fetchInstances(params: ListParams): Promise<InstancePage> {
+    return (await http.get<InstancePage>(`${BASE}/servers`, { params: listQuery(params) })).data;
+}
+
 export function useInstances(params: ListParams) {
     return useQuery({
         queryKey: keys.list(params),
-        queryFn: async () => (await http.get<InstancePage>(`${BASE}/servers`, { params: listQuery(params) })).data,
+        queryFn: () => fetchInstances(params),
         placeholderData: keepPreviousData,
         staleTime: 15_000,
     });

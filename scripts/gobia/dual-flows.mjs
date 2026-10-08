@@ -451,20 +451,40 @@ export async function dualFlows({ browser, context, login, scheme, baseUrl, root
         await page.keyboard.press('Control+h');
         await editor('a').locator('.find-widget.visible .replace-part').waitFor({ state: 'visible', timeout: 5000 });
         await page.keyboard.press('Escape');
+        // Back in the text, at the end of the line: Escape from the widgets may leave focus on them.
+        await editor('a').locator('.monaco-editor .view-line').first().click();
+        await page.keyboard.press('End');
         const before = await textOf('a');
         await page.keyboard.type(' QQ');
-        const typed = await textOf('a');
-        if (typed === before) throw new Error('typing did nothing');
-        await page.keyboard.press('Control+z');
-        await page.waitForTimeout(200);
-        const undone = await textOf('a');
-        if (undone === typed) throw new Error('Ctrl+Z did nothing');
-        await page.keyboard.press('Control+y');
-        if (!(await textBecomes('a', typed))) throw new Error('Ctrl+Y did not redo');
-        await page.keyboard.press('Control+z');
-        await page.waitForTimeout(200);
-        await page.keyboard.press('Control+Shift+z');
-        if (!(await textBecomes('a', typed))) throw new Error('Ctrl+Shift+Z did not redo');
+        if (!(await textBecomes('a', before + ' QQ'))) throw new Error('typing did nothing');
+        const typed = before + ' QQ';
+        // Undo until the text changes, redo until it is back (one key press can undo a word or the whole typing).
+        let changed = false;
+        for (let attempt = 0; attempt < 3 && !changed; attempt++) {
+            await page.keyboard.press('Control+z');
+            changed = await (async () => {
+                for (let wait = 0; wait < 10; wait++) {
+                    if ((await textOf('a')) !== typed) return true;
+                    await page.waitForTimeout(100);
+                }
+                return false;
+            })();
+        }
+        if (!changed) throw new Error('Ctrl+Z did nothing');
+        for (let attempt = 0; attempt < 3 && (await textOf('a')) !== typed; attempt++) {
+            await page.keyboard.press('Control+y');
+            await textBecomes('a', typed);
+        }
+        if ((await textOf('a')) !== typed) throw new Error('Ctrl+Y did not redo');
+        for (let attempt = 0; attempt < 3 && (await textOf('a')) === typed; attempt++) {
+            await page.keyboard.press('Control+z');
+            await page.waitForTimeout(250);
+        }
+        for (let attempt = 0; attempt < 3 && (await textOf('a')) !== typed; attempt++) {
+            await page.keyboard.press('Control+Shift+z');
+            await textBecomes('a', typed);
+        }
+        if ((await textOf('a')) !== typed) throw new Error('Ctrl+Shift+Z did not redo');
         // Save all: edit both editors, one shortcut saves both servers.
         await editor('b').locator('.monaco-editor').first().click();
         await page.keyboard.type(' BB');
