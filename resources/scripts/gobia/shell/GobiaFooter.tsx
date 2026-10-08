@@ -28,13 +28,6 @@ const columns: Array<{ title: string; links: FooterLink[] }> = [
         ],
     },
     {
-        title: 'ACCOUNT',
-        links: [
-            { label: 'Login', href: '/login' },
-            { label: 'Register', href: '/register' },
-        ],
-    },
-    {
         title: 'LEGAL',
         links: [
             { label: 'Privacy Policy', href: '/privacy' },
@@ -87,26 +80,42 @@ export default function GobiaFooter() {
                     ))}
                 </div>
                 <div className={'gb-footer-bottom'}>
-                    <div>
+                    <div className={'gb-footer-center'}>
                         <p>
                             &copy; {new Date().getFullYear()} <strong>Gobia Cloud</strong>. All Rights Reserved.
                         </p>
-                        <img
-                            className={'gb-footer-watermark gb-only-dark'}
-                            src={'/assets/theme/img/cryvex-240.png'}
-                            alt={'Official Cryvex Brand'}
-                            width={110}
-                            height={56}
-                        />
-                        <img
-                            className={'gb-footer-watermark gb-only-light'}
-                            src={'/assets/theme/img/cryvex-black-240.png'}
-                            alt={'Official Cryvex Brand'}
-                            width={110}
-                            height={56}
-                        />
+                        <a
+                            className={'gb-footer-cryvex'}
+                            href={'https://cryvex.org'}
+                            target={'_blank'}
+                            rel={'noopener noreferrer'}
+                            aria-label={'Cryvex, opens cryvex.org'}
+                        >
+                            <img
+                                className={'gb-footer-watermark gb-only-dark'}
+                                src={'/assets/theme/img/cryvex-240.png'}
+                                alt={''}
+                                width={110}
+                                height={56}
+                            />
+                            <img
+                                className={'gb-footer-watermark gb-only-light'}
+                                src={'/assets/theme/img/cryvex-black-240.png'}
+                                alt={''}
+                                width={110}
+                                height={56}
+                            />
+                        </a>
                     </div>
                     <div className={'gb-footer-tools'}>
+                        <a
+                            href={'https://gobia.cloud/discord'}
+                            target={'_blank'}
+                            rel={'noopener noreferrer'}
+                            aria-label={'Join the Gobia Cloud Discord'}
+                        >
+                            <span className={'gb-footer-discord'} aria-hidden />
+                        </a>
                         <a href={'/account/appearance'} aria-label={'Appearance settings'}>
                             <Settings aria-hidden />
                         </a>

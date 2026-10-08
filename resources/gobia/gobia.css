@@ -1079,7 +1079,7 @@ textarea.gb-input {
 }
 .gb-footer-grid {
     display: grid;
-    grid-template-columns: minmax(0, 1.25fr) repeat(4, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1.25fr) repeat(3, minmax(0, 1fr));
     gap: 32px;
 }
 .gb-footer-brand img {
@@ -1158,15 +1158,49 @@ textarea.gb-input {
 .gb-footer-bottom p strong {
     font-weight: 700;
 }
+/* Copyright stays on the left; the logo is centred under the copyright line. */
+.gb-footer-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: fit-content;
+}
+.gb-footer-discord {
+    width: 18px;
+    height: 18px;
+    background: currentColor;
+    -webkit-mask: url('/assets/theme/img/discord.svg') center / contain no-repeat;
+    mask: url('/assets/theme/img/discord.svg') center / contain no-repeat;
+}
+.gb-footer-cryvex {
+    display: inline-block;
+    border-radius: var(--gb-radius-md);
+}
 .gb-footer-watermark {
     height: 56px;
     width: auto;
     display: block;
-    opacity: 0.95;
+    opacity: 0.5;
+    transition: opacity 150ms ease;
+}
+.gb-footer-cryvex:hover .gb-footer-watermark,
+.gb-footer-cryvex:focus-visible .gb-footer-watermark {
+    opacity: 1;
+}
+.gb-footer-cryvex:focus-visible,
+.gb-footer-tools a:focus-visible {
+    outline: 2px solid var(--gb-focus, currentColor);
+    outline-offset: 3px;
 }
 .gb-footer-tools {
     display: flex;
     gap: 10px;
+    justify-content: flex-end;
+}
+@media (prefers-reduced-motion: reduce) {
+    .gb-footer-watermark {
+        transition: none;
+    }
 }
 .gb-footer-tools a {
     display: inline-flex;
@@ -1223,6 +1257,9 @@ textarea.gb-input {
     .gb-footer-bottom {
         flex-direction: column;
         align-items: flex-start;
+    }
+    .gb-footer-tools {
+        justify-content: flex-start;
     }
 }
 
@@ -4098,4 +4135,40 @@ html {
     border: 1px solid var(--gb-border-muted);
     border-radius: 10px;
     overflow: hidden;
+}
+
+/* Explorer selection: hover, selected, active file, focus and dragging are separate states. */
+.gb-tree-row.active-file {
+    background: rgb(var(--p-500) / 0.08);
+}
+.gb-tree-row.selected {
+    background: rgb(var(--p-500) / 0.2);
+    box-shadow: inset 2px 0 0 rgb(var(--p-500));
+}
+.gb-tree-row.selected:hover {
+    background: rgb(var(--p-500) / 0.28);
+}
+.gb-tree-row.selected .gb-tree-name {
+    color: var(--gb-text-strong);
+    font-weight: 600;
+}
+.gb-tree-row.dragged {
+    opacity: 0.55;
+}
+.gb-tree-row.drop-ok {
+    transition: background 120ms ease, box-shadow 120ms ease;
+}
+.gb-file-badge {
+    flex: none;
+    display: block;
+}
+.gb-tab-name {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+@media (prefers-reduced-motion: reduce) {
+    .gb-tree-row.drop-ok {
+        transition: none;
+    }
 }
