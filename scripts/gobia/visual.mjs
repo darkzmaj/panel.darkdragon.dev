@@ -407,6 +407,8 @@ try {
 
     if (run('flows')) {
         const { accessFlows } = await import('./access-flows.mjs');
+        const { adminFlows } = await import('./admin-flows.mjs');
+        const { explorerFlows } = await import('./explorer-flows.mjs');
         const { bundleFlows, dashboardFlows, fileFlows, keyboardFlows, mobileFlows } = await import('./flows.mjs');
         const check = async (label, work) => {
             try {
@@ -421,6 +423,8 @@ try {
         if (!only || only === 'dashboard') await dashboardFlows({ context, baseUrl, check });
         if (!only || only === 'files') await fileFlows({ context, baseUrl, check });
         if (!only || only === 'access') await accessFlows({ browser, context, login, scheme, baseUrl, check });
+        if (!only || only === 'explorer') await explorerFlows({ browser, context, login, scheme, baseUrl, check });
+        if (!only || only === 'admin') await adminFlows({ browser, context, login, scheme, baseUrl, check });
         if (!only || only === 'keyboard') await keyboardFlows({ context, baseUrl, check });
         if (!only || only === 'bundle') await bundleFlows({ context, baseUrl, check });
         if (!only || only === 'mobile') await mobileFlows({ browser, login, scheme, baseUrl, check });
