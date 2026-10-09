@@ -177,7 +177,7 @@ export interface PaneConfig {
     /** Copy or move these paths of this server to the other one (the root of it unless a folder is given). */
     onTransfer?: (paths: string[], mode: 'copy' | 'move', directory?: string) => void;
     /** Files dropped on this explorer from the other one. */
-    onCrossDrop?: (origin: string, paths: string[], directory: string) => void;
+    onCrossDrop?: (origin: string, paths: string[], directory: string, copy: boolean) => void;
 }
 
 export interface FilePermissions {
@@ -1066,7 +1066,7 @@ export function usePane(config: PaneConfig) {
               : permissions.create;
         if (!allowed) return;
         event.preventDefault();
-        event.dataTransfer.dropEffect = internal ? 'move' : 'copy';
+        event.dataTransfer.dropEffect = internal || (cross && !(event.ctrlKey || event.metaKey)) ? 'move' : 'copy';
         setRootOver(true);
     };
     const rootDrop = (event: React.DragEvent) => {
@@ -1076,7 +1076,8 @@ export function usePane(config: PaneConfig) {
         const moved = event.dataTransfer.getData(MOVE_TYPE);
         event.preventDefault();
         if (cross && origin && moved) {
-            if (permissions.create) config.onCrossDrop?.(origin, JSON.parse(moved) as string[], ROOT);
+            if (permissions.create)
+                config.onCrossDrop?.(origin, JSON.parse(moved) as string[], ROOT, event.ctrlKey || event.metaKey);
         } else if (internal && moved) {
             if (permissions.update) moveInto(JSON.parse(moved) as string[], ROOT);
         } else if (permissions.create) {
@@ -1684,6 +1685,44 @@ export function usePane(config: PaneConfig) {
             if (paths.length === 0) return;
             setPicked({ paths, primary: paths.at(-1) ?? null, anchor: paths[0] ?? null });
             setSettled(paths[0] ?? null);
+        },
+        /** Paths of the open tabs at or under the path. */
+        openUnder: (path: string) =>
+            latest.current.state.tabs
+                .filter((tab) => tab.path === path || tab.path.startsWith(`${path}/`))
+                .map((tab) => tab.path),
+        /** Saves the tabs with unsaved edits at or under the path; false when one could not be saved. */
+        saveUnder: async (path: string): Promise<boolean> => {
+            const dirty = latest.current.state.tabs.filter(
+                (tab) => isDirty(tab) && (tab.path === path || tab.path.startsWith(`${path}/`))
+            );
+            for (const tab of dirty) {
+                // eslint-disable-next-line no-await-in-loop
+                if (!(await save(tab.path))) return false;
+            }
+            return true;
+        },
+        /** Closes the tabs with unsaved edits at or under the path without saving them. */
+        discardUnder: (path: string) => {
+            for (const tab of latest.current.state.tabs) {
+                if (isDirty(tab) && (tab.path === path || tab.path.startsWith(`${path}/`))) {
+                    dispatch({ type: 'close', path: tab.path });
+                }
+            }
+        },
+        /** Whether the explorer knows the path as a file or a folder (undefined when it has not listed it). */
+        kindOf: (path: string): 'file' | 'directory' | undefined => {
+            for (const listing of Object.values(tree.listings)) {
+                if (listing === 'loading' || 'error' in listing) continue;
+                const entry = listing.items.find((candidate) => candidate.path === path);
+                if (entry) return entry.directory ? 'directory' : 'file';
+            }
+            return undefined;
+        },
+        /** Opens a file by path in a tab (after a move, in the pane it moved to). */
+        openPath: async (path: string) => {
+            const entry = await statFile(uuid, path);
+            if (entry && !entry.directory) openFile(entry);
         },
         dirtyCount: state.tabs.filter(isDirty).length,
     };

@@ -161,7 +161,7 @@ function SecondPane({
     onSaveAll: () => void;
     peer: { name: string; canWrite: boolean } | null;
     onTransfer: (paths: string[], mode: TransferMode, directory?: string) => void;
-    onCrossDrop: (origin: string, paths: string[], directory: string) => void;
+    onCrossDrop: (origin: string, paths: string[], directory: string, copy: boolean) => void;
 }) {
     const summary = useServerSummary(uuid);
     const permissions = summary.data?.permissions ?? { create: false, update: false, delete: false, archive: false };
@@ -257,12 +257,19 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
             const destination = handleOf(job.destination.pane);
             const source = handleOf(job.source.pane);
             // Select what arrived once the listing shows it, so the selection is never pruned as a ghost.
-            const arrived = result.status === 'copied' || result.status === 'moved';
+            const arrived =
+                result.status === 'copied' || result.status === 'moved' || result.status === 'move_incomplete';
+            // The folder it landed in opens (once something was dropped in) so the arrival is visible.
+            if (arrived) destination?.api.tree.expand(job.directory);
             void destination?.api.tree.reload([job.directory], true).then(() => {
                 if (arrived) destination.api.select([join(job.directory, result.name)]);
             });
             if (job.mode === 'move' && result.status === 'moved') {
+                // Tabs of what moved follow it: closed on the old server, opened at the new identity on the new one.
+                const open = source?.api.openUnder(result.path) ?? [];
+                const landed = result.destination ?? join(job.directory, result.name);
                 source?.api.closeGone([result.path]);
+                for (const path of open) void destination?.api.openPath(landed + path.slice(result.path.length));
                 void source?.api.tree.reload([result.path.slice(0, Math.max(1, result.path.lastIndexOf('/')))], true);
             }
         },
@@ -270,8 +277,13 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
             const failed = job.results.filter(
                 (result) => result.status === 'failed' || result.status === 'partial'
             ).length;
+            const kept = job.results.filter((result) => result.status === 'move_incomplete').length;
             const done = job.results.filter((result) => result.status === 'copied' || result.status === 'moved').length;
             if (job.status === 'cancelled') toast.message('Transfer cancelled.');
+            else if (kept > 0)
+                toast.error(
+                    `${kept} item${kept === 1 ? ' was' : 's were'} copied and verified, but the original${kept === 1 ? ' is' : 's are'} still on ${job.source.name}. Nothing was lost: use Finish in the transfer list.`
+                );
             else if (failed > 0) toast.error(`${failed} of ${job.items.length} could not be transferred.`);
             else if (done > 0)
                 toast.success(
@@ -282,6 +294,11 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
     const [conflict, setConflict] = useState<{
         names: string[];
         proceed: (choice: Conflict | null) => void;
+    } | null>(null);
+
+    const [unsavedMove, setUnsavedMove] = useState<{
+        names: string[];
+        proceed: (choice: 'save' | 'discard' | null) => void;
     } | null>(null);
 
     const endOf = (pane: PaneId): TransferEnd | null => {
@@ -300,15 +317,27 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
             const receiver = handleOf(to);
             if (!source || !destination || !sender || !receiver) return;
 
-            // Files with unsaved edits stay where they are: the edit would no longer match what is on disk.
-            let items = paths.filter((path) => {
-                if (mode === 'move' && sender.api.hasUnsaved(path)) {
-                    toast.error(`${basename(path)} has unsaved changes. Save or close it before moving it.`);
-                    return false;
+            let items = paths;
+            // A file with unsaved edits is never moved from its older disk version: the person decides first.
+            const unsaved = mode === 'move' ? items.filter((path) => sender.api.hasUnsaved(path)) : [];
+            if (unsaved.length > 0) {
+                const choice = await new Promise<'save' | 'discard' | null>((resolve) =>
+                    setUnsavedMove({ names: unsaved.map(basename), proceed: resolve })
+                );
+                setUnsavedMove(null);
+                if (choice === null) return;
+                for (const path of unsaved) {
+                    if (choice === 'save') {
+                        // eslint-disable-next-line no-await-in-loop
+                        if (!(await sender.api.saveUnder(path))) {
+                            toast.error(`${basename(path)} could not be saved, so nothing was moved.`);
+                            return;
+                        }
+                    } else {
+                        sender.api.discardUnder(path);
+                    }
                 }
-                return true;
-            });
-            if (items.length === 0) return;
+            }
 
             let existing: string[] = [];
             try {
@@ -341,7 +370,12 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
                 }
             }
             mark('transfer-start');
-            transfers.start({ mode, conflict: policy, source, destination, directory, items });
+            const kinds: Record<string, 'file' | 'directory'> = {};
+            for (const path of items) {
+                const kind = sender.api.kindOf(path);
+                if (kind) kinds[path] = kind;
+            }
+            transfers.start({ mode, conflict: policy, source, destination, directory, items, kinds });
         },
         // eslint-disable-next-line react-hooks/exhaustive-deps
         [transfers.start, summaryA.data, summaryB.data]
@@ -393,7 +427,8 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
         onSaveAll: saveEverything,
         peer: peerForA,
         onTransfer: (paths, mode, directory) => void startTransfer('a', paths, mode, directory),
-        onCrossDrop: (origin, paths, directory) => void startTransfer(origin as PaneId, paths, 'copy', directory),
+        onCrossDrop: (origin, paths, directory, copy) =>
+            void startTransfer(origin as PaneId, paths, copy ? 'copy' : 'move', directory),
     });
     panes.current.a = {
         uuid,
@@ -711,8 +746,8 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
                     onSaveAll={saveEverything}
                     peer={peerForB}
                     onTransfer={(paths, mode, directory) => void startTransfer('b', paths, mode, directory)}
-                    onCrossDrop={(origin, paths, directory) =>
-                        void startTransfer(origin as PaneId, paths, 'copy', directory)
+                    onCrossDrop={(origin, paths, directory, copy) =>
+                        void startTransfer(origin as PaneId, paths, copy ? 'copy' : 'move', directory)
                     }
                 />
             )}
@@ -753,6 +788,33 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
                         </Button>
                         <Button type={'button'} color={'primary'} onClick={() => conflict.proceed('replace')}>
                             Replace
+                        </Button>
+                    </Dialog.Footer>
+                </Dialog>
+            )}
+
+            {unsavedMove && (
+                <Dialog
+                    open
+                    onClose={() => unsavedMove.proceed(null)}
+                    title={
+                        unsavedMove.names.length === 1
+                            ? `${unsavedMove.names[0]} has unsaved changes`
+                            : `${unsavedMove.names.length} items have unsaved changes`
+                    }
+                    description={
+                        'Moving would use the older version saved on the server. Save the changes first, or discard them and move what is saved.'
+                    }
+                >
+                    <Dialog.Footer>
+                        <Button.Text type={'button'} onClick={() => unsavedMove.proceed(null)}>
+                            Cancel
+                        </Button.Text>
+                        <Button type={'button'} onClick={() => unsavedMove.proceed('discard')}>
+                            Discard changes and move
+                        </Button>
+                        <Button type={'button'} color={'primary'} onClick={() => unsavedMove.proceed('save')}>
+                            Save and move
                         </Button>
                     </Dialog.Footer>
                 </Dialog>

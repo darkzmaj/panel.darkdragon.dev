@@ -19,6 +19,8 @@ const resultText = (result: ItemResult): string => {
             return 'Done';
         case 'skipped':
             return result.reason ?? 'Skipped';
+        case 'move_incomplete':
+            return result.reason ?? 'Copied, but the original is still on the source.';
         case 'partial':
             return `Some files were not transferred: ${result.reason ?? ''}`;
         case 'failed':
@@ -38,7 +40,8 @@ export default function TransferPanel({ jobs, onCancel, onRetry, onClear }: Prop
         <section aria-label={'Transfers between servers'} className={'gb-transfers'}>
             {jobs.map((job) => {
                 const failed = job.results.filter(
-                    (result) => result.status === 'failed' || result.status === 'partial'
+                    (result) =>
+                        result.status === 'failed' || result.status === 'partial' || result.status === 'move_incomplete'
                 );
                 const verb = job.status === 'running' ? VERB[job.mode] : DONE[job.mode];
                 const title =
@@ -76,7 +79,7 @@ export default function TransferPanel({ jobs, onCancel, onRetry, onClear }: Prop
                                     <button
                                         type={'button'}
                                         className={'gb-icon-btn gb-icon-btn-sm'}
-                                        aria-label={`Retry transfer of ${title}`}
+                                        aria-label={`${job.results.some((result) => result.status === 'move_incomplete') ? 'Finish' : 'Retry'} transfer of ${title}`}
                                         onClick={() => onRetry(job.id)}
                                     >
                                         <RotateCw aria-hidden />
@@ -93,12 +96,27 @@ export default function TransferPanel({ jobs, onCancel, onRetry, onClear }: Prop
                         {job.results.length > 0 && (
                             <ul className={'gb-transfer-list'}>
                                 {job.results.map((result) => (
-                                    <li key={result.path} className={result.status === 'failed' ? 'failed' : undefined}>
+                                    <li
+                                        key={result.path}
+                                        className={
+                                            result.status === 'failed' || result.status === 'move_incomplete'
+                                                ? 'failed'
+                                                : undefined
+                                        }
+                                    >
                                         <FileTypeIcon name={result.name} size={14} folder={false} />
                                         <span className={'gb-transfer-name'}>{result.name}</span>
                                         <span
-                                            role={result.status === 'failed' ? 'alert' : undefined}
-                                            className={result.status === 'failed' ? 'gb-transfer-error' : 'gb-muted'}
+                                            role={
+                                                result.status === 'failed' || result.status === 'move_incomplete'
+                                                    ? 'alert'
+                                                    : undefined
+                                            }
+                                            className={
+                                                result.status === 'failed' || result.status === 'move_incomplete'
+                                                    ? 'gb-transfer-error'
+                                                    : 'gb-muted'
+                                            }
                                         >
                                             {resultText(result)}
                                         </span>

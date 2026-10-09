@@ -7,12 +7,14 @@ export type Conflict = 'replace' | 'keep' | 'skip';
 export interface ItemResult {
     path: string;
     name: string;
-    status: 'copied' | 'moved' | 'skipped' | 'partial' | 'failed';
+    /** `move_incomplete`: copied and verified, but the original is still on the source (nothing was lost). */
+    status: 'copied' | 'moved' | 'skipped' | 'partial' | 'failed' | 'move_incomplete';
     bytes: number;
     copied: number;
     skipped: number;
     failed: number;
     reason: string | null;
+    destination?: string | null;
 }
 
 export interface TransferEnd {
@@ -35,16 +37,21 @@ export interface TransferJob {
     status: 'running' | 'done' | 'cancelled';
     /** A failure that stopped the job (a server that cannot be reached); item failures are in `results`. */
     error: string | null;
+    /** What the explorer showed each item to be, so the Panel can skip a listing. */
+    kinds: Record<string, 'file' | 'directory'>;
+    /** Items whose copy is already verified and only the original is left to remove. */
+    resume: string[];
 }
 
 interface Response {
     items: ItemResult[];
     bytes: number;
+    timings?: Record<string, number>;
 }
 
 /** One request per chosen item, so progress is real: the Panel answers when that item is verified at the destination. */
 async function sendItem(
-    job: Pick<TransferJob, 'mode' | 'conflict' | 'source' | 'destination' | 'directory'>,
+    job: Pick<TransferJob, 'mode' | 'conflict' | 'source' | 'destination' | 'directory' | 'kinds' | 'resume'>,
     item: string,
     signal: AbortSignal
 ): Promise<ItemResult> {
@@ -57,6 +64,8 @@ async function sendItem(
             items: [item],
             mode: job.mode,
             conflict: job.conflict,
+            kinds: job.kinds[item] ? { [item]: job.kinds[item] } : undefined,
+            resume: job.resume.includes(item) || undefined,
         },
         { timeout: 15 * 60 * 1000, signal }
     );
@@ -119,8 +128,15 @@ export function useTransfers(hooks: TransferHooks) {
     );
 
     const start = useCallback(
-        (job: Omit<TransferJob, 'id' | 'results' | 'status' | 'error'>) => {
-            const created: TransferJob = { ...job, id: next.current++, results: [], status: 'running', error: null };
+        (job: Omit<TransferJob, 'id' | 'results' | 'status' | 'error' | 'resume'>) => {
+            const created: TransferJob = {
+                ...job,
+                id: next.current++,
+                results: [],
+                status: 'running',
+                error: null,
+                resume: [],
+            };
             setJobs((current) => [...current, created]);
             void run(created);
         },
@@ -132,8 +148,12 @@ export function useTransfers(hooks: TransferHooks) {
         (id: number) => {
             const job = jobs.find((candidate) => candidate.id === id);
             if (!job || job.status === 'running') return;
-            const kept = job.results.filter((result) => result.status !== 'failed');
-            const again: TransferJob = { ...job, results: kept, status: 'running', error: null };
+            const kept = job.results.filter((result) => ['copied', 'moved', 'skipped'].includes(result.status));
+            // An item whose copy was verified only needs its original removed; nothing is copied twice.
+            const resume = job.results
+                .filter((result) => result.status === 'move_incomplete')
+                .map((result) => result.path);
+            const again: TransferJob = { ...job, results: kept, status: 'running', error: null, resume };
             patch(id, () => again);
             void run(again);
         },

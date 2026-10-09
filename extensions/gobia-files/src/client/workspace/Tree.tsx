@@ -135,7 +135,7 @@ interface TreeProps {
     /** Which pane this explorer is, so a drag from the other explorer is a transfer and not a move. */
     paneId: string;
     /** Files dropped here from the other explorer (copy by default). */
-    onCrossDrop?: (origin: string, paths: string[], directory: string) => void;
+    onCrossDrop?: (origin: string, paths: string[], directory: string, copy: boolean) => void;
     onSelect: (path: string, mode: SelectMode) => void;
     /** Keyboard arrows move the selection to the previous or next visible path. */
     onClear: () => void;
@@ -161,7 +161,7 @@ interface Handlers {
     dragStart: (path: string) => string[];
     move: TreeProps['onMove'];
     dropFiles: TreeProps['onDropFiles'];
-    crossDrop: (origin: string, paths: string[], directory: string) => void;
+    crossDrop: (origin: string, paths: string[], directory: string, copy: boolean) => void;
     /** The names in one folder as the explorer lists them now (read when something is dragged over, not on every draw). */
     namesIn: (path: string) => ReadonlySet<string>;
 }
@@ -207,6 +207,8 @@ const Row = memo(function Row({
     const directory = entry === null || entry.directory;
     const path = entry?.path ?? ROOT;
     const [over, setOver] = useState<'ok' | 'denied' | null>(null);
+    // What a drop from the other explorer would do: it moves, and copies while Ctrl (or Cmd) is held.
+    const [operation, setOperation] = useState<'move' | 'copy' | null>(null);
     const Chevron = open ? ChevronDown : ChevronRight;
 
     const dragOver = (event: DragEvent) => {
@@ -221,9 +223,12 @@ const Row = memo(function Row({
               ? canMove && (dragging === null || dragging.every((item) => validTarget(item, path, h.namesIn(path))))
               : canUpload;
         event.preventDefault();
-        event.dataTransfer.dropEffect = allowed ? (internal ? 'move' : 'copy') : 'none';
+        const copying = event.ctrlKey || event.metaKey;
+        event.dataTransfer.dropEffect = allowed ? (internal || (cross && !copying) ? 'move' : 'copy') : 'none';
         const next = allowed ? 'ok' : 'denied';
         if (over !== next) setOver(next);
+        const op = allowed && cross ? (copying ? 'copy' : 'move') : null;
+        if (operation !== op) setOperation(op);
     };
 
     const drop = (event: DragEvent) => {
@@ -231,12 +236,13 @@ const Row = memo(function Row({
         event.preventDefault();
         event.stopPropagation();
         setOver(null);
+        setOperation(null);
         // The dragged row may unmount once the move lands, so its own dragend can never clear the highlights.
         onDragging(null);
         const moved = event.dataTransfer.getData(MOVE_TYPE);
         const origin = originOf(event.dataTransfer.types);
         if (moved && origin !== null && origin !== paneId) {
-            if (canUpload) h.crossDrop(origin, JSON.parse(moved) as string[], path);
+            if (canUpload) h.crossDrop(origin, JSON.parse(moved) as string[], path, event.ctrlKey || event.metaKey);
         } else if (moved) {
             if (canMove) h.move(JSON.parse(moved) as string[], path);
         } else if (canUpload) {
@@ -255,8 +261,12 @@ const Row = memo(function Row({
                 (over === 'ok' ? ' drop-ok' : over === 'denied' ? ' drop-denied' : '')
             }
             onDragOver={dragOver}
-            onDragLeave={() => setOver(null)}
+            onDragLeave={() => {
+                setOver(null);
+                setOperation(null);
+            }}
             onDrop={drop}
+            data-operation={operation ?? undefined}
         >
             <button
                 type={'button'}
@@ -361,7 +371,7 @@ export default function Tree(props: TreeProps) {
             dragStart: (path) => latest.current.onDragSelect(path),
             move: (from, to) => latest.current.onMove(from, to),
             dropFiles: (data, directory) => latest.current.onDropFiles(data, directory),
-            crossDrop: (origin, paths, directory) => latest.current.onCrossDrop?.(origin, paths, directory),
+            crossDrop: (origin, paths, directory, copy) => latest.current.onCrossDrop?.(origin, paths, directory, copy),
             namesIn: (path) => namesOf(latest.current.tree.listings[path]),
         }),
         []
