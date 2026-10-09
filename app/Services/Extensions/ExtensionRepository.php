@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace Pterodactyl\Services\Extensions;
 
 use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Schema;
 use Pterodactyl\Events\Extensions\ExtensionLoadFailed;
 use Pterodactyl\Exceptions\Extensions\InvalidExtensionException;
 use Pterodactyl\Models\Extension;
@@ -32,6 +32,9 @@ class ExtensionRepository
 
     /** @var array<string, true> Provider failures in this application instance, retained across discovery refreshes. */
     private array $failedProviders = [];
+
+    /** @var array<string, true>|null Extensions whose row carried an error when the rows were last read; null before the first read. */
+    private ?array $recordedErrors = null;
 
     public function __construct(
         private readonly ExtensionManifestValidator $validator,
@@ -95,18 +98,32 @@ class ExtensionRepository
      */
     public function records(): Collection
     {
-        return rescue(function (): Collection {
-            if (! Schema::hasTable('extensions')) {
-                return $this->recordCollection([]);
-            }
-
+        // Gobia: this runs while every request boots. Asking the schema whether the table exists cost an
+        // information_schema query each time; a missing table (a panel that has not been migrated yet) is
+        // instead recognised from the failed select.
+        try {
             $records = [];
+            $errored = [];
             foreach (Extension::query()->get() as $extension) {
                 $records[$extension->identifier] = $extension;
+                if ($extension->error !== null) {
+                    $errored[$extension->identifier] = true;
+                }
             }
 
+            $this->recordedErrors = $errored;
+
             return $this->recordCollection($records);
-        }, fn (): Collection => $this->recordCollection([]));
+        } catch (QueryException $queryException) {
+            // SQLSTATE 42S02: the table does not exist. Anything else is worth knowing about.
+            if ($queryException->getCode() !== '42S02') {
+                rescue(fn () => report($queryException), report: false);
+            }
+        } catch (Throwable $throwable) {
+            rescue(fn () => report($throwable), report: false);
+        }
+
+        return $this->recordCollection([]);
     }
 
     /**
@@ -187,6 +204,9 @@ class ExtensionRepository
         }
 
         rescue(fn (): int => Extension::query()->where('identifier', $identifier)->update(['error' => $reason]), report: false);
+        if ($this->recordedErrors !== null) {
+            $this->recordedErrors[$identifier] = true;
+        }
 
         $context = array_filter(['exception' => $exception]);
         $exception instanceof Throwable
@@ -217,7 +237,16 @@ class ExtensionRepository
             $this->enabled = null;
         }
 
+        // Gobia: the provider loader calls this on every boot. When the rows that were just read show no
+        // error for these extensions there is nothing to clear, so the UPDATE is not sent at all.
+        if ($this->recordedErrors !== null && array_intersect_key($this->recordedErrors, array_flip($identifiers)) === []) {
+            return;
+        }
+
         rescue(fn (): int => Extension::query()->whereIn('identifier', $identifiers)->whereNotNull('error')->update(['error' => null]), report: false);
+        if ($this->recordedErrors !== null) {
+            $this->recordedErrors = array_diff_key($this->recordedErrors, array_flip($identifiers));
+        }
     }
 
     public function settings(string $identifier): ExtensionSettings
