@@ -150,9 +150,12 @@ Keep `docs/` updated when major systems change: `docs/pterodactyl-2-audit.md`, `
 
 ## Updater ownership
 
-Claude may build the Gobia Updates frontend and the compatibility API contract. **Majcek owns the final privileged
-updater implementation.** Never implement privileged installation, shell execution, or file replacement from the frontend
-or from unprivileged PHP.
+**Majcek owns the updater.** It exists since 2026-10-09: `extensions/gobia-core/src/Updater` (detached CLI worker, signed releases
+only), `deploy/linux/gobia-update-helper`, `scripts/release/*`; guide in `docs/gobia-updates.md`, decisions in `MAJCEK_HANDOFF.md`
+section 15. Frontend work may change how the Updates screen renders what the backend reports, nothing more: never add installation,
+shell execution or file replacement to the frontend or to request handling, never widen the updater's fixed command lists, never
+accept a URL, path or command from a request, and never weaken signature, checksum or preflight checks. Changes to the updater need
+`tests/Integration/Gobia/UpdaterTest.php` to pass and an end to end run (`docs/gobia-updater-e2e.md`).
 
 ## Future Wings policy
 

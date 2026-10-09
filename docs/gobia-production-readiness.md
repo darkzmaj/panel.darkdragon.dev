@@ -12,7 +12,7 @@ Verdict: **Not Production Ready.** Frontend Ready and CI Verified (mock Wings), 
 
 1. Real Wings, Docker, backups, restores, transfers and the SFTP/file flows were never run: mock Wings proves the panel side only.
 2. The base, Pterodactyl 2.0 `2.0-develop`, is alpha and a moving target; upstream breaking changes are expected.
-3. The privileged updater, signed releases and the release manifest artifact fields do not exist (Majcek, `MAJCEK_HANDOFF.md` sections 10 to 12).
+3. The updater, signed release packaging and the release workflow exist since 2026-10-09 (`docs/gobia-updates.md`, `MAJCEK_HANDOFF.md` section 15) and passed an end to end run in a container (`docs/gobia-updater-e2e.md`). Still open: no release has been tagged or installed from GitHub, the release workflow has never run (Actions is blocked), and no update has run on a real server with PHP-FPM, systemd and Wings.
 4. Production rate limits (websocket token 5 per minute per server, client API 256 per minute) were only exercised on the dev stack with raised limits; a heavy multi server dashboard under real limits is unmeasured.
 5. No load, soak or security penetration test; no backup/restore drill of the panel database.
 6. CI runs on a private mirror, not on the production repository.
