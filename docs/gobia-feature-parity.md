@@ -59,3 +59,7 @@ Legend for "Core or Extension": `Ext` extension API only, `Theme` design tokens,
 | 42 | Gobia Updates frontend | none | gobia-core admin screen | Ext | no | yes | contract | yes | Done (frontend and read only compatibility API; privileged updater is Majcek's) | Update button gate rule |
 
 Statuses were last reviewed in the final closure pass (2026-10-08): the `Done` rows are covered by the Pest, Vitest and browser checks listed under "Verification that exists in the repository" in docs/gobia-visual-parity.md. Do not mark `Done` without tests.
+
+| 18 | Cross server Move, Copy, Duplicate (Files) | none | `gobia-files` transfers (move removes the source only after verification; `move_incomplete` can be finished) | Ext | no | yes | no | yes | Done on mock Wings and fake Wings only; real Wings unverified (MAJCEK_HANDOFF.md section 13) |  |
+| 19 | Startup inside Settings, Network named Ports (server pages) | separate pages | tabs and a rename, old addresses kept | Core | no | yes | no | yes | Done (nav flows) |  |
+| 20 | Hetzner Storage Box backups | none | Specification only (MAJCEK_HANDOFF.md section 14) | Ext | yes | yes | no | yes | Not implemented |  |

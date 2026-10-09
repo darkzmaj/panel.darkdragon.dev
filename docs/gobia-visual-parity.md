@@ -129,3 +129,8 @@ files were left unchanged when it stops half way, and offers "Undo the last repl
 * Status dots: power, CPU, memory, storage, in the instance list rows and stacked in the sidebar instance card, live over websockets. The instance card is a button that opens the searchable instance switcher. The list header and every row share one grid so columns line up.
 * The stock Pterodactyl overview version card, external link buttons and navigation cards were removed from the admin overview.
 * The login logo sits above the form card in the right half, as requested.
+
+## Server pages: Settings tabs, Ports, explorer hierarchy (final corrections)
+
+* Settings has two tabs, General and Startup, built with `TabLinks` (the admin tab style), each a route: `/server/<id>/settings`, `/server/<id>/settings/startup`. The heading is Settings on both; the sidebar highlights Settings on both. The old `/startup` address moves to the Startup tab. Network is named Ports (`/server/<id>/ports`; `/network` moves there). The browser matrix has `server-startup` (new address) and `server-ports`.
+* Files explorer: 16 px per level, guide lines under the root and under every open folder, folders in a heavier weight than files, root items share one indent (checked by the `explorer: hierarchy` flow), drops between servers say "Move here" or "Copy here" on the row under the pointer.

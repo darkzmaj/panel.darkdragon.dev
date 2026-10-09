@@ -89,3 +89,11 @@ Chromium, found by the keyboard flow. `gobia/shell/GobiaShell.tsx` scrolls the c
 | `extensions/gobia-core/src/client/dashboard/*` | Four live dots per instance row, one grid for header and rows, websocket stats (`liveStats.ts`) | Extension code | None | `levels.spec.ts`, `status:` flows | None |
 | `extensions/gobia-files/**` | Pane hook, dual workspace, save pipeline, icons, transfer backend (`GobiaFiles\`, route `POST /api/client/extensions/gobia-files/transfers`) | Extension code; the replaced component `server.files.manager` stays the entry point | None | `FileTransferTest`, `dual:`/`explorer:` flows | None |
 | `services/mock-wings/server.mjs` | Pushes stats every second and has a dev only `mock-stats` endpoint | Development tool, never shipped | None | `status:` flows | Keep |
+
+## Final corrections (Settings tabs, Ports)
+
+| File | Purpose | Why an extension cannot do it | Conflict risk | Tests | Removal path |
+| --- | --- | --- | --- | --- | --- |
+| `resources/scripts/router/routeTree.ts` | `settings/startup` and `ports` routes, `startup` and `network` moved in place, Settings guard that sends startup-only users to Startup | Core server routes | Medium (route list changes upstream) | `scripts/gobia/nav-flows.mjs`, routeTree spec | Re-add the upstream `startup` and `network` routes |
+| `resources/scripts/components/server/settings/SettingsContainer.tsx`, `ServerSettingsTabs.tsx`, `startup/StartupContainer.tsx`, `network/NetworkContainer.tsx`, `elements/ServerContentBlock.tsx`, `admin/AdminTabs.tsx` | Tabs, headings, subtitles; `TabLinks` extracted from `AdminTabs` | Core pages | Low to medium | nav flows, Vitest | Revert the files |
+| `resources/scripts/gobia/shell/ServerSwitcher.tsx`, `Sidebars.tsx`, `sdk/navigation.tsx` | Keep Startup tab when switching, Ports icon, new path types (old kept) | Gobia shell and SDK types | Low | nav flows | Revert |
