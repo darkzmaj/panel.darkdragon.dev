@@ -5,7 +5,15 @@ privileged backend. The frontend never executes shell commands and never decides
 reports. Prefix: `/api/admin/extensions/gobia-core/updates` (admin extension routes: root administrator session or admin API key). Already implemented by gobia-core and read only: `GET /api/admin/extensions/gobia-core/compatibility`.
 All endpoints require a root admin session or an application API key with the `gobia.updates` permission, and use the standard throttle.
 
-Status: DRAFT contract. Payloads may gain fields; removals need a version bump (`contract_version`).
+Status: implemented by `GobiaCore\Http\Controllers\UpdateController` (2026-10-09; operator guide `docs/gobia-updates.md`). Payloads may gain fields;
+removals need a version bump (`contract_version`). Reading needs a root administrator (session or account API key). `POST /install` and `POST /rollback`
+need a panel session, never an API key, and are limited to six requests a minute.
+
+Additions made by the implementation, all optional for a client: `GET /check?refresh=1` asks the update source again (otherwise the answer is cached),
+and `check` also returns `checked_at`, `error` (why the source could not be read, or null) and `active_update_id` (a run in flight, so a reloaded page
+can follow it). `progress` also returns `type` (`update` or `rollback`), `steps[] {id, label, status}`, `failure_step` and `rollback.failed`. An update id
+is `YYYYMMDDTHHMMSS-xxxxxx`, not a UUID. `rollback-eligibility` also returns `update_id`. Errors carry `{code, message, step}` beside the panel's usual
+`errors[]`: `update_in_progress` (409, with `update_id`), `preflight_failed` (422, with the failing `checks`), `update_rejected` and `rollback_rejected` (422).
 
 ## GET /check
 
@@ -71,8 +79,9 @@ List of past updates: `update_id`, from/to versions, started/finished timestamps
 
 ## POST /rollback
 
-Body: `{ "update_id": "uuid" }`. Only if eligible. Returns `202` with a new progress id. When `mode` is `requires-db-restore`, the UI must state that
-data written after the snapshot will be lost and require explicit confirmation.
+Body: `{ "update_id": "<id from rollback-eligibility>", "confirm_database_restore": true }`. Only if eligible. Returns `202` with a new progress id. When
+`mode` is `requires-db-restore`, the UI must state that data written after the snapshot will be lost and require explicit confirmation; the backend
+refuses the request (`422 rollback_rejected`) unless `confirm_database_restore` is true.
 
 ## UI sections
 

@@ -1,0 +1,65 @@
+name: Gobia Release
+
+# Builds, signs and publishes a Gobia release when a deliberate tag is pushed: gobia-v<gobia_version>.
+# Production panels only ever install what this workflow (or scripts/release/build-release.sh run by a
+# maintainer) signed. Nothing here runs on an ordinary push. Actions are pinned to commits because this job holds
+# the signing key: a moved tag in a third party action must not be able to read it.
+on:
+  push:
+    tags:
+      - "gobia-v*"
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    name: Build and publish
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - name: The tag must match gobia-release.json and be on the release branch
+        run: |
+          version="$(jq -r .gobia_version gobia-release.json)"
+          if [ "gobia-v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match gobia_version $version" >&2
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/gobia-2; then
+            echo "The tagged commit is not on gobia-2" >&2
+            exit 1
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
+        with:
+          php-version: 8.3
+          extensions: bcmath, curl, gd, intl, mbstring, mysql, openssl, pdo, sodium, tokenizer, xml, zip
+          tools: composer:v2
+          coverage: none
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm --prefix extensions/gobia-files ci
+      - run: npm run build:production
+      - run: node scripts/gobia/run.mjs build
+      - name: Build and sign the package
+        env:
+          GOBIA_RELEASE_SIGNING_KEY: ${{ secrets.GOBIA_RELEASE_SIGNING_KEY }}
+          RELEASE_DESTRUCTIVE: ${{ vars.GOBIA_RELEASE_DESTRUCTIVE }}
+        run: scripts/release/build-release.sh dist
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          flags=""
+          case "$VERSION" in *-*) flags="--prerelease" ;; esac
+          gh release create "$GITHUB_REF_NAME" --title "Gobia Panel $VERSION" --generate-notes $flags \
+            "dist/$VERSION/gobia-panel-$VERSION.tar.gz" \
+            "dist/$VERSION/gobia-panel-$VERSION.tar.gz.sha256" \
+            "dist/$VERSION/release.json"

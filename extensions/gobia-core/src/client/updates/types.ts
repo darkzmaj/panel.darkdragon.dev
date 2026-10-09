@@ -27,6 +27,11 @@ export interface UpdateCheck {
         release_notes_markdown: string;
     } | null;
     update_available: boolean;
+    /** Why the update source could not be read, when it could not. */
+    error?: string | null;
+    checked_at?: string;
+    /** An update or rollback that is running right now, so a reloaded page can follow it. */
+    active_update_id?: string | null;
 }
 
 export type CheckStatus = 'pass' | 'fail' | 'warn' | 'skip';
@@ -58,7 +63,7 @@ export interface UpdateProgress {
     step: string;
     log: { at: string; level: string; message: string }[];
     failure: string | null;
-    rollback: { performed: boolean; database_restored: boolean };
+    rollback: { performed: boolean; database_restored: boolean; failed?: boolean };
 }
 
 export interface HistoryEntry {
@@ -67,12 +72,15 @@ export interface HistoryEntry {
     to: string;
     started_at: string;
     finished_at: string | null;
-    result: 'completed' | 'failed' | 'rolled_back';
+    result: 'completed' | 'failed' | 'rolled_back' | 'running';
     database_restored: boolean;
 }
 
 export interface RollbackEligibility {
     eligible: boolean;
     mode: 'file-only' | 'requires-db-restore';
+    /** The update a rollback would undo. */
+    update_id?: string | null;
+    database_snapshot?: { id: string; taken_at: string | null } | null;
     reason: string | null;
 }

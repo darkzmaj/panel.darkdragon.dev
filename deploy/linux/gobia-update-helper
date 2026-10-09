@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+# Privileged helper for the Gobia Panel updater. Install root owned at /usr/local/sbin/gobia-update-helper
+# (mode 0755) and allow only the Panel's PHP user to run it through sudo (see docs/gobia-updates.md).
+#
+# It accepts exactly three verbs and nothing else:
+#   check                validate the configuration and exit (used by the preflight)
+#   activate <version>   atomically point <root>/current at releases/<version>
+#   restart-services     restart the queue worker and companion services, reload PHP-FPM
+#
+# Every value is validated here; the caller cannot supply a path, a command or a service name.
+set -euo pipefail
+umask 022
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+
+CONF=/etc/gobia-update-helper.conf
+if [ ! -f "$CONF" ] || [ -L "$CONF" ] || [ "$(stat -c %u "$CONF")" != "0" ] || [ -n "$(find "$CONF" -perm /022)" ]; then
+    echo "$CONF must exist, be owned by root and not be group/world writable" >&2
+    exit 78
+fi
+
+# The file is read as data, never sourced: a value can only be a path, a user or a list of unit names.
+read_conf() {
+    local value
+    value="$({ grep -E "^$1=" "$CONF" || true; } | tail -n 1 | cut -d= -f2- | tr -d '"'"'"'\r')"
+    if ! [[ "$value" =~ ^[A-Za-z0-9@_./:\ -]*$ ]]; then
+        echo "invalid value for $1 in $CONF" >&2
+        exit 78
+    fi
+    printf '%s' "$value"
+}
+
+PANEL_ROOT="$(read_conf PANEL_ROOT)"        # only needed for "activate"
+PANEL_USER="$(read_conf PANEL_USER)"
+WORKER_SERVICE="$(read_conf WORKER_SERVICE)"
+PHP_FPM_SERVICE="$(read_conf PHP_FPM_SERVICE)"
+EXTRA_SERVICES="$(read_conf EXTRA_SERVICES)" # optional, space separated, e.g. gobia-template-sftp.service
+
+VERSION_RE='^[0-9]{1,4}\.[0-9]{1,4}\.[0-9]{1,4}(-(dev|alpha|beta|rc)(\.[0-9]{1,4})?)?$'
+UNIT_RE='^[A-Za-z0-9@_.:-]+\.service$'
+
+for unit in $WORKER_SERVICE $PHP_FPM_SERVICE $EXTRA_SERVICES; do
+    [[ "$unit" =~ $UNIT_RE ]] || { echo "invalid service name in $CONF" >&2; exit 78; }
+done
+[ -n "$PANEL_USER" ] && id "$PANEL_USER" >/dev/null 2>&1 || { echo "PANEL_USER is not a user" >&2; exit 78; }
+
+case "${1:-}" in
+    check)
+        [ "$#" -eq 1 ] || exit 64
+        ;;
+    activate)
+        [ "$#" -eq 2 ] || { echo "usage: activate <version>" >&2; exit 64; }
+        version="$2"
+        [[ "$version" =~ $VERSION_RE ]] || { echo "invalid version" >&2; exit 65; }
+        [[ "$PANEL_ROOT" == /* ]] && [ -d "$PANEL_ROOT/releases" ] || { echo "PANEL_ROOT is not a release directory install" >&2; exit 78; }
+
+        release="$PANEL_ROOT/releases/$version"
+        [ -d "$release" ] && [ ! -L "$release" ] || { echo "no such release" >&2; exit 66; }
+        [ -f "$release/artisan" ] && [ -f "$release/gobia-release.json" ] || { echo "release is incomplete" >&2; exit 67; }
+        grep -Eq "\"gobia_version\"[[:space:]]*:[[:space:]]*\"${version//./\\.}\"" "$release/gobia-release.json" || { echo "release version mismatch" >&2; exit 67; }
+        [ "$(stat -c %U "$release")" = "$PANEL_USER" ] || { echo "release has unexpected owner" >&2; exit 68; }
+
+        ln -sfn "releases/$version" "$PANEL_ROOT/current.new"
+        mv -Tf "$PANEL_ROOT/current.new" "$PANEL_ROOT/current"
+        ;;
+    restart-services)
+        [ "$#" -eq 1 ] || exit 64
+        for unit in $WORKER_SERVICE $EXTRA_SERVICES; do
+            systemctl restart "$unit"
+        done
+        if [ -n "$PHP_FPM_SERVICE" ]; then
+            systemctl reload "$PHP_FPM_SERVICE"
+        fi
+        ;;
+    *)
+        echo "unknown verb" >&2
+        exit 64
+        ;;
+esac

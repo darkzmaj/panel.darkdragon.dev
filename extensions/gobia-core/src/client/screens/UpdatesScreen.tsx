@@ -37,7 +37,9 @@ function Row({ label, value }: { label: string; value: string }) {
 
 export default function UpdatesScreen() {
     const queryClient = useQueryClient();
-    const [updateId, setUpdateId] = useState<string | null>(null);
+    const [startedId, setStartedId] = useState<string | null>(null);
+    const [dismissedId, setDismissedId] = useState<string | null>(null);
+    const [confirmRestore, setConfirmRestore] = useState(false);
 
     const compat = useQuery({
         queryKey: ['gobia-core', 'updates', 'compatibility'],
@@ -48,6 +50,19 @@ export default function UpdatesScreen() {
         queryFn: () => optional<UpdateCheck>('updates/check'),
         staleTime: 60_000,
     });
+    // "Check for updates" asks the update source again instead of reading the cached answer.
+    const recheck = useMutation({
+        mutationFn: () => optional<UpdateCheck>('updates/check?refresh=1'),
+        onSuccess: (result) => {
+            queryClient.setQueryData(['gobia-core', 'updates', 'check'], result);
+            void queryClient.invalidateQueries({ queryKey: ['gobia-core', 'updates', 'preflight'] });
+            if (result?.error) toast.error(result.error);
+            else if (result && !result.update_available) toast.success('This Panel is up to date.');
+        },
+    });
+    // An update that is already running (started in another tab, or before a reload) is followed again.
+    const activeId = check.data?.active_update_id ?? null;
+    const updateId = startedId ?? (activeId !== dismissedId ? activeId : null);
     const preflight = useQuery({
         queryKey: ['gobia-core', 'updates', 'preflight'],
         queryFn: () => optional<Preflight>('updates/preflight'),
@@ -78,17 +93,21 @@ export default function UpdatesScreen() {
                     confirm_backup: true,
                 })
             ).data,
-        onSuccess: (result) => setUpdateId(result.update_id),
+        onSuccess: (result) => setStartedId(result.update_id),
         onError: (error: Error) => toast.error(httpErrorToHuman(error)),
     });
     const rollback = useMutation({
         mutationFn: async () =>
             (
                 await http.post<{ update_id: string }>(`${BASE}/updates/rollback`, {
-                    update_id: history.data?.data[0]?.update_id,
+                    update_id: eligibility.data?.update_id,
+                    confirm_database_restore: eligibility.data?.mode === 'requires-db-restore',
                 })
             ).data,
-        onSuccess: (result) => setUpdateId(result.update_id),
+        onSuccess: (result) => {
+            setConfirmRestore(false);
+            setStartedId(result.update_id);
+        },
         onError: (error: Error) => toast.error(httpErrorToHuman(error)),
     });
 
@@ -158,12 +177,33 @@ export default function UpdatesScreen() {
                             </pre>
                         </div>
                     ) : (
-                        <p className={'gb:text-sm gb:text-muted-foreground'}>
+                        <p
+                            className={
+                                check.data?.error
+                                    ? 'gb:text-sm gb:text-destructive'
+                                    : 'gb:text-sm gb:text-muted-foreground'
+                            }
+                        >
                             {check.data === null
                                 ? 'The Gobia update service is not installed on this panel, so no release information is available.'
-                                : 'You are on the latest approved release.'}
+                                : (check.data?.error ?? 'You are on the latest approved release.')}
                         </p>
                     )}
+                    <div className={'gb:mt-4 gb:flex gb:flex-wrap gb:items-center gb:gap-3'}>
+                        <Button
+                            type={'button'}
+                            disabled={recheck.isPending || Boolean(running)}
+                            isLoading={recheck.isPending}
+                            onClick={() => recheck.mutate()}
+                        >
+                            Check for updates
+                        </Button>
+                        {check.data?.checked_at && (
+                            <span className={'gb:text-xs gb:text-muted-foreground'}>
+                                Last checked {new Date(check.data.checked_at).toLocaleString()}
+                            </span>
+                        )}
+                    </div>
                 </ContentBox>
             </div>
 
@@ -253,14 +293,46 @@ export default function UpdatesScreen() {
                     {gate === 'not-ready' && 'This installation is not ready for the update.'}
                     {gate === 'ready' && 'Ready. A database backup is taken first.'}
                 </span>
-                {eligibility.data?.eligible && (
-                    <Button.Danger type={'button'} isLoading={rollback.isPending} onClick={() => rollback.mutate()}>
+                {eligibility.data?.eligible && !running && !confirmRestore && (
+                    <Button.Danger
+                        type={'button'}
+                        isLoading={rollback.isPending}
+                        onClick={() =>
+                            eligibility.data?.mode === 'requires-db-restore'
+                                ? setConfirmRestore(true)
+                                : rollback.mutate()
+                        }
+                    >
                         {eligibility.data.mode === 'requires-db-restore'
                             ? 'Roll back and restore the database'
                             : 'Roll back'}
                     </Button.Danger>
                 )}
             </div>
+
+            {confirmRestore && eligibility.data?.eligible && (
+                <div
+                    className={'gb:mt-4 gb:rounded-md gb:border gb:border-destructive gb:p-4 gb:text-sm'}
+                    role={'alertdialog'}
+                    aria-label={'Confirm database restore'}
+                >
+                    <p>
+                        The last update changed the database. Rolling back restores the database as it was
+                        {eligibility.data.database_snapshot?.taken_at
+                            ? ` on ${new Date(eligibility.data.database_snapshot.taken_at).toLocaleString()}`
+                            : ' before the update'}
+                        . Everything saved since then (new servers, users, settings) is lost.
+                    </p>
+                    <div className={'gb:mt-3 gb:flex gb:gap-3'}>
+                        <Button.Danger type={'button'} isLoading={rollback.isPending} onClick={() => rollback.mutate()}>
+                            Restore the database and roll back
+                        </Button.Danger>
+                        <Button type={'button'} onClick={() => setConfirmRestore(false)}>
+                            Cancel
+                        </Button>
+                    </div>
+                </div>
+            )}
 
             {progress.data && (
                 <ContentBox title={'Update progress'} className={'gb:mt-6'}>
@@ -284,16 +356,35 @@ export default function UpdatesScreen() {
                                 : '.'}
                         </p>
                     )}
+                    {progress.data.rollback.failed && (
+                        <p className={'gb:mt-2 gb:text-sm gb:text-destructive'}>
+                            The automatic rollback failed and the Panel stays in maintenance mode. Fix the cause, then
+                            run "php artisan gobia-core:update:recover --force-up" on the server.
+                        </p>
+                    )}
+                    {progress.data.log.length > 0 && (
+                        <pre
+                            className={
+                                'gb:mt-3 gb:max-h-56 gb:overflow-auto gb:whitespace-pre-wrap gb:rounded-md gb:bg-sunken gb:p-3 gb:text-xs'
+                            }
+                            aria-label={'Update log'}
+                        >
+                            {progress.data.log.map((entry) => entry.message).join('\n')}
+                        </pre>
+                    )}
                     {isTerminal(progress.data.state) && (
                         <Button
                             type={'button'}
                             className={'gb:mt-3'}
                             onClick={() => {
-                                setUpdateId(null);
+                                // The Panel's own files changed: load the new frontend instead of patching this one.
+                                if (progress.data.state !== 'failed') return window.location.reload();
+                                setDismissedId(updateId);
+                                setStartedId(null);
                                 void queryClient.invalidateQueries({ queryKey: ['gobia-core', 'updates'] });
                             }}
                         >
-                            Close
+                            {progress.data.state === 'failed' ? 'Close' : 'Reload the Panel'}
                         </Button>
                     )}
                 </ContentBox>

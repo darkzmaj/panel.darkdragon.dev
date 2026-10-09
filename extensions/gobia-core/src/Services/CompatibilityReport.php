@@ -69,18 +69,42 @@ class CompatibilityReport
         return ['driver' => (string) DB::getDriverName(), 'version' => is_string($version) ? $version : null];
     }
 
-    /** @return array{pending: int, ran: int} */
-    private function migrations(): array
+    /** @return list<string>|null names of the migrations this installation has on disk but has not run; null when that cannot be read */
+    public function pendingMigrations(): ?array
     {
         try {
             $migrator = app('migrator');
             $files = $migrator->getMigrationFiles([...$migrator->paths(), database_path('migrations')]);
-            $ran = $migrator->getRepository()->getRan();
 
-            return ['pending' => count(array_diff(array_keys($files), $ran)), 'ran' => count($ran)];
+            return array_values(array_diff(array_keys($files), $migrator->getRepository()->getRan()));
         } catch (Throwable) {
-            return ['pending' => -1, 'ran' => -1];
+            return null;
         }
+    }
+
+    /** @return list<string>|null names of every migration recorded as run; null when that cannot be read */
+    public function ranMigrations(): ?array
+    {
+        try {
+            return array_values(app('migrator')->getRepository()->getRan());
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
+    /** @return array{driver: string, version: string|null} */
+    public function databaseServer(): array
+    {
+        return $this->database();
+    }
+
+    /** @return array{pending: int, ran: int} */
+    private function migrations(): array
+    {
+        $pending = $this->pendingMigrations();
+        $ran = $this->ranMigrations();
+
+        return $pending === null || $ran === null ? ['pending' => -1, 'ran' => -1] : ['pending' => count($pending), 'ran' => count($ran)];
     }
 
     /** @return array{database: bool, cache: bool, queue: string} */
