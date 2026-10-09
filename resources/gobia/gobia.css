@@ -3104,15 +3104,26 @@ span.gb-tree-chevron {
 .gb-tree-group {
     position: relative;
 }
-.gb-tree-group::before {
+/* The children of an open folder (and of the root) hang off one thin guide under the parent's chevron. */
+.gb-tree-children {
+    position: relative;
+}
+.gb-tree-children::before {
     content: '';
     position: absolute;
     top: 0;
-    bottom: 0;
+    bottom: 6px;
     left: var(--guide, 16px);
     width: 1px;
-    background: var(--gb-border-muted);
+    background: var(--gb-border);
+    opacity: 0.55;
     pointer-events: none;
+}
+.gb-tree-row.dir .gb-tree-name {
+    font-weight: 600;
+}
+.gb-tree-row.file .gb-tree-name {
+    font-weight: 400;
 }
 .gb-explorer-tools {
     padding: 8px;

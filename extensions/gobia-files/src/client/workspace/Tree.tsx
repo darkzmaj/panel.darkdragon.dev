@@ -15,6 +15,9 @@ import type { TreeEntry } from './api';
 import { basename, dirname } from './paths';
 import type { Listing, TreeState } from './useTree';
 
+/** Pixels one folder level indents its children. */
+const INDENT = 16;
+
 export const MOVE_TYPE = 'application/x-gobia-file';
 /** Names the pane a drag started in (the type itself carries it, because only types are readable while dragging over). */
 export const PANE_TYPE_PREFIX = 'application/x-gobia-pane-';
@@ -90,7 +93,7 @@ function InlineName({
     }, [initial]);
     return (
         <div className={'gb-tree-row inline' + (problem && value !== '' ? ' invalid' : '')}>
-            <div className={'gb-tree-inline'} style={{ paddingLeft: depth * 14 + 8 }}>
+            <div className={'gb-tree-inline'} style={{ paddingLeft: depth * INDENT + 8 }}>
                 <span className={'gb-tree-chevron'} />
                 <FileTypeIcon name={initial || (folder ? 'folder' : 'file')} folder={folder} />
                 <input
@@ -254,7 +257,7 @@ const Row = memo(function Row({
         <div
             className={
                 'gb-tree-row' +
-                (entry === null ? ' root' : '') +
+                (entry === null ? ' root' : directory ? ' dir' : ' file') +
                 (selected ? ' selected' : active ? ' active-file' : '') +
                 (dragged ? ' dragged' : '') +
                 (settled ? ' settled' : '') +
@@ -297,7 +300,7 @@ const Row = memo(function Row({
                     event.preventDefault();
                     h.menu(entry, event.clientX, event.clientY);
                 }}
-                style={{ paddingLeft: depth * 14 + 8 }}
+                style={{ paddingLeft: depth * INDENT + 8 }}
                 title={path}
             >
                 {directory ? (
@@ -408,7 +411,7 @@ export default function Tree(props: TreeProps) {
     const directory = (path: string, depth: number): ReactNode => {
         const listing = tree.listings[path];
         const note = (text: string, error = false) => (
-            <div className={'gb-tree-note' + (error ? ' error' : '')} style={{ paddingLeft: depth * 14 + 32 }}>
+            <div className={'gb-tree-note' + (error ? ' error' : '')} style={{ paddingLeft: depth * INDENT + 32 }}>
                 {text}
             </div>
         );
@@ -436,11 +439,7 @@ export default function Tree(props: TreeProps) {
                 }
 
                 return (
-                    <div
-                        key={entry.path}
-                        className={'gb-tree-group'}
-                        style={{ ['--guide' as string]: `${depth * 14 + 15}px` }}
-                    >
+                    <div key={entry.path} className={'gb-tree-group'}>
                         <Row
                             entry={entry}
                             depth={depth}
@@ -459,7 +458,14 @@ export default function Tree(props: TreeProps) {
                             onDragging={setDragging}
                             settled={props.settled === entry.path}
                         />
-                        {open && directory(entry.path, depth + 1)}
+                        {open && (
+                            <div
+                                className={'gb-tree-children'}
+                                style={{ ['--guide' as string]: `${depth * INDENT + 16}px` }}
+                            >
+                                {directory(entry.path, depth + 1)}
+                            </div>
+                        )}
                     </div>
                 );
             }),
@@ -486,7 +492,9 @@ export default function Tree(props: TreeProps) {
                 onDragging={setDragging}
                 settled={false}
             />
-            {directory(ROOT, 1)}
+            <div className={'gb-tree-children root'} style={{ ['--guide' as string]: '16px' }}>
+                {directory(ROOT, 1)}
+            </div>
         </nav>
     );
 }

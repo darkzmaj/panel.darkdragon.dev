@@ -290,6 +290,56 @@ export async function explorerFlows({ browser, context, login, scheme, baseUrl, 
         }
     );
 
+    await check(
+        'explorer: hierarchy: root items share one indent, each level indents 16 px, folders and files differ',
+        async () => {
+            const top = page.locator('.gb-tree-children.root > .gb-tree-group > .gb-tree-row');
+            const lefts = await top.evaluateAll((nodes) =>
+                nodes.map((node) => parseFloat(getComputedStyle(node.querySelector('button')).paddingLeft))
+            );
+            if (lefts.length < 2 || new Set(lefts).size !== 1)
+                throw new Error('root items do not share one indent: ' + lefts);
+            const rootLeft = await root.evaluate((el) => parseFloat(getComputedStyle(el).paddingLeft));
+            if (lefts[0] <= rootLeft) throw new Error('root items are not indented under the root');
+            const weights = await top.evaluateAll((nodes) =>
+                nodes.map((node) => [
+                    node.classList.contains('dir'),
+                    Number(getComputedStyle(node.querySelector('.gb-tree-name')).fontWeight),
+                ])
+            );
+            const dirWeight = weights.find(([dir]) => dir)?.[1];
+            const fileWeight = weights.find(([dir]) => !dir)?.[1];
+            if (dirWeight === undefined || fileWeight === undefined || dirWeight <= fileWeight)
+                throw new Error('folders and files look the same');
+            // A file created inside a folder sits one level deeper and hangs off a guide line.
+            const folder = (
+                await page
+                    .locator('.gb-tree-children.root > .gb-tree-group > .gb-tree-row.dir .gb-tree-name')
+                    .first()
+                    .innerText()
+            ).trim();
+            await button(folder).click();
+            await page.getByRole('button', { name: 'New file' }).first().click();
+            const nested = 'nest-' + run + '.txt';
+            await page.getByLabel('File name').fill(nested);
+            await page.getByLabel('File name').press('Enter');
+            await page.locator('.gb-tree-name', { hasText: nested }).first().waitFor();
+            const childLeft = await button(nested).evaluate((el) => parseFloat(getComputedStyle(el).paddingLeft));
+            if (childLeft !== lefts[0] + 16)
+                throw new Error('a child is not 16 px deeper than its folder: ' + childLeft);
+            if ((await row(folder).locator('xpath=..').locator('.gb-tree-children').count()) < 1)
+                throw new Error('the open folder has no guide for its children');
+            if ((await page.locator('.gb-tree-children.root').count()) !== 1) throw new Error('the root has no guide');
+            // Collapsing and expanding must not move unrelated rows.
+            const sibling = await top.last().evaluate((node) => node.getBoundingClientRect().left);
+            await button(folder).click();
+            await button(folder).click();
+            if ((await top.last().evaluate((node) => node.getBoundingClientRect().left)) !== sibling)
+                throw new Error('an unrelated row moved');
+            if (!(await isSelected(folder))) throw new Error('expanding changed the selection');
+        }
+    );
+
     await check('explorer: an empty area clears the selection, delete removes the selected set', async () => {
         await page.locator('.gb-tree').evaluate((element) => element.parentElement.click());
         if (await isSelected(a)) throw new Error('selection not cleared');
