@@ -25,6 +25,9 @@ final class FakeWings
     /** Truncate what is stored for any file written with this name, to prove an integrity failure is caught. */
     public ?string $corrupt = null;
 
+    /** Delete requests for a path containing this text fail with a 500, to prove a move never reports success then. */
+    public ?string $failDelete = null;
+
     /** @var list<string> */
     public array $calls = [];
 
@@ -53,7 +56,7 @@ final class FakeWings
                     foreach ($tree as $path => $node) {
                         if ($this->parent($path) === ($directory === '' ? '/' : $directory) && $path !== '/') {
                             $rows[] = [
-                                'name' => mb_substr($path, mb_strrpos($path, '/') + 1), 'mode' => '-rw-r--r--', 'mode_bits' => '644', 'size' => $node['dir'] ? 4096 : mb_strlen($node['content']),
+                                'name' => mb_substr($path, mb_strrpos($path, '/') + 1), 'mode' => '-rw-r--r--', 'mode_bits' => '644', 'size' => $node['dir'] ? 4096 : mb_strlen($node['content'], '8bit'),
                                 'file' => ! $node['dir'], 'symlink' => false, 'mime' => 'text/plain', 'created' => '2026-01-01T00:00:00+00:00', 'modified' => '2026-01-01T00:00:00+00:00',
                             ];
                         }
@@ -63,11 +66,11 @@ final class FakeWings
                 case 'contents':
                     $node = $tree[(string) $query['file']] ?? null;
 
-                    return $node === null || $node['dir'] ? Http::response('', 404) : Http::response($node['content'], 200, ['Content-Length' => (string) mb_strlen($node['content'])]);
+                    return $node === null || $node['dir'] ? Http::response('', 404) : Http::response($node['content'], 200, ['Content-Length' => (string) mb_strlen($node['content'], '8bit')]);
                 case 'write':
                     $content = $request->body();
                     $file = (string) $query['file'];
-                    $tree[$file] = ['dir' => false, 'content' => $this->corrupt !== null && str_contains($file, $this->corrupt) ? mb_substr($content, 0, max(0, mb_strlen($content) - 1)) : $content];
+                    $tree[$file] = ['dir' => false, 'content' => $this->corrupt !== null && str_contains($file, $this->corrupt) ? mb_strcut($content, 0, max(0, mb_strlen($content, '8bit') - 1), '8bit') : $content];
 
                     return Http::response('', 204);
                 case 'create-directory':
@@ -88,6 +91,9 @@ final class FakeWings
 
                     return Http::response('', 204);
                 case 'delete':
+                    if ($this->failDelete !== null && str_contains(implode(',', $json['files']), $this->failDelete) && ! str_contains(implode(',', $json['files']), '.gobia-transfer-')) {
+                        return Http::response('', 500);
+                    }
                     foreach ($json['files'] as $name) {
                         $target = mb_rtrim((string) $json['root'], '/').'/'.$name;
                         foreach (array_keys($tree) as $path) {
@@ -143,7 +149,7 @@ test('copying keeps the original and delivers the exact bytes, binary included',
     $this->wings->seed($this->a->uuid, '/config.yml', $bytes);
     $this->wings->seed($this->b->uuid, '/plugins', null);
 
-    send()->assertOk()->assertJsonPath('items.0.status', 'copied')->assertJsonPath('bytes', mb_strlen($bytes));
+    send()->assertOk()->assertJsonPath('items.0.status', 'copied')->assertJsonPath('bytes', mb_strlen($bytes, '8bit'));
 
     expect($this->wings->trees[$this->b->uuid]['/plugins/config.yml']['content'])->toBe($bytes);
     expect($this->wings->trees[$this->a->uuid]['/config.yml']['content'])->toBe($bytes);
@@ -225,4 +231,45 @@ test('a file above the size limit is refused with a reason and nothing is writte
 
     send(['items' => ['/big.bin']])->assertOk()->assertJsonPath('items.0.status', 'failed');
     expect($this->wings->paths($this->b->uuid))->toBe(['/plugins']);
+});
+
+test('real binary data survives a copy byte for byte', function (): void {
+    $bytes = random_bytes(3 * 1024 * 1024 + 17);
+    $this->wings->seed($this->a->uuid, '/config.yml', $bytes);
+    $this->wings->seed($this->b->uuid, '/plugins', null);
+
+    send()->assertOk()->assertJsonPath('items.0.status', 'copied')->assertJsonPath('bytes', 3 * 1024 * 1024 + 17)->assertJsonStructure(['timings' => ['total']]);
+
+    expect(hash('sha256', $this->wings->trees[$this->b->uuid]['/plugins/config.yml']['content']))->toBe(hash('sha256', $bytes));
+});
+
+test('a move whose original cannot be removed is reported incomplete, never moved, and can be finished', function (): void {
+    $this->wings->seed($this->a->uuid, '/config.yml', 'KEEP');
+    $this->wings->seed($this->b->uuid, '/plugins', null);
+    $this->wings->failDelete = 'config.yml';
+
+    send(['mode' => 'move'])->assertOk()->assertJsonPath('items.0.status', 'move_incomplete');
+    expect($this->wings->trees[$this->a->uuid]['/config.yml']['content'])->toBe('KEEP');
+    expect($this->wings->trees[$this->b->uuid]['/plugins/config.yml']['content'])->toBe('KEEP');
+
+    $this->wings->failDelete = null;
+    send(['mode' => 'move', 'conflict' => 'skip', 'resume' => true])->assertOk()->assertJsonPath('items.0.status', 'moved');
+    expect($this->wings->paths($this->a->uuid))->toBe([]);
+    expect($this->wings->trees[$this->b->uuid]['/plugins/config.yml']['content'])->toBe('KEEP');
+});
+
+test('a move with a skipped collision keeps the original', function (): void {
+    $this->wings->seed($this->a->uuid, '/config.yml', 'NEW');
+    $this->wings->seed($this->b->uuid, '/plugins', null);
+    $this->wings->seed($this->b->uuid, '/plugins/config.yml', 'OLD');
+
+    send(['mode' => 'move'])->assertOk()->assertJsonPath('items.0.status', 'skipped');
+    expect($this->wings->trees[$this->a->uuid]['/config.yml']['content'])->toBe('NEW');
+});
+
+test('a copy into the same server with keep adds a second copy', function (): void {
+    $this->wings->seed($this->a->uuid, '/config.yml', 'SAME');
+
+    send(['destination' => $this->a->uuid, 'directory' => '/', 'conflict' => 'keep'])->assertOk()->assertJsonPath('items.0.status', 'copied');
+    expect($this->wings->paths($this->a->uuid))->toBe(['/config (copy).yml', '/config.yml']);
 });

@@ -28,6 +28,9 @@ class TransferController
             'items.*' => ['required', 'string', 'max:4096'],
             'mode' => ['sometimes', 'string', Rule::in(['copy', 'move'])],
             'conflict' => ['sometimes', 'string', Rule::in(['replace', 'keep', 'skip'])],
+            'kinds' => ['sometimes', 'array', 'max:200'],
+            'kinds.*' => ['string', Rule::in(['file', 'directory'])],
+            'resume' => ['sometimes', 'boolean'],
         ]);
         $user = $request->user();
         $mode = $data['mode'] ?? 'copy';
@@ -40,6 +43,8 @@ class TransferController
             array_values($data['items']),
             $mode,
             $data['conflict'] ?? 'skip',
+            $data['kinds'] ?? [],
+            (bool) ($data['resume'] ?? false),
         );
 
         $failed = count(array_filter($result['items'], fn (array $item): bool => $item['status'] === 'failed'));
@@ -60,6 +65,7 @@ class TransferController
             'directory' => $result['directory'],
             'items' => $result['items'],
             'bytes' => $result['bytes'],
+            'timings' => $result['timings'],
         ]);
     }
 }

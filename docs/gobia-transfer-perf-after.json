@@ -1,0 +1,116 @@
+{
+  "label": "after-127",
+  "results": {
+    "small file copy": {
+      "ms": 83,
+      "http": 200,
+      "item": "copied",
+      "reason": null,
+      "identical": true,
+      "stages": {
+        "authorize": 1,
+        "capacity": 2,
+        "list_source": 6,
+        "list_destination": 2,
+        "download_source": 3,
+        "upload": 1,
+        "verify_download": 2,
+        "commit": 1,
+        "total": 23
+      }
+    },
+    "5 MiB binary copy": {
+      "ms": 130,
+      "http": 200,
+      "item": "copied",
+      "reason": null,
+      "identical": true,
+      "stages": {
+        "authorize": 1,
+        "capacity": 20,
+        "list_source": 2,
+        "list_destination": 2,
+        "download_source": 7,
+        "upload": 16,
+        "verify_download": 12,
+        "commit": 3,
+        "total": 78
+      }
+    },
+    "40 MiB jar copy": {
+      "ms": 423,
+      "http": 200,
+      "item": "copied",
+      "reason": null,
+      "identical": true,
+      "stages": {
+        "authorize": 1,
+        "capacity": 3,
+        "list_source": 5,
+        "list_destination": 3,
+        "download_source": 44,
+        "upload": 130,
+        "verify_download": 43,
+        "commit": 2,
+        "total": 330
+      }
+    },
+    "folder of 20 small files copy": {
+      "ms": 369,
+      "http": 200,
+      "item": "copied",
+      "copied": 22,
+      "stages": {
+        "authorize": 1,
+        "capacity": 2,
+        "list_source": 21,
+        "list_destination": 8,
+        "create_folder": 4,
+        "download_source": 48,
+        "upload": 40,
+        "verify_download": 94,
+        "commit": 46,
+        "total": 305
+      }
+    },
+    "small file move": {
+      "ms": 98,
+      "http": 200,
+      "item": "moved",
+      "sourceGone": true,
+      "destinationIdentical": true,
+      "stages": {
+        "authorize": 1,
+        "capacity": 13,
+        "list_source": 3,
+        "list_destination": 2,
+        "download_source": 2,
+        "upload": 1,
+        "verify_download": 23,
+        "commit": 1,
+        "delete_source": 1,
+        "confirm_delete": 2,
+        "total": 52
+      }
+    },
+    "40 MiB jar move": {
+      "ms": 505,
+      "http": 200,
+      "item": "moved",
+      "sourceGone": true,
+      "stages": {
+        "authorize": 1,
+        "capacity": 2,
+        "list_source": 2,
+        "list_destination": 2,
+        "download_source": 57,
+        "upload": 135,
+        "verify_download": 73,
+        "commit": 51,
+        "delete_source": 7,
+        "confirm_delete": 4,
+        "total": 433
+      }
+    }
+  }
+}
