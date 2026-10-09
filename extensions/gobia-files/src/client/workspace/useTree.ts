@@ -47,6 +47,21 @@ const order = (a: TreeEntry, b: TreeEntry) =>
 const isLoaded = (listing: Listing | undefined): listing is { items: TreeEntry[] } =>
     listing !== undefined && listing !== 'loading' && 'items' in listing;
 
+/** Whether two listings of one folder are the same, entry for entry. */
+export const sameItems = (a: readonly TreeEntry[], b: readonly TreeEntry[]): boolean =>
+    a.length === b.length &&
+    a.every((item, index) => {
+        const other = b[index];
+        return (
+            other !== undefined &&
+            item.path === other.path &&
+            item.directory === other.directory &&
+            item.size === other.size &&
+            item.modifiedAt === other.modifiedAt &&
+            item.mimetype === other.mimetype
+        );
+    });
+
 /**
  * The listings after `from` moved to `to`: a moved folder keeps every listing it had under its new path, the old
  * parent loses the entry and the new parent gains it (when those directories are loaded), in listing order.
@@ -124,7 +139,12 @@ export function useTree(uuid: string, source: TreeSource = 'fetch'): TreeState {
                     });
                     return;
                 }
-                setListings((current) => ({ ...current, [directory]: { items } }));
+                setListings((current) => {
+                    const existing = current[directory];
+                    // Nothing changed: keep the listing (and every row built from it) as it is, so a refresh draws nothing.
+                    if (isLoaded(existing) && sameItems(existing.items, items)) return current;
+                    return { ...current, [directory]: { items } };
+                });
             } catch (error) {
                 setListings((current) => ({ ...current, [directory]: { error: httpErrorToHuman(error as Error) } }));
             }

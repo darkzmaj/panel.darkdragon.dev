@@ -26,7 +26,7 @@ const OFF_TEXT = {
 /**
  * Four dots that read at a glance: power, then CPU, memory and storage against their limits. While the instance is
  * running every dot flashes in the colour of its level (green normal, yellow high, red at the limit); starting,
- * stopping and installing flash yellow; an instance that is off or unavailable shows four steady red dots. Only
+ * stopping and installing flash yellow; an instance that is off or unavailable shows one steady red power dot and three blank ones. Only
  * opacity animates, which the browser composites without repainting, and motion stops for people who ask for it.
  */
 export default function StatusDots({ mode, seed, powerLabel, cpu, memory, disk, vertical = false }: Props) {
@@ -41,7 +41,7 @@ export default function StatusDots({ mode, seed, powerLabel, cpu, memory, disk, 
             ? `${label}: ${off}`
             : `${label} ${reading.text}, ${LEVEL_TEXT[view.level === 'idle' ? 'idle' : reading.level]}`;
     const dots = [
-        { key: 'power', view: dotView(mode, 'ok'), label: `Power: ${powerLabel}` },
+        { key: 'power', view: dotView(mode, 'ok', true), label: `Power: ${powerLabel}` },
         { key: 'cpu', view: dotView(mode, cpu.level), label: '' },
         { key: 'memory', view: dotView(mode, memory.level), label: '' },
         { key: 'disk', view: dotView(mode, disk.level), label: '' },

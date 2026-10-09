@@ -136,6 +136,106 @@ export async function explorerFlows({ browser, context, login, scheme, baseUrl, 
         }
     );
 
+    await check('explorer: right click anywhere opens the Gobia menu, never the browser one', async () => {
+        const wrapper = page.locator('.gb-tree').locator('xpath=..');
+        const box = await wrapper.boundingBox();
+        for (const point of [
+            { x: box.x + box.width / 2, y: box.y + box.height - 6, what: 'the empty space' },
+            { x: box.x + 6, y: box.y + box.height - 6, what: 'the empty corner' },
+        ]) {
+            await page.mouse.click(point.x, point.y, { button: 'right' });
+            await page
+                .getByRole('menuitem', { name: 'New file' })
+                .waitFor({ timeout: 3000 })
+                .catch(() => {
+                    throw new Error(`no Gobia menu on ${point.what}`);
+                });
+            await page.keyboard.press('Escape');
+        }
+        await page
+            .locator('.gb-explorer-tools:visible')
+            .first()
+            .click({ button: 'right', position: { x: 262, y: 10 }, force: true });
+        await page.getByRole('menuitem', { name: 'New folder' }).waitFor({ timeout: 3000 });
+        await page.keyboard.press('Escape');
+    });
+
+    const mouseDrag = async (source, target, hold = 900) => {
+        const from = await source.boundingBox();
+        const to = await target.boundingBox();
+        await page.mouse.move(from.x + 40, from.y + from.height / 2);
+        await page.mouse.down();
+        await page.mouse.move(from.x + 60, from.y + from.height / 2 + 4, { steps: 3 });
+        await page.mouse.move(to.x + 40, to.y + to.height / 2, { steps: 8 });
+        await page.waitForTimeout(hold);
+        // Browsers repeat dragover while the pointer rests; one small move stands in for that.
+        await page.mouse.move(to.x + 43, to.y + to.height / 2);
+    };
+
+    await check(
+        'explorer: dragging lights only the folder under the pointer and opens nothing until something is dropped in',
+        async () => {
+            const closed = `sel-closed-${run}`;
+            const loose = `sel-loose-${run}.txt`;
+            await create('New folder', 'Folder name', closed);
+            await create('New file', 'File name', loose);
+            await page.keyboard.press('Escape');
+            await button(loose).click();
+            await mouseDrag(button(loose), row(closed));
+            const lit = await page.locator('.gb-tree-row.drop-ok, .gb-tree-row.drop-valid').count();
+            const onlyTarget = (await row(closed).getAttribute('class')).includes('drop-ok');
+            const expanded = await button(closed).getAttribute('aria-expanded');
+            await page.mouse.up();
+            if (lit !== 1 || !onlyTarget)
+                throw new Error(`${lit} rows are lit while dragging, expected only the folder under the pointer`);
+            if (expanded === 'true') throw new Error('the folder opened just because the pointer rested on it');
+            // After the drop it opens and shows what arrived.
+            await row(loose).waitFor({ timeout: 10000 });
+            if ((await button(closed).getAttribute('aria-expanded')) !== 'true')
+                throw new Error('the folder did not open after the file was put in');
+        }
+    );
+
+    await check('explorer: a file can be dropped on the root folder row and on the empty space', async () => {
+        const inside = `sel-inside-${run}`;
+        const moved = `sel-up-${run}.txt`;
+        await create('New folder', 'Folder name', inside);
+        await create('New file', 'File name', moved);
+        await button(moved).click();
+        await button(moved).dragTo(row(inside));
+        await row(moved).waitFor();
+        const depthOf = async () =>
+            Number((await button(moved).getAttribute('style'))?.match(/padding-left: ([0-9]+)px/)?.[1] ?? 0);
+        const deep = await depthOf();
+        // Onto the root row.
+        await button(moved).dragTo(page.locator('.gb-tree-row.root').first());
+        await page.waitForFunction(
+            (name) =>
+                [...document.querySelectorAll('.gb-tree-row button[data-path]')].some(
+                    (node) => node.dataset.path === '/' + name
+                ),
+            moved,
+            { timeout: 10000 }
+        );
+        if ((await depthOf()) >= deep) throw new Error('the file is still inside the folder');
+        // Into the folder again, then onto the empty space below the rows.
+        await button(moved).dragTo(row(inside));
+        await row(moved).waitFor();
+        const wrapper = page.locator('.gb-tree').locator('xpath=..');
+        const box = await wrapper.boundingBox();
+        await mouseDrag(button(moved), row(inside), 100);
+        await page.mouse.move(box.x + box.width / 2, box.y + box.height - 8, { steps: 6 });
+        await page.mouse.up();
+        await page.waitForFunction(
+            (name) =>
+                [...document.querySelectorAll('.gb-tree-row button[data-path]')].some(
+                    (node) => node.dataset.path === '/' + name
+                ),
+            moved,
+            { timeout: 10000 }
+        );
+    });
+
     await check('explorer: renaming keeps the item selected', async () => {
         const renamed = `sel-renamed-${run}.py`;
         await button(c).click();
@@ -198,11 +298,22 @@ export async function explorerFlows({ browser, context, login, scheme, baseUrl, 
         await page.getByRole('button', { name: 'Delete', exact: true }).click();
         await row(f1).waitFor({ state: 'detached', timeout: 15000 });
         // Leftover entries of this run at the root.
-        for (const name of [`sel-renamed-${run}.py`]) {
+        for (const name of [
+            `sel-renamed-${run}.py`,
+            `sel-closed-${run}`,
+            `sel-inside-${run}`,
+            `sel-up-${run}.txt`,
+            `sel-race-${run}`,
+        ]) {
             if ((await page.locator('.gb-tree-name', { hasText: name }).count()) > 0) {
                 await button(name).click();
                 await page.keyboard.press('Delete');
                 await page.getByRole('button', { name: 'Delete', exact: true }).click();
+                await page
+                    .locator('.gb-tree-name', { hasText: name })
+                    .first()
+                    .waitFor({ state: 'detached', timeout: 10000 })
+                    .catch(() => undefined);
             }
         }
     });

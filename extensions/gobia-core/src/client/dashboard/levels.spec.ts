@@ -45,10 +45,11 @@ describe('dots', () => {
         expect(dotView('checking', 'ok')).toEqual({ level: 'idle', flashing: true });
     });
 
-    it('hold still, and red, only when the instance is off or unavailable', () => {
+    it('hold still when the instance is off or unavailable: a red power dot, three blank ones', () => {
         for (const mode of ['offline', 'unavailable'] as const) {
+            expect(dotView(mode, 'ok', true)).toEqual({ level: 'max', flashing: false });
             for (const own of ['idle', 'ok', 'high', 'max'] as const) {
-                expect(dotView(mode, own)).toEqual({ level: 'max', flashing: false });
+                expect(dotView(mode, own)).toEqual({ level: 'idle', flashing: false });
             }
         }
     });

@@ -23,14 +23,15 @@ function ViewMenu({
     counts,
     onChange,
 }: {
-    view: View;
+    /** The chosen view, or null while a category is open: the two never apply together. */
+    view: View | null;
     counts: Record<View, number> | undefined;
     onChange: (view: View) => void;
 }) {
     const [open, setOpen] = useState(false);
     const root = useRef<HTMLDivElement>(null);
     const trigger = useRef<HTMLButtonElement>(null);
-    const current = VIEWS.find((item) => item.id === view) ?? VIEWS[0];
+    const current = VIEWS.find((item) => item.id === view);
 
     useEffect(() => {
         if (!open) return;
@@ -56,9 +57,9 @@ function ViewMenu({
                 aria-haspopup={'listbox'}
                 aria-expanded={open}
                 onClick={() => setOpen((value) => !value)}
-                className={'gb-chip active'}
+                className={'gb-chip' + (current ? ' active' : '')}
             >
-                {current?.label}
+                {current?.label ?? 'Views'}
                 <ChevronDown aria-hidden />
             </button>
             {open && (
@@ -108,7 +109,9 @@ function ViewMenu({
 export default function DashboardPage({ model }: ReplacementProps<'dashboard.page'>) {
     const queryClient = useQueryClient();
     const navigate = usePanelNavigate();
-    const [view, setView] = useState<View>('all');
+    // All, You and Other list instances whatever their category; a category lists what the person put in it. Choosing
+    // one of them leaves the other, so the view is null while a category is open.
+    const [view, setView] = useState<View | null>('all');
     const [category, setCategory] = useState<CategoryFilter>(null);
     const [search, setSearch] = useState('');
     const [q, setQ] = useState('');
@@ -127,14 +130,14 @@ export default function DashboardPage({ model }: ReplacementProps<'dashboard.pag
         return () => clearTimeout(timer);
     }, [search]);
 
-    const params = useMemo(() => ({ view, category, q, page }), [view, category, q, page]);
+    const params = useMemo(() => ({ view: view ?? 'all', category, q, page }), [view, category, q, page]);
     const { data, isPending, isError, isPlaceholderData, refetch } = useInstances(params);
     const { data: summary } = useSummary();
 
     // Once a list is on screen the other views of the same category and search are fetched quietly, so choosing All,
     // You or Other shows the answer at once instead of the old list for a moment.
     useEffect(() => {
-        if (!data || isPlaceholderData || page !== 1) return;
+        if (!data || isPlaceholderData || page !== 1 || view === null) return;
         for (const other of VIEWS) {
             if (other.id === view) continue;
             const next = { ...params, view: other.id, page: 1 };
@@ -156,6 +159,7 @@ export default function DashboardPage({ model }: ReplacementProps<'dashboard.pag
             !summary.categories.some((item) => item.id === category)
         ) {
             setCategory(null);
+            setView('all');
             setPage(1);
         }
     }, [summary, category]);
@@ -220,12 +224,20 @@ export default function DashboardPage({ model }: ReplacementProps<'dashboard.pag
     });
 
     const choose = (next: { view?: View; category?: CategoryFilter }) => {
-        if (next.view !== undefined) setView(next.view);
-        if (next.category !== undefined) setCategory(next.category);
+        if (next.view !== undefined) {
+            setView(next.view);
+            setCategory(null);
+        }
+        if (next.category !== undefined) {
+            setCategory(next.category);
+            setView(next.category === null ? 'all' : null);
+        }
         setPage(1);
     };
 
     const filtering = category !== null || view !== 'all' || q.trim() !== '';
+    // The numbers in the view menu are for the whole lists, not for the category that is open.
+    const viewCounts = view === null ? summary?.counts : data?.meta.counts;
 
     return (
         <PageContentBlock title={'Instances'}>
@@ -245,7 +257,7 @@ export default function DashboardPage({ model }: ReplacementProps<'dashboard.pag
 
             <div style={{ marginBottom: 16 }}>
                 <div className={'gb-filterbar'} role={'toolbar'} aria-label={'Instance views'}>
-                    <ViewMenu view={view} counts={data?.meta.counts} onChange={(next) => choose({ view: next })} />
+                    <ViewMenu view={view} counts={viewCounts} onChange={(next) => choose({ view: next })} />
                     <div className={'gb-filterbar-scroll'}>
                         {summary?.categories.map((item) => (
                             <button

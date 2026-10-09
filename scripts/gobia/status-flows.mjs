@@ -73,8 +73,11 @@ export async function statusFlows({ browser, context, login, scheme, baseUrl, ro
             await waitLevel('power', 'max', 8000);
             for (const dot of ['power', 'cpu', 'memory', 'disk']) {
                 const cls = await row.locator(`[data-dot="${dot}"]`).getAttribute('class');
-                if (cls.includes('flash') || (await level(dot)) !== 'max')
-                    throw new Error(`an offline instance must show a steady red ${dot} dot, got ${cls}`);
+                const want = dot === 'power' ? 'max' : 'idle';
+                if (cls.includes('flash') || (await level(dot)) !== want)
+                    throw new Error(
+                        `an offline instance: ${dot} must be steady ${want === 'max' ? 'red' : 'blank'}, got ${cls}`
+                    );
             }
             await power('start');
             const took = await waitLevel('power', 'high', 6000).catch(() => null);

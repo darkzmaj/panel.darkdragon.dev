@@ -1,6 +1,8 @@
 import { ChevronDown, ChevronRight, Ellipsis } from 'lucide-react';
 import {
+    memo,
     useEffect,
+    useMemo,
     useRef,
     useState,
     type DragEvent,
@@ -11,12 +13,12 @@ import {
 import FileTypeIcon from './FileTypeIcon';
 import type { TreeEntry } from './api';
 import { basename, dirname } from './paths';
-import type { TreeState } from './useTree';
+import type { Listing, TreeState } from './useTree';
 
 export const MOVE_TYPE = 'application/x-gobia-file';
 /** Names the pane a drag started in (the type itself carries it, because only types are readable while dragging over). */
 export const PANE_TYPE_PREFIX = 'application/x-gobia-pane-';
-const originOf = (types: readonly string[]) =>
+export const originOf = (types: readonly string[]) =>
     types.find((type) => type.startsWith(PANE_TYPE_PREFIX))?.slice(PANE_TYPE_PREFIX.length) ?? null;
 export const ROOT = '/';
 
@@ -152,6 +154,18 @@ interface TreeProps {
     settled: string | null;
 }
 
+/** What a row calls. One object for the whole tree whose functions never change, so a row that did not change is not drawn again. */
+interface Handlers {
+    click: (entry: TreeEntry | null, event: MouseEvent) => void;
+    menu: (entry: TreeEntry | null, x: number, y: number) => void;
+    dragStart: (path: string) => string[];
+    move: TreeProps['onMove'];
+    dropFiles: TreeProps['onDropFiles'];
+    crossDrop: (origin: string, paths: string[], directory: string) => void;
+    /** The names in one folder as the explorer lists them now (read when something is dragged over, not on every draw). */
+    namesIn: (path: string) => ReadonlySet<string>;
+}
+
 interface RowProps {
     entry: TreeEntry | null;
     depth: number;
@@ -163,22 +177,16 @@ interface RowProps {
     dirty: boolean;
     canMove: boolean;
     canUpload: boolean;
+    canCross: boolean;
     paneId: string;
-    onCrossDrop?: (origin: string, paths: string[], directory: string) => void;
-    onClick: (event: MouseEvent) => void;
-    onMenu: (x: number, y: number) => void;
-    onDragStart: (path: string) => string[];
-    onMove: TreeProps['onMove'];
-    onDropFiles: TreeProps['onDropFiles'];
-    onHoverOpen: () => void;
-    /** The path being dragged anywhere in the tree, to light up the folders it may be dropped on. */
+    h: Handlers;
+    /** The paths being dragged anywhere in the tree. */
     dragging: readonly string[] | null;
     onDragging: (paths: readonly string[] | null) => void;
-    taken: ReadonlySet<string>;
     settled: boolean;
 }
 
-function Row({
+const Row = memo(function Row({
     entry,
     depth,
     open,
@@ -189,17 +197,11 @@ function Row({
     dirty,
     canMove,
     canUpload,
+    canCross,
     paneId,
-    onCrossDrop,
-    onClick,
-    onMenu,
-    onDragStart,
-    onMove,
-    onDropFiles,
-    onHoverOpen,
+    h,
     dragging,
     onDragging,
-    taken,
     settled,
 }: RowProps) {
     const directory = entry === null || entry.directory;
@@ -214,14 +216,14 @@ function Row({
         const cross = origin !== null && origin !== paneId;
         const internal = types.includes(MOVE_TYPE) && !cross;
         const allowed = cross
-            ? canUpload && onCrossDrop !== undefined
+            ? canUpload && canCross
             : internal
-              ? canMove && (dragging === null || dragging.every((item) => validTarget(item, path, taken)))
+              ? canMove && (dragging === null || dragging.every((item) => validTarget(item, path, h.namesIn(path))))
               : canUpload;
         event.preventDefault();
         event.dataTransfer.dropEffect = allowed ? (internal ? 'move' : 'copy') : 'none';
-        setOver(allowed ? 'ok' : 'denied');
-        if (allowed && !open) window.setTimeout(onHoverOpen, 600);
+        const next = allowed ? 'ok' : 'denied';
+        if (over !== next) setOver(next);
     };
 
     const drop = (event: DragEvent) => {
@@ -234,11 +236,11 @@ function Row({
         const moved = event.dataTransfer.getData(MOVE_TYPE);
         const origin = originOf(event.dataTransfer.types);
         if (moved && origin !== null && origin !== paneId) {
-            if (canUpload) onCrossDrop?.(origin, JSON.parse(moved) as string[], path);
+            if (canUpload) h.crossDrop(origin, JSON.parse(moved) as string[], path);
         } else if (moved) {
-            if (canMove) onMove(JSON.parse(moved) as string[], path);
+            if (canMove) h.move(JSON.parse(moved) as string[], path);
         } else if (canUpload) {
-            onDropFiles(event.dataTransfer, path);
+            h.dropFiles(event.dataTransfer, path);
         }
     };
 
@@ -250,9 +252,6 @@ function Row({
                 (selected ? ' selected' : active ? ' active-file' : '') +
                 (dragged ? ' dragged' : '') +
                 (settled ? ' settled' : '') +
-                (dragging && directory && over === null && dragging.every((item) => validTarget(item, path, taken))
-                    ? ' drop-valid'
-                    : '') +
                 (over === 'ok' ? ' drop-ok' : over === 'denied' ? ' drop-denied' : '')
             }
             onDragOver={dragOver}
@@ -268,7 +267,7 @@ function Row({
                 draggable={entry !== null && canMove}
                 onDragStart={(event) => {
                     if (!entry) return;
-                    const traveling = onDragStart(entry.path);
+                    const traveling = h.dragStart(entry.path);
                     event.dataTransfer.setData(MOVE_TYPE, JSON.stringify(traveling));
                     event.dataTransfer.setData(`${PANE_TYPE_PREFIX}${paneId}`, paneId);
                     event.dataTransfer.effectAllowed = 'copyMove';
@@ -283,10 +282,10 @@ function Row({
                     onDragging(traveling);
                 }}
                 onDragEnd={() => onDragging(null)}
-                onClick={onClick}
+                onClick={(event) => h.click(entry, event)}
                 onContextMenu={(event) => {
                     event.preventDefault();
-                    onMenu(event.clientX, event.clientY);
+                    h.menu(entry, event.clientX, event.clientY);
                 }}
                 style={{ paddingLeft: depth * 14 + 8 }}
                 title={path}
@@ -319,7 +318,7 @@ function Row({
                     aria-haspopup={'menu'}
                     onClick={(event) => {
                         const box = event.currentTarget.getBoundingClientRect();
-                        onMenu(box.right, box.bottom);
+                        h.menu(entry, box.right, box.bottom);
                     }}
                 >
                     <Ellipsis aria-hidden />
@@ -327,11 +326,46 @@ function Row({
             )}
         </div>
     );
-}
+});
+
+const namesOf = (listing: Listing | undefined): ReadonlySet<string> =>
+    new Set(listing && listing !== 'loading' && 'items' in listing ? listing.items.map((item) => item.name) : []);
 
 export default function Tree(props: TreeProps) {
     const { tree, selection, activePath, openPaths, dirtyPaths, canMove, canUpload, inline } = props;
     const [dragging, setDragging] = useState<readonly string[] | null>(null);
+    // The handlers read the newest props through this ref, so they can stay the same object for the life of the tree.
+    const latest = useRef(props);
+    latest.current = props;
+    const handlers = useMemo<Handlers>(
+        () => ({
+            click: (entry, event) => {
+                const current = latest.current;
+                if (entry === null) {
+                    current.onSelect(ROOT, 'single');
+                    return;
+                }
+                const mode = event.shiftKey ? 'range' : event.ctrlKey || event.metaKey ? 'toggle' : 'single';
+                current.onSelect(entry.path, mode);
+                if (mode !== 'single') return;
+                if (entry.directory) current.tree.toggle(entry.path);
+                else current.onOpen(entry);
+            },
+            menu: (entry, x, y) => {
+                const current = latest.current;
+                // A right click inside the selection keeps it; elsewhere it selects just that entry.
+                if (entry === null) current.onSelect(ROOT, 'single');
+                else if (!current.selection.has(entry.path)) current.onSelect(entry.path, 'single');
+                current.onMenu(entry, x, y);
+            },
+            dragStart: (path) => latest.current.onDragSelect(path),
+            move: (from, to) => latest.current.onMove(from, to),
+            dropFiles: (data, directory) => latest.current.onDropFiles(data, directory),
+            crossDrop: (origin, paths, directory) => latest.current.onCrossDrop?.(origin, paths, directory),
+            namesIn: (path) => namesOf(latest.current.tree.listings[path]),
+        }),
+        []
+    );
 
     const arrows = (event: KeyboardEvent) => {
         const key = event.key;
@@ -345,12 +379,7 @@ export default function Tree(props: TreeProps) {
         props.onSelect(next.dataset.path ?? ROOT, event.shiftKey ? 'range' : 'single');
     };
 
-    const namesIn = (path: string): ReadonlySet<string> => {
-        const listing = tree.listings[path];
-        return new Set(
-            listing && listing !== 'loading' && 'items' in listing ? listing.items.map((item) => item.name) : []
-        );
-    };
+    const canCross = props.onCrossDrop !== undefined;
     const creating = (path: string) => inline?.kind === 'create' && inline.directory === path;
     const newRow = (path: string, depth: number) =>
         inline?.kind === 'create' && inline.directory === path ? (
@@ -360,7 +389,7 @@ export default function Tree(props: TreeProps) {
                 initial={''}
                 label={inline.what === 'file' ? 'File name' : 'Folder name'}
                 folder={inline.what === 'folder'}
-                taken={namesIn(path)}
+                taken={namesOf(tree.listings[path])}
                 onSubmit={props.onInlineSubmit}
                 onCancel={props.onInlineCancel}
             />
@@ -376,7 +405,6 @@ export default function Tree(props: TreeProps) {
         if (!listing || listing === 'loading') return note('Loading…');
         if ('error' in listing) return note(listing.error, true);
         if (listing.items.length === 0) return creating(path) ? newRow(path, depth) : note('Empty');
-        const taken = namesIn(path);
 
         return [
             newRow(path, depth),
@@ -390,7 +418,7 @@ export default function Tree(props: TreeProps) {
                             initial={entry.name}
                             label={'New name'}
                             folder={entry.directory}
-                            taken={taken}
+                            taken={namesOf(listing)}
                             onSubmit={props.onInlineSubmit}
                             onCancel={props.onInlineCancel}
                         />
@@ -414,31 +442,11 @@ export default function Tree(props: TreeProps) {
                             dirty={dirtyPaths.has(entry.path)}
                             canMove={canMove}
                             canUpload={canUpload}
+                            canCross={canCross}
                             paneId={props.paneId}
-                            onCrossDrop={props.onCrossDrop}
-                            onClick={(event) => {
-                                const mode = event.shiftKey
-                                    ? 'range'
-                                    : event.ctrlKey || event.metaKey
-                                      ? 'toggle'
-                                      : 'single';
-                                props.onSelect(entry.path, mode);
-                                if (mode !== 'single') return;
-                                if (entry.directory) tree.toggle(entry.path);
-                                else props.onOpen(entry);
-                            }}
-                            onMenu={(x, y) => {
-                                // A right click inside the selection keeps it; elsewhere it selects just that entry.
-                                if (!selection.has(entry.path)) props.onSelect(entry.path, 'single');
-                                props.onMenu(entry, x, y);
-                            }}
-                            onDragStart={props.onDragSelect}
-                            onMove={props.onMove}
-                            onDropFiles={props.onDropFiles}
-                            onHoverOpen={() => tree.expand(entry.path)}
+                            h={handlers}
                             dragging={dragging}
                             onDragging={setDragging}
-                            taken={entry.directory ? namesIn(entry.path) : taken}
                             settled={props.settled === entry.path}
                         />
                         {open && directory(entry.path, depth + 1)}
@@ -459,22 +467,13 @@ export default function Tree(props: TreeProps) {
                 dragged={false}
                 openFile={false}
                 dirty={false}
-                canMove={false}
+                canMove={canMove}
                 canUpload={canUpload}
+                canCross={canCross}
                 paneId={props.paneId}
-                onCrossDrop={props.onCrossDrop}
-                onClick={() => props.onSelect(ROOT, 'single')}
-                onMenu={(x, y) => {
-                    props.onSelect(ROOT, 'single');
-                    props.onMenu(null, x, y);
-                }}
-                onDragStart={props.onDragSelect}
-                onMove={props.onMove}
-                onDropFiles={props.onDropFiles}
-                onHoverOpen={() => undefined}
+                h={handlers}
                 dragging={dragging}
                 onDragging={setDragging}
-                taken={namesIn(ROOT)}
                 settled={false}
             />
             {directory(ROOT, 1)}

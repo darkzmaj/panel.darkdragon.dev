@@ -51,13 +51,14 @@ export interface DotView {
 /**
  * One dot. Everything that is alive flashes: running dots in the colour of their level, starting, stopping and
  * installing in yellow, an unknown state in grey. The only dots that hold still are the red ones of an instance that is
- * off or unavailable. `own` is the level of this dot's resource (green for the power dot).
+ * off or unavailable (and there only the power dot is red, the others stay blank). `own` is the level of this dot's resource (green for the power dot).
  */
-export function dotView(mode: DotsMode, own: Level): DotView {
+export function dotView(mode: DotsMode, own: Level, power = false): DotView {
     switch (mode) {
         case 'offline':
         case 'unavailable':
-            return { level: 'max', flashing: false };
+            // Off: the power dot is one steady red, the other three are blank. Nothing flashes.
+            return power ? { level: 'max', flashing: false } : { level: 'idle', flashing: false };
         case 'transition':
         case 'installing':
             return { level: 'high', flashing: true };

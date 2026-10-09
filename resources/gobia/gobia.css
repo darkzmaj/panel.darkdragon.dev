@@ -3964,9 +3964,6 @@ html {
     color: rgb(var(--gb-danger));
     font-size: 12px;
 }
-.gb-tree-row.drop-valid {
-    box-shadow: inset 0 0 0 1px rgb(var(--p-500) / 0.45);
-}
 .gb-tree-row.settled {
     animation: gb-settle 520ms var(--gb-ease-out, ease-out);
 }
@@ -4672,4 +4669,10 @@ html {
     height: 14px;
     transform: translateY(-50%);
     color: var(--gb-text-3);
+}
+
+/* an instance that is off: one steady red power dot, three blank (hollow) ones */
+.gb-sdot.idle:not(.flash) {
+    background: transparent;
+    box-shadow: inset 0 0 0 1.5px rgb(var(--n-500) / 0.55);
 }

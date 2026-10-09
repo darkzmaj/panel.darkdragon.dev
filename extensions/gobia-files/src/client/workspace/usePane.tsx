@@ -40,7 +40,7 @@ import { isDirty, tabsReducer, type Tab } from './tabs';
 import type { FileResult } from './search';
 import SearchPanel, { type ReplaceResult } from './SearchPanel';
 import FileTypeIcon from './FileTypeIcon';
-import Tree, { ROOT, validTarget, visiblePaths, type Inline, type SelectMode } from './Tree';
+import Tree, { MOVE_TYPE, ROOT, originOf, validTarget, visiblePaths, type Inline, type SelectMode } from './Tree';
 import { mark } from './timing';
 import UploadPanel from './UploadPanel';
 import { pickedFromDrop, pickedFromInput, useUploadQueue } from './uploads';
@@ -243,7 +243,10 @@ export function usePane(config: PaneConfig) {
             () =>
                 void loadEditor().then((loaded) => {
                     setEditorModule(loaded);
-                    window.setTimeout(loaded.warmUp, 0);
+                    // When the browser is idle, so warming Monaco never lands in the middle of a click or a drag.
+                    (window.requestIdleCallback
+                        ? (run: () => void) => window.requestIdleCallback(run, { timeout: 2000 })
+                        : (run: () => void) => window.setTimeout(run, 200))(loaded.warmUp);
                 }),
             50
         );
@@ -552,8 +555,24 @@ export function usePane(config: PaneConfig) {
     // A file changed by someone else (console, another panel user, a server process) while it is open. A clean tab simply
     // refreshes; one with unsaved edits asks first. "Cancel" is remembered for that remote version only.
     const dismissed = useRef<Record<string, string | null>>({});
-    const tabStrip = useRef<HTMLDivElement>(null);
+    const tabStrip = useRef<HTMLDivElement | null>(null);
     const [tabDrag, setTabDrag] = useState<{ path: string; over: string | null; after: boolean } | null>(null);
+    // The wheel scrolls the tab strip sideways (a mouse has no horizontal wheel), not only its scrollbar. A callback ref,
+    // because the second pane's strip is created later, inside a portal.
+    const stripCleanup = useRef<(() => void) | null>(null);
+    const setStrip = useCallback((strip: HTMLDivElement | null) => {
+        stripCleanup.current?.();
+        stripCleanup.current = null;
+        tabStrip.current = strip;
+        if (!strip) return;
+        const wheel = (event: WheelEvent) => {
+            if (strip.scrollWidth <= strip.clientWidth || Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
+            event.preventDefault();
+            strip.scrollLeft += event.deltaY;
+        };
+        strip.addEventListener('wheel', wheel, { passive: false });
+        stripCleanup.current = () => strip.removeEventListener('wheel', wheel);
+    }, []);
     // The active tab is always scrolled into view, also when a search result or a restored session activates it.
     useEffect(() => {
         const strip = tabStrip.current;
@@ -751,9 +770,8 @@ export function usePane(config: PaneConfig) {
             if (what === 'file') {
                 dispatch({ type: 'open', path, name });
                 await load(path);
-            } else {
-                tree.expand(path);
             }
+            // A new folder stays closed: it opens when something is put in it.
         });
 
     const rename = (from: string, to: string) =>
@@ -1021,6 +1039,51 @@ export function usePane(config: PaneConfig) {
     const editorPaths = useMemo(() => state.tabs.map((tab) => tab.path), [state.tabs]);
     const dirtyPaths = useMemo(() => new Set(state.tabs.filter(isDirty).map((tab) => tab.path)), [state.tabs]);
 
+    // Right click anywhere in the explorer (rows, tools, the empty part) opens the Gobia menu for the root folder, never the
+    // browser's. Rows handle their own click first; text fields keep the browser menu (copy, paste).
+    const rootContextMenu = (event: React.MouseEvent) => {
+        if (event.defaultPrevented) return;
+        if ((event.target as HTMLElement).closest('input, textarea, [contenteditable="true"]')) return;
+        event.preventDefault();
+        setSelection(null);
+        openMenu(null, event.clientX, event.clientY);
+    };
+
+    // The empty part of the explorer is the root folder: files can be dropped or moved there.
+    const [rootOver, setRootOver] = useState(false);
+    const rootKind = (types: readonly string[]) => {
+        const origin = originOf(types);
+        const cross = origin !== null && origin !== paneId;
+        return { origin, cross, internal: types.includes(MOVE_TYPE) && !cross };
+    };
+    const rootDragOver = (event: React.DragEvent) => {
+        if ((event.target as HTMLElement).closest('.gb-tree-row')) return;
+        const { cross, internal } = rootKind(event.dataTransfer.types);
+        const allowed = cross
+            ? permissions.create && config.onCrossDrop !== undefined
+            : internal
+              ? permissions.update
+              : permissions.create;
+        if (!allowed) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = internal ? 'move' : 'copy';
+        setRootOver(true);
+    };
+    const rootDrop = (event: React.DragEvent) => {
+        if ((event.target as HTMLElement).closest('.gb-tree-row')) return;
+        setRootOver(false);
+        const { origin, cross, internal } = rootKind(event.dataTransfer.types);
+        const moved = event.dataTransfer.getData(MOVE_TYPE);
+        event.preventDefault();
+        if (cross && origin && moved) {
+            if (permissions.create) config.onCrossDrop?.(origin, JSON.parse(moved) as string[], ROOT);
+        } else if (internal && moved) {
+            if (permissions.update) moveInto(JSON.parse(moved) as string[], ROOT);
+        } else if (permissions.create) {
+            void dropFiles(event.dataTransfer, ROOT);
+        }
+    };
+
     const searching = explorerView === 'search';
     const pane = (shown: boolean): React.CSSProperties => ({
         display: shown ? 'flex' : 'none',
@@ -1030,7 +1093,7 @@ export function usePane(config: PaneConfig) {
     });
     const explorer = (
         <>
-            <div style={pane(searching)}>
+            <div style={pane(searching)} onContextMenu={rootContextMenu}>
                 <div className={'gb-explorer-tools'}>
                     <ToolButton label={'Back to files'} onClick={() => setExplorerView('files')}>
                         <X aria-hidden />
@@ -1053,7 +1116,7 @@ export function usePane(config: PaneConfig) {
                     onReplace={replaceInFile}
                 />
             </div>
-            <div style={pane(!searching)}>
+            <div style={pane(!searching)} onContextMenu={rootContextMenu}>
                 <div className={'gb-explorer-tools'}>
                     {permissions.create && (
                         <>
@@ -1119,7 +1182,16 @@ export function usePane(config: PaneConfig) {
                     />
                 </div>
                 <div
-                    style={{ flex: 1, overflow: 'auto', padding: '4px 0', minHeight: 0 }}
+                    style={{
+                        flex: 1,
+                        overflow: 'auto',
+                        padding: '4px 0',
+                        minHeight: 0,
+                        boxShadow: rootOver ? 'inset 0 0 0 2px rgb(var(--p-500) / 0.6)' : undefined,
+                    }}
+                    onDragOver={rootDragOver}
+                    onDragLeave={() => setRootOver(false)}
+                    onDrop={rootDrop}
                     onClick={(event) => {
                         // The empty part of the explorer clears the selection.
                         const target = event.target as HTMLElement;
@@ -1170,7 +1242,7 @@ export function usePane(config: PaneConfig) {
     const editor = (
         <>
             <div
-                ref={tabStrip}
+                ref={setStrip}
                 role={'group'}
                 aria-label={'Open files'}
                 className={'gb-tabs'}

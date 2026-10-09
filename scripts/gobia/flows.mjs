@@ -23,14 +23,14 @@ function withScreenshot(page, check) {
 
 /** The number a view option of the dashboard shows after its name: "All · 4" gives 4. */
 async function viewCount(page, label) {
-    await page.getByRole('button', { name: /^(All|You|Other)/ }).click();
+    await page.getByRole('button', { name: /^(All|You|Other|Views)/ }).click();
     const text = await page.getByRole('option', { name: new RegExp(`^${label}`) }).innerText();
     await page.keyboard.press('Escape');
     return Number(/·\s*(\d+)/.exec(text)?.[1] ?? NaN);
 }
 
 async function chooseView(page, label) {
-    await page.getByRole('button', { name: /^(All|You|Other)/ }).click();
+    await page.getByRole('button', { name: /^(All|You|Other|Views)/ }).click();
     await page.getByRole('option', { name: new RegExp(`^${label}`) }).click();
     await page.getByRole('button', { name: new RegExp(`^${label}`) }).waitFor();
 }
@@ -101,16 +101,22 @@ export async function dashboardFlows({ context, baseUrl, check: plain }) {
         await page.getByRole('button', { name: category, exact: true }).waitFor();
     });
 
-    await check('categories: rename shows at once and a view change keeps the category', async () => {
+    await check('categories: opening one unselects All, You and Other, choosing a view leaves it', async () => {
         await page.getByRole('button', { name: 'Edit categories' }).click();
         await page.locator('.gb-cat-name', { hasText: category }).click();
         await page.getByLabel('Category name').fill(category + ' B');
         await page.getByRole('button', { name: 'Save category' }).click();
         await page.getByRole('button', { name: 'Close' }).click();
         await page.getByRole('button', { name: category + ' B', exact: true }).waitFor();
-        await page.getByRole('button', { name: category + ' B', exact: true }).click();
+        const tab = page.getByRole('button', { name: category + ' B', exact: true });
+        await tab.click();
+        // A category replaces the view: the All, You, Other chip is unselected while it is open.
+        await page.getByRole('button', { name: 'Views' }).waitFor();
+        if ((await tab.getAttribute('aria-pressed')) !== 'true') throw new Error('the category is not selected');
+        // Choosing a view leaves the category.
         await chooseView(page, 'You');
-        await page.getByRole('button', { name: category + ' B', exact: true }).waitFor();
+        if ((await tab.getAttribute('aria-pressed')) !== 'false')
+            throw new Error('the category stayed selected after choosing a view');
         await chooseView(page, 'All');
     });
 
