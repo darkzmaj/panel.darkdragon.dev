@@ -207,9 +207,11 @@ only cover the frontend and the Gobia Pest tests. Wings reports file times in na
 
 **Real Wings.** None of this has run against real Wings, Docker, quotas or large and many files. Mock Wings and a faked Wings in Pest prove the Panel logic only. Required before production: copy and move between two real nodes (the same node and different nodes), a 60 MiB and a 1 GiB file (temp disk, timeouts, the 2 GiB limit), a failing source delete (`move_incomplete` then Finish), a folder with thousands of entries, unusual file names, a full destination disk, a node going offline mid transfer, an interrupted request (no temporary files may remain), subuser permission combinations, and the dots with real resource numbers and a real start/stop.
 
-## 14. Hetzner Storage Box backups (specification for Majcek; not implemented)
+## 14. Hetzner Storage Box backups (specification; implemented in part on 2026-10-09)
 
-Nothing in this section exists in the code. It is the design the backup feature must follow. Facts about Hetzner come from its official documentation (docs.hetzner.com, Storage Box pages "Overview", "Access Overview", "Access with SSH/rsync/BorgBackup", "Access with SFTP/SCP", "Snapshots", last changed September 2026 when read on 2026-10-09). Re-read them before building; limits and ports change.
+**Status.** The extension `gobia-backups` implements this section with SFTP and built in encryption instead of BorgBackup, has an API and console commands, and no screen yet. What was built, what differs from this specification and why, and what is untested are in `docs/gobia-backups.md`. The text below is the original specification and stays as the reference for the parts that are not built (Borg, a second destination, notifications, capacity warnings).
+
+It is the design the backup feature follows. Facts about Hetzner come from its official documentation (docs.hetzner.com, Storage Box pages "Overview", "Access Overview", "Access with SSH/rsync/BorgBackup", "Access with SFTP/SCP", "Snapshots", last changed September 2026 when read on 2026-10-09). Re-read them before building; limits and ports change.
 
 ### 14.1 What a Storage Box offers (verified)
 

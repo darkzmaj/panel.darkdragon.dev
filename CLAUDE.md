@@ -157,6 +157,10 @@ shell execution or file replacement to the frontend or to request handling, neve
 accept a URL, path or command from a request, and never weaken signature, checksum or preflight checks. Changes to the updater need
 `tests/Integration/Gobia/UpdaterTest.php` to pass and an end to end run (`docs/gobia-updater-e2e.md`).
 
+## Offsite backups (gobia-backups)
+
+Backend only so far: Wings builds the archive, the Panel streams it encrypted to a Hetzner Storage Box over SFTP, restores go back through Wings with a signed link. Guide, differences from the specification and the API a screen needs: `docs/gobia-backups.md`. Credentials are write only: never add an endpoint or a serialisation that returns a private key, password or encryption key (the encryption key is shown once at creation, nowhere else). Paths on the box are built from UUIDs only. Not yet run against a real Storage Box or a real Wings node.
+
 ## Future Wings policy
 
 Do not modify Wings in this migration unless explicitly requested.

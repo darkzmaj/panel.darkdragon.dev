@@ -110,3 +110,5 @@ The updater itself lives in `extensions/gobia-core` and needs no core change. Ou
 | `deploy/linux/gobia-update-helper`, `scripts/release/build-release.sh`, `scripts/release/sign.php`, `.github/workflows/gobia-release.yaml` (all new) | Privileged helper, release packaging and signing, release workflow | Deployment and release tooling | None (new files) | `tests/Integration/Gobia/UpdaterTest.php`, `docs/gobia-updater-e2e.md` | Keep |
 
 New Gobia owned paths: `extensions/gobia-core/src/Updater`, `src/Console/Update`, `config/gobia_updater.php`, `tests/Integration/Gobia/UpdaterTest.php`, `BuildsReleases.php`, `TarArchive.php`, `docs/gobia-updates.md`, `docs/gobia-updater-e2e.md`, `docs/gobia-security-review.md`, `docs/gobia-backend-performance.md`.
+
+`extensions/gobia-backups` (offsite backups on a Storage Box, added 2026-10-09) is a Gobia owned path with no core change; its tests are `tests/Integration/Gobia/OffsiteBackupTest.php` and its guide `docs/gobia-backups.md`.

@@ -1,0 +1,16 @@
+{
+    "id": "gobia-backups",
+    "name": "Gobia Backups",
+    "version": "1.0.0",
+    "description": "Offsite server backups on a Hetzner Storage Box: schedules, retention, encryption and restore.",
+    "author": "Gobia",
+    "requires": {
+        "panel": "^2.0.0-dev",
+        "sdk": ">=2.0.0-beta.4 <3.0",
+        "php": "^8.3"
+    },
+    "provider": "GobiaBackups\\GobiaBackupsProvider",
+    "autoload": {
+        "GobiaBackups\\": "src"
+    }
+}
