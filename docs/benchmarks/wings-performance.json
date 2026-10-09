@@ -1,0 +1,8 @@
+{
+  "status": "not_measured",
+  "reason": "no Linux host with Docker available in the producing session; no figures were fabricated",
+  "upstream_wings": {"commit": "cba8315bceda926241d6f86e78b3bd52cf15e41f", "latest_tag": "v1.13.3"},
+  "panel_version": "1.15.1-gobia.1",
+  "cases": {"direct": null, "stock_wings": null, "gobia_wings": null},
+  "harness": "bench/wings (run.sh -> summarize.py -> dashboard.py); summarize.py output replaces `cases`"
+}
