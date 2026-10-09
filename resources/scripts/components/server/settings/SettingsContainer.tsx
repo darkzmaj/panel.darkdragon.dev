@@ -10,6 +10,7 @@ import { ip } from '@/lib/formatters';
 import Button from '@/components/elements/Button';
 import { useCurrentServer } from '@/api/server/queries';
 import { useCurrentUser } from '@/api/account/queries';
+import ServerSettingsTabs from '@/components/server/settings/ServerSettingsTabs';
 
 const SettingsContainer = () => {
     const username = useCurrentUser().username;
@@ -21,6 +22,7 @@ const SettingsContainer = () => {
 
     return (
         <ServerContentBlock title={'Settings'}>
+            <ServerSettingsTabs />
             <div className={'md:flex'}>
                 <div className={'w-full md:flex-1 md:mr-10'}>
                     <Can action={'file.sftp'}>

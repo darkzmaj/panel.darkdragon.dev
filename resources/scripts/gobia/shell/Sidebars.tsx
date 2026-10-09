@@ -16,7 +16,6 @@ import {
     LayoutDashboard,
     MapPin,
     Network,
-    Play,
     RefreshCw,
     Server,
     Settings,
@@ -72,8 +71,7 @@ const serverIcons = new Map<string, LucideIcon>([
     ['schedules', Clock],
     ['users', Users],
     ['backups', Archive],
-    ['network', Network],
-    ['startup', Play],
+    ['ports', Network],
     ['settings', Settings],
     ['activity', Activity],
 ]);

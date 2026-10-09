@@ -15,6 +15,7 @@ import { usePermissions } from '@/plugins/usePermissions';
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty';
 import { emptyCompactClass } from '@/components/ui/styles';
 import { cn } from '@/lib/cn';
+import ServerSettingsTabs from '@/components/server/settings/ServerSettingsTabs';
 
 const StartupContainer = () => {
     const server = useCurrentServer()!;
@@ -36,13 +37,17 @@ const StartupContainer = () => {
     };
 
     return !data ? (
-        !error || (error && isFetching) ? (
-            <Spinner centered size={Spinner.Size.LARGE} />
-        ) : (
-            <ServerError title={'Oops!'} message={httpErrorToHuman(error)} onRetry={() => refetch()} />
-        )
+        <ServerContentBlock title={'Settings'}>
+            <ServerSettingsTabs />
+            {!error || (error && isFetching) ? (
+                <Spinner centered size={Spinner.Size.LARGE} />
+            ) : (
+                <ServerError title={'Oops!'} message={httpErrorToHuman(error)} onRetry={() => refetch()} />
+            )}
+        </ServerContentBlock>
     ) : (
-        <ServerContentBlock title={'Startup Settings'}>
+        <ServerContentBlock title={'Settings'}>
+            <ServerSettingsTabs />
             <Slot
                 name={'server.startup.form'}
                 data={{

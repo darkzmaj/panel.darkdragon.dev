@@ -10,7 +10,10 @@ import { chromium } from 'playwright-core';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const baseUrl = process.env.GOBIA_URL ?? 'http://localhost:8000';
-const exe = ['C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', 'C:/Program Files/Google/Chrome/Application/chrome.exe'].find(existsSync);
+const exe = [
+    'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
+    'C:/Program Files/Google/Chrome/Application/chrome.exe',
+].find(existsSync);
 const browser = await chromium.launch({ executablePath: exe, headless: true });
 const context = await browser.newContext();
 const page = await context.newPage();
@@ -33,10 +36,13 @@ const big = randomBytes(40 * 1024 * 1024);
 writeFileSync(disk(a, dir, 'small.json'), small);
 writeFileSync(disk(a, dir, 'plugin.bin'), binary);
 writeFileSync(disk(a, dir, 'server.jar'), big);
-for (let index = 0; index < 20; index++) writeFileSync(disk(a, dir, 'folder', index % 2 ? 'sub' : '.', `f${index}.yml`), `key${index}: ${index}\n`);
+for (let index = 0; index < 20; index++)
+    writeFileSync(disk(a, dir, 'folder', index % 2 ? 'sub' : '.', `f${index}.yml`), `key${index}: ${index}\n`);
 const sha = (path) => createHash('sha256').update(readFileSync(path)).digest('hex');
 
-const xsrf = decodeURIComponent((await context.cookies(baseUrl)).find((cookie) => cookie.name === 'XSRF-TOKEN')?.value ?? '');
+const xsrf = decodeURIComponent(
+    (await context.cookies(baseUrl)).find((cookie) => cookie.name === 'XSRF-TOKEN')?.value ?? ''
+);
 const send = async (items, mode, extra = {}) => {
     const started = Date.now();
     const response = await page.request.post(`${baseUrl}/api/client/extensions/gobia-files/transfers`, {
@@ -52,24 +58,69 @@ const results = {};
 const label = process.argv[2] ?? 'run';
 try {
     const cases = [
-        ['small file copy', [`/${dir}/small.json`], 'copy', disk(a, dir, 'small.json'), disk(b, dir, 'in', 'small.json')],
-        ['5 MiB binary copy', [`/${dir}/plugin.bin`], 'copy', disk(a, dir, 'plugin.bin'), disk(b, dir, 'in', 'plugin.bin')],
-        ['40 MiB jar copy', [`/${dir}/server.jar`], 'copy', disk(a, dir, 'server.jar'), disk(b, dir, 'in', 'server.jar')],
+        [
+            'small file copy',
+            [`/${dir}/small.json`],
+            'copy',
+            disk(a, dir, 'small.json'),
+            disk(b, dir, 'in', 'small.json'),
+        ],
+        [
+            '5 MiB binary copy',
+            [`/${dir}/plugin.bin`],
+            'copy',
+            disk(a, dir, 'plugin.bin'),
+            disk(b, dir, 'in', 'plugin.bin'),
+        ],
+        [
+            '40 MiB jar copy',
+            [`/${dir}/server.jar`],
+            'copy',
+            disk(a, dir, 'server.jar'),
+            disk(b, dir, 'in', 'server.jar'),
+        ],
     ];
     for (const [name, items, mode, source, target] of cases) {
         const run = await send(items, mode);
         const same = existsSync(target) && sha(source) === sha(target);
-        results[name] = { ms: run.ms, http: run.status, item: run.body.items?.[0]?.status, reason: run.body.items?.[0]?.reason, identical: same, stages: run.body.timings ?? null };
+        results[name] = {
+            ms: run.ms,
+            http: run.status,
+            item: run.body.items?.[0]?.status,
+            reason: run.body.items?.[0]?.reason,
+            identical: same,
+            stages: run.body.timings ?? null,
+        };
     }
     const folder = await send([`/${dir}/folder`], 'copy');
-    results['folder of 20 small files copy'] = { ms: folder.ms, http: folder.status, item: folder.body.items?.[0]?.status, copied: folder.body.items?.[0]?.copied, stages: folder.body.timings ?? null };
+    results['folder of 20 small files copy'] = {
+        ms: folder.ms,
+        http: folder.status,
+        item: folder.body.items?.[0]?.status,
+        copied: folder.body.items?.[0]?.copied,
+        stages: folder.body.timings ?? null,
+    };
     // Moves: the source must be gone afterwards, the destination identical.
     const original = sha(disk(a, dir, 'small.json'));
     rmSync(disk(b, dir, 'in', 'small.json'), { force: true });
     const move = await send([`/${dir}/small.json`], 'move');
-    results['small file move'] = { ms: move.ms, http: move.status, item: move.body.items?.[0]?.status, sourceGone: !existsSync(disk(a, dir, 'small.json')), destinationIdentical: existsSync(disk(b, dir, 'in', 'small.json')) && sha(disk(b, dir, 'in', 'small.json')) === original, stages: move.body.timings ?? null };
+    results['small file move'] = {
+        ms: move.ms,
+        http: move.status,
+        item: move.body.items?.[0]?.status,
+        sourceGone: !existsSync(disk(a, dir, 'small.json')),
+        destinationIdentical:
+            existsSync(disk(b, dir, 'in', 'small.json')) && sha(disk(b, dir, 'in', 'small.json')) === original,
+        stages: move.body.timings ?? null,
+    };
     const bigMove = await send([`/${dir}/server.jar`], 'move');
-    results['40 MiB jar move'] = { ms: bigMove.ms, http: bigMove.status, item: bigMove.body.items?.[0]?.status, sourceGone: !existsSync(disk(a, dir, 'server.jar')), stages: bigMove.body.timings ?? null };
+    results['40 MiB jar move'] = {
+        ms: bigMove.ms,
+        http: bigMove.status,
+        item: bigMove.body.items?.[0]?.status,
+        sourceGone: !existsSync(disk(a, dir, 'server.jar')),
+        stages: bigMove.body.timings ?? null,
+    };
 } finally {
     for (const uuid of [a, b]) rmSync(disk(uuid, dir), { recursive: true, force: true });
     await browser.close();

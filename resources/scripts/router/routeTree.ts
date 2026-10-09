@@ -1,6 +1,14 @@
 import type { QueryClient } from '@tanstack/react-query';
 import type { AnyRoute } from '@tanstack/react-router';
-import { createRootRouteWithContext, createRoute, lazyRouteComponent, redirect } from '@tanstack/react-router';
+import { createElement } from 'react';
+import {
+    createRootRouteWithContext,
+    createRoute,
+    lazyRouteComponent,
+    Navigate,
+    redirect,
+    useParams,
+} from '@tanstack/react-router';
 import { publishAreaNav, type AreaNavEntry } from '@/router/nav';
 import {
     getExtensionScreens,
@@ -78,6 +86,7 @@ import RootNotFound from '@/router/RootNotFound';
 import { RouteAccessDenied } from '@/router/RouteError';
 import { eggIdParam, idParam, scheduleIdParam } from '@/router/params';
 import { requireServerPermission, serverScreen } from '@/router/serverScreen';
+import { hasPermission } from '@/plugins/usePermissions';
 import { slottedRouteComponent } from '@/router/routeSlots';
 import {
     parseActivitySearch,
@@ -256,6 +265,13 @@ const serverRoute = createRoute({
     },
     component: ServerLayout,
 });
+/** An address that moved: opens the new one in place, so Back does not return to the old address. */
+const redirectServerTo = (suffix: string) =>
+    function MovedServerPage() {
+        const { id } = useParams({ strict: false }) as { id: string };
+
+        return createElement(Navigate, { to: `/server/${id}/${suffix}` as never, replace: true });
+    };
 const serverChildren = [
     // ServerLayout renders the console itself.
     createRoute({
@@ -367,7 +383,12 @@ const serverChildren = [
     createRoute({
         getParentRoute: () => serverRoute,
         path: 'network',
-        staticData: { nav: { label: 'Network', permission: 'allocation.*' } },
+        component: redirectServerTo('ports'),
+    }),
+    createRoute({
+        getParentRoute: () => serverRoute,
+        path: 'ports',
+        staticData: { nav: { label: 'Ports', permission: 'allocation.*' } },
         beforeLoad: requireServerPermission('allocation.*'),
         loader: async ({ context }) => {
             await context.queryClient.ensureQueryData({
@@ -383,7 +404,11 @@ const serverChildren = [
     createRoute({
         getParentRoute: () => serverRoute,
         path: 'startup',
-        staticData: { nav: { label: 'Startup', permission: 'startup.*' } },
+        component: redirectServerTo('settings/startup'),
+    }),
+    createRoute({
+        getParentRoute: () => serverRoute,
+        path: 'settings/startup',
         beforeLoad: requireServerPermission('startup.*'),
         loader: async ({ context }) => {
             await context.queryClient.ensureQueryData({
@@ -399,8 +424,19 @@ const serverChildren = [
     createRoute({
         getParentRoute: () => serverRoute,
         path: 'settings',
-        staticData: { nav: { label: 'Settings', permission: ['settings.*', 'file.sftp'] } },
-        beforeLoad: requireServerPermission(['settings.*', 'file.sftp']),
+        staticData: { nav: { label: 'Settings', permission: ['settings.*', 'file.sftp', 'startup.*'] } },
+        beforeLoad: ({ context, params }) => {
+            const may = (name: string) => hasPermission(context.serverPermissions, name);
+            // Someone who may only change startup lands on that tab.
+            if (!may('settings.*') && !may('file.sftp') && may('startup.*')) {
+                throw redirect({
+                    to: '/server/$id/settings/startup' as never,
+                    params: { id: params.id } as never,
+                    replace: true,
+                });
+            }
+            requireServerPermission(['settings.*', 'file.sftp'])({ context });
+        },
         component: serverScreen(
             () => import('@/components/server/settings/SettingsContainer'),
             ['settings.*', 'file.sftp'],

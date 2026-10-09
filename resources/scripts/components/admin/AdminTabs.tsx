@@ -49,14 +49,11 @@ export function tabGroupFor(pathname: string): AdminTabGroup | undefined {
     return adminTabGroups.find((group) => group.tabs.some((tab) => tab.to === path));
 }
 
-export default function AdminTabs() {
-    const path = useLocation({ select: (location) => location.pathname.replace(/\/+$/, '') });
-    const group = tabGroupFor(path);
-    if (!group) return null;
-
+/** Tabs that are real pages: every tab is a link, so Back, Forward and refresh keep the tab. */
+export function TabLinks({ label, tabs, path }: { label: string; tabs: readonly Tab[]; path: string }) {
     return (
-        <nav aria-label={group.heading} className={'flex flex-wrap border-b border-border mb-6'}>
-            {group.tabs.map((tab) => {
+        <nav aria-label={label} className={'flex flex-wrap border-b border-border mb-6'}>
+            {tabs.map((tab) => {
                 const active = tab.to === path;
 
                 return (
@@ -78,4 +75,12 @@ export default function AdminTabs() {
             })}
         </nav>
     );
+}
+
+export default function AdminTabs() {
+    const path = useLocation({ select: (location) => location.pathname.replace(/\/+$/, '') });
+    const group = tabGroupFor(path);
+    if (!group) return null;
+
+    return <TabLinks label={group.heading} tabs={group.tabs} path={path} />;
 }

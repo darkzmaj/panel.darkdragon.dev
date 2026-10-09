@@ -50,7 +50,7 @@ const NetworkContainer = () => {
     const newAllocationButton = <NewButton onClick={onCreateAllocation}>New allocation</NewButton>;
 
     return (
-        <ServerContentBlock title={'Network'}>
+        <ServerContentBlock title={'Ports'}>
             {!data ? (
                 <Spinner size={'large'} centered />
             ) : (

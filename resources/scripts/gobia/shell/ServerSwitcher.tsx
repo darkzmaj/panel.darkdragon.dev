@@ -108,12 +108,15 @@ export default function ServerSwitcher({ id, children }: { id: string; children:
         if (target === id) return;
         // The page to keep: the first segment after /server/<id>.
         const rest = location.pathname.replace(new RegExp(`^/server/${id}/?`), '');
-        const segment = rest.split('/')[0] ?? '';
+        const parts = rest.split('/');
+        // Settings has a Startup tab of its own address: keep it when the next server allows it.
+        const segment = parts[0] === 'settings' && parts[1] === 'startup' ? 'settings/startup' : (parts[0] ?? '');
         let allowed: string | null = segment;
         try {
             const loaded = await queryClient.ensureQueryData(serverQueryOptions(target));
             const permissions = selectServerPermissions(loaded);
             const mayOpen = (name: string) => {
+                if (name === 'settings/startup') return hasPermission(permissions, 'startup.*');
                 const entry = getAreaNav('server').find((candidate) => candidate.segment === name);
                 if (!entry) return name === '';
                 if (!entry.permission) return true;
@@ -121,7 +124,8 @@ export default function ServerSwitcher({ id, children }: { id: string; children:
                     hasPermission(permissions, permission)
                 );
             };
-            if (!mayOpen(segment))
+            if (!mayOpen(segment) && segment === 'settings/startup' && mayOpen('settings')) allowed = 'settings';
+            else if (!mayOpen(segment))
                 allowed = getAreaNav('server').find((entry) => mayOpen(entry.segment))?.segment ?? '';
         } catch {
             allowed = segment;

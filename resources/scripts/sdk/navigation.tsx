@@ -14,7 +14,7 @@ export {
 export type CorePanelPath =
     | '/'
     | `/account${'' | '/api' | '/ssh' | '/activity'}`
-    | `/server/$id${'' | '/files' | '/databases' | '/schedules' | '/users' | '/users/new' | '/backups' | '/network' | '/startup' | '/settings' | '/activity'}`
+    | `/server/$id${'' | '/files' | '/databases' | '/schedules' | '/users' | '/users/new' | '/backups' | '/ports' | '/network' | '/settings/startup' | '/startup' | '/settings' | '/activity'}`
     | '/server/$id/files/$action'
     | '/server/$id/schedules/$scheduleId'
     | `/panel${'' | '/users' | '/locations' | '/nodes' | '/servers' | '/databases' | '/mounts' | '/eggs' | '/tags' | '/extensions' | '/api' | '/activity' | '/settings' | '/settings/mail' | '/settings/advanced'}`
