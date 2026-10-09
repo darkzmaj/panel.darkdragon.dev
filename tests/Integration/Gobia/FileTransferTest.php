@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Pterodactyl\Tests\Pest\Integration\Gobia\FileTransferTest;
 
 use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
-use Pterodactyl\Models\Server;
 use Pterodactyl\Models\Subuser;
 use Pterodactyl\Models\User;
 use Pterodactyl\Tests\Integration\Api\Client\ClientApiIntegrationTestCase;
@@ -42,6 +42,7 @@ final class FakeWings
             if (! preg_match('#/api/servers/([0-9a-f-]{36})/files/([a-z-]+)#', $request->url(), $m)) {
                 return Http::response('', 204);
             }
+
             [, $uuid, $action] = $m;
             parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $query);
             $json = $request->data();
@@ -94,6 +95,7 @@ final class FakeWings
                     if ($this->failDelete !== null && str_contains(implode(',', $json['files']), $this->failDelete) && ! str_contains(implode(',', $json['files']), '.gobia-transfer-')) {
                         return Http::response('', 500);
                     }
+
                     foreach ($json['files'] as $name) {
                         $target = mb_rtrim((string) $json['root'], '/').'/'.$name;
                         foreach (array_keys($tree) as $path) {
@@ -131,6 +133,7 @@ beforeEach(function (): void {
     $this->installGobia(['gobia-files']);
     $this->wings = new FakeWings;
     $this->wings->install();
+
     $this->owner = User::factory()->create();
     $this->a = $this->createServerModel(['owner_id' => $this->owner->id, 'name' => 'A']);
     $this->b = $this->createServerModel(['owner_id' => $this->owner->id, 'name' => 'B']);
@@ -153,7 +156,7 @@ test('copying keeps the original and delivers the exact bytes, binary included',
 
     expect($this->wings->trees[$this->b->uuid]['/plugins/config.yml']['content'])->toBe($bytes);
     expect($this->wings->trees[$this->a->uuid]['/config.yml']['content'])->toBe($bytes);
-    expect(array_filter($this->wings->paths($this->b->uuid), fn (string $path) => str_contains($path, '.gobia-transfer-')))->toBe([]);
+    expect(array_filter($this->wings->paths($this->b->uuid), fn (string $path): bool => str_contains($path, '.gobia-transfer-')))->toBe([]);
 });
 
 test('moving a folder carries every nested file and removes the source only afterwards', function (): void {
@@ -221,7 +224,8 @@ test('a stranger learns nothing and traversal is refused', function (): void {
     send(['items' => ['/../etc/passwd']])->assertUnprocessable();
     send(['directory' => '/plugins/../../x'])->assertUnprocessable();
     send(['source' => 'not-a-uuid'])->assertUnprocessable();
-    send(['source' => '00000000-0000-4000-8000-000000000000'])->assertNotFound();
+    // A server that does not exist answers like one the caller may not use.
+    send(['source' => '00000000-0000-4000-8000-000000000000'])->assertForbidden();
 });
 
 test('a file above the size limit is refused with a reason and nothing is written', function (): void {
@@ -272,4 +276,21 @@ test('a copy into the same server with keep adds a second copy', function (): vo
 
     send(['destination' => $this->a->uuid, 'directory' => '/', 'conflict' => 'keep'])->assertOk()->assertJsonPath('items.0.status', 'copied');
     expect($this->wings->paths($this->a->uuid))->toBe(['/config (copy).yml', '/config.yml']);
+});
+
+test('one person can only run a few transfers at once', function (): void {
+    $this->wings->seed($this->a->uuid, '/config.yml', 'X');
+    config(['gobia_files.transfer.concurrent_per_user' => 2]);
+    $held = [];
+    foreach ([0, 1] as $slot) {
+        $held[] = $lock = Cache::lock('gobia-files:transfer:'.$this->owner->id.':'.$slot, 60);
+        expect($lock->get())->toBeTrue();
+    }
+
+    send()->assertStatus(429);
+
+    $held[0]->release();
+    send()->assertOk()->assertJsonPath('items.0.status', 'copied');
+    // The slot is given back when the transfer ends, so the next one runs too.
+    send(['conflict' => 'keep'])->assertOk();
 });

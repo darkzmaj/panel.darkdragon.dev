@@ -92,10 +92,16 @@ class AccessService
             throw ValidationException::withMessages(['email' => 'You already have access to these servers.']);
         }
 
-        DB::transaction(function () use ($email, $servers, $permissions): void {
+        DB::transaction(function () use ($owner, $email, $servers, $permissions): void {
             foreach ($servers as $server) {
                 $existing = Subuser::query()->where('server_id', $server->id)->whereHas('user', fn ($query) => $query->where('email', $email))->first();
                 if ($existing !== null) {
+                    // Granting to someone who already has access rewrites their permissions, so the same rule as
+                    // replace() applies: a manager cannot change a person who holds more than they do.
+                    $held = $this->authority($owner, $server);
+                    if ($held !== null && array_diff($existing->permissions, $held) !== []) {
+                        abort(403, 'This person holds more permissions than you on '.$server->name.'.');
+                    }
                     $this->updater->update($server, $existing, $permissions);
                     Activity::event('server:subuser.update')->subject($server, $existing->user)->property(['email' => $email, 'new' => $permissions, 'via' => 'account'])->log();
 

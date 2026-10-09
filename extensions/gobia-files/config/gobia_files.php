@@ -24,5 +24,7 @@ return [
         'verify_hash_bytes' => (int) env('GOBIA_FILES_TRANSFER_VERIFY_HASH_BYTES', 256 * 1024 * 1024),
         // Seconds one request to a node may take (a large file needs minutes).
         'timeout' => (int) env('GOBIA_FILES_TRANSFER_TIMEOUT', 900),
+        // Transfers one person may run at the same time. Each holds a PHP worker and temporary disk while it runs.
+        'concurrent_per_user' => (int) env('GOBIA_FILES_TRANSFER_CONCURRENT_PER_USER', 2),
     ],
 ];

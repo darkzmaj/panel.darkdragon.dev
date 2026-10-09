@@ -9,17 +9,25 @@ use GobiaCore\Services\AvatarService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Knuckles\Scribe\Attributes\Endpoint;
 use Knuckles\Scribe\Attributes\Group;
 use Pterodactyl\Exceptions\Http\Base\InvalidPasswordProvidedException;
 use Pterodactyl\Facades\Activity;
 use Pterodactyl\Models\User;
 use Pterodactyl\Validation\UserRules;
+use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 
 #[Group('Gobia profile')]
 class ProfileController
 {
+    /** Wrong passwords accepted per fifteen minutes before the username change stops answering. */
+    private const int PASSWORD_ATTEMPTS = 5;
+
+    private const int CHANGES_PER_DAY = 3;
+
     public function __construct(private readonly AvatarService $avatars) {}
 
     #[Endpoint('Get the Gobia profile', 'Returns the signed in user\'s Gobia profile: appearance, avatar and username.')]
@@ -65,10 +73,25 @@ class ProfileController
             'username' => UserRules::rules($user)['username'],
             'password' => ['required', 'string'],
         ]);
-        throw_unless(Hash::check($data['password'], $user->password), InvalidPasswordProvidedException::class, trans('validation.internal.invalid_password'));
+        // This endpoint confirms a password, so without its own limit an API key could be used to guess it.
+        $guesses = 'gobia:username-password:'.$user->id;
+        if (RateLimiter::tooManyAttempts($guesses, self::PASSWORD_ATTEMPTS)) {
+            throw new TooManyRequestsHttpException(RateLimiter::availableIn($guesses), 'Too many attempts. Try again later.');
+        }
+        if (! Hash::check($data['password'], $user->password)) {
+            RateLimiter::hit($guesses, 900);
+
+            throw new InvalidPasswordProvidedException(trans('validation.internal.invalid_password'));
+        }
+        RateLimiter::clear($guesses);
 
         $original = $user->username;
         if ($original !== mb_strtolower($data['username'])) {
+            $changes = 'gobia:username-changes:'.$user->id;
+            if (RateLimiter::tooManyAttempts($changes, self::CHANGES_PER_DAY)) {
+                throw ValidationException::withMessages(['username' => 'You can change your username '.self::CHANGES_PER_DAY.' times a day. Try again later.']);
+            }
+            RateLimiter::hit($changes, 86400);
             $user->forceFill(['username' => $data['username']])->save();
             Activity::event('gobia:profile.username-changed')->property(['old' => $original, 'new' => $user->username])->log();
         }

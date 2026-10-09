@@ -243,12 +243,12 @@ class TemplateFileStore
         if (str_contains($content, "\0") || ! mb_check_encoding($content, 'UTF-8')) {
             throw new DisplayException('Only UTF-8 text can be saved in the editor. Upload other files instead.');
         }
-        if (mb_strlen($content) > $this->limits()['max_edit_bytes']) {
+        if (mb_strlen($content, '8bit') > $this->limits()['max_edit_bytes']) {
             throw new DisplayException('Files above '.$this->human($this->limits()['max_edit_bytes']).' cannot be edited in the browser. Upload them instead.');
         }
 
         $this->ensureWorkingTree($template);
-        $this->assertCanStore($template, $path, mb_strlen($content));
+        $this->assertCanStore($template, $path, mb_strlen($content, '8bit'));
         $target = $this->resolve($template, $path);
         $this->assertNoFolderConflict($template, $path);
         $this->makeDirectory(dirname($target));
@@ -286,7 +286,7 @@ class TemplateFileStore
                 if ($chunk === false) {
                     throw new DisplayException('The upload was interrupted.');
                 }
-                $written += mb_strlen($chunk);
+                $written += mb_strlen($chunk, '8bit');
                 if ($written > $limit) {
                     throw new DisplayException('A template file can be at most '.$this->human($limit).'.');
                 }

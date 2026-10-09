@@ -6,6 +6,7 @@ namespace Pterodactyl\Tests\Pest\Integration\Gobia\ProfileAvatarUsernameTest;
 
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Storage;
 use Pterodactyl\Models\User;
 use Pterodactyl\Tests\Integration\Api\Client\ClientApiIntegrationTestCase;
@@ -102,13 +103,35 @@ test('changing the username needs the current password and follows the panel rul
     foreach (['', '-bad', 'bad-', 'sp ace', str_repeat('a', 200), "x\ny"] as $invalid) {
         $this->putJson(PROFILE_URL.'/username', ['username' => $invalid, 'password' => 'correct-horse-battery'])->assertUnprocessable();
     }
+
     $this->putJson(PROFILE_URL.'/username', ['password' => 'correct-horse-battery'])->assertUnprocessable();
     expect($user->fresh()->username)->toBe('new.name');
 });
 
-test('a username cannot take another user\'s name, whatever the case', function (): void {
+test("a username cannot take another user's name, whatever the case", function (): void {
     $taken = User::factory()->create(['username' => 'already.used']);
     $user = User::factory()->create(['password' => Hash::make('correct-horse-battery')]);
     $this->actingAs($user)->putJson(PROFILE_URL.'/username', ['username' => 'Already.Used', 'password' => 'correct-horse-battery'])->assertUnprocessable();
     expect($taken->fresh()->username)->toBe('already.used');
+});
+
+test('the username change cannot be used to guess the password and is limited per day', function (): void {
+    $user = User::factory()->create(['password' => Hash::make('correct-horse-battery')]);
+    $this->actingAs($user);
+
+    foreach (range(1, 5) as $attempt) {
+        $this->putJson(PROFILE_URL.'/username', ['username' => 'guess.'.$attempt, 'password' => 'wrong-'.$attempt])->assertStatus(400);
+    }
+
+    // After five wrong passwords even the right one is refused for a while.
+    $this->putJson(PROFILE_URL.'/username', ['username' => 'guessed', 'password' => 'correct-horse-battery'])->assertStatus(429);
+    expect($user->fresh()->username)->not->toBe('guessed');
+
+    RateLimiter::clear('gobia:username-password:'.$user->id);
+    foreach (['first.name', 'second.name', 'third.name'] as $name) {
+        $this->putJson(PROFILE_URL.'/username', ['username' => $name, 'password' => 'correct-horse-battery'])->assertOk();
+    }
+
+    $this->putJson(PROFILE_URL.'/username', ['username' => 'fourth.name', 'password' => 'correct-horse-battery'])->assertUnprocessable();
+    expect($user->fresh()->username)->toBe('third.name');
 });

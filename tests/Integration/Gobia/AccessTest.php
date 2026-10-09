@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Pterodactyl\Tests\Pest\Integration\Gobia\AccessTest;
 
+use Illuminate\Support\Facades\Http;
 use Pterodactyl\Models\Server;
 use Pterodactyl\Models\Subuser;
 use Pterodactyl\Models\User;
@@ -14,7 +15,7 @@ uses(ClientApiIntegrationTestCase::class, InstallsGobiaExtensions::class);
 
 beforeEach(function (): void {
     // Changing access revokes the person's SFTP sessions on the node; nothing here should reach a real daemon.
-    \Illuminate\Support\Facades\Http::fake();
+    Http::fake();
     $this->installGobia(['gobia-core']);
 });
 afterEach(fn () => $this->uninstallGobia());
@@ -191,6 +192,8 @@ test('a manager cannot change or remove someone who holds more than they do', fu
 
     $this->putJson(ACCESS.'/'.$power->uuid, ['servers' => [$a->uuid], 'permissions' => ['control.start']])->assertForbidden();
     $this->deleteJson(ACCESS.'/'.$power->uuid)->assertForbidden();
+    // Granting again to the same address rewrites permissions too, so it is refused the same way.
+    $this->postJson(ACCESS, ['email' => $power->email, 'servers' => [$a->uuid], 'permissions' => ['control.start']])->assertForbidden();
     expect(Subuser::query()->where('user_id', $power->id)->first()->permissions)->toContain('file.update');
 });
 

@@ -415,7 +415,8 @@ final class TransferService
     private function server(string $uuid): Server
     {
         $server = Server::query()->where('uuid', $uuid)->with('node')->first();
-        abort_if($server === null, 404, 'Server not found.');
+        // The same answer as a server the user may not use, so the response never confirms that an id exists.
+        abort_if($server === null, 403, 'You are not allowed to transfer files between these servers.');
 
         return $server;
     }

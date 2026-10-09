@@ -92,9 +92,11 @@ $app = Application::configure(basePath: $_ENV['APP_BASE_PATH'] ?? dirname(__DIR_
             AuthenticateIPAccess::class,
         ]);
 
-        $middleware->group('application-api', [SubstituteBindings::class, AuthenticateApplicationUser::class]);
+        // Gobia: authorisation runs before route model binding in the administrator and application groups, so
+        // someone who may not use these APIs gets 403 for every id instead of 404 for the ones that do not exist.
+        $middleware->group('application-api', [AuthenticateApplicationUser::class, SubstituteBindings::class]);
         $middleware->group('client-api', [SubstituteClientBindings::class, RequireClientApiKey::class]);
-        $middleware->group('admin-api', [SubstituteBindings::class, AuthenticateAdmin::class]);
+        $middleware->group('admin-api', [AuthenticateAdmin::class, SubstituteBindings::class]);
         $middleware->group('daemon', [SubstituteBindings::class, DaemonAuthenticate::class]);
 
         $middleware->alias([

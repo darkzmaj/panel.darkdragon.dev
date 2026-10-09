@@ -178,7 +178,7 @@ class TemplateServiceTest extends IntegrationTestCase
         $stream = fopen('php://temp', 'r+');
         fwrite($stream, $binary);
         rewind($stream);
-        $this->assertSame(mb_strlen($binary), $this->service->uploadFile($template, 'plugins/Essentials.jar', $stream, mb_strlen($binary)));
+        $this->assertSame(mb_strlen($binary, '8bit'), $this->service->uploadFile($template, 'plugins/Essentials.jar', $stream, mb_strlen($binary, '8bit')));
         $this->service->makeFolder($template, 'world/region');
         $this->service->putFile($template, 'server.properties', "motd=hi\n");
 
