@@ -340,6 +340,56 @@ export async function explorerFlows({ browser, context, login, scheme, baseUrl, 
         }
     );
 
+    const menuLabels = async () =>
+        (
+            await page
+                .getByRole('menuitem')
+                .first()
+                .waitFor({ timeout: 5000 })
+                .then(() => page.getByRole('menuitem').allInnerTexts())
+        ).map((text) => text.trim());
+    await check('explorer: the right click menu fits what was clicked (file, folder, empty space)', async () => {
+        const topFile = page.locator('.gb-tree-children.root > .gb-tree-group > .gb-tree-row.file').first();
+        const topFolder = page.locator('.gb-tree-children.root > .gb-tree-group > .gb-tree-row.dir').first();
+        await topFile.click({ button: 'right' });
+        let labels = await menuLabels();
+        for (const wanted of ['Open', 'Rename', 'Duplicate', 'Download', 'Copy path', 'Delete'])
+            if (!labels.includes(wanted)) throw new Error('a file menu lacks ' + wanted + ': ' + labels);
+        for (const banned of ['New file', 'New folder', 'Upload files here'])
+            if (labels.includes(banned)) throw new Error('a file menu offers ' + banned);
+        if (labels.some((label) => /^(Copy|Move) .* to /.test(label)))
+            throw new Error('a transfer entry is in the menu');
+        await page.keyboard.press('Escape');
+        await topFolder.click({ button: 'right' });
+        labels = await menuLabels();
+        for (const wanted of ['New file', 'New folder', 'Upload files here', 'Rename', 'Delete'])
+            if (!labels.includes(wanted)) throw new Error('a folder menu lacks ' + wanted + ': ' + labels);
+        await page.keyboard.press('Escape');
+        await root.click({ button: 'right' });
+        labels = await menuLabels();
+        for (const wanted of ['New file', 'New folder', 'Upload files here'])
+            if (!labels.includes(wanted)) throw new Error('the root menu lacks ' + wanted + ': ' + labels);
+        for (const banned of ['Rename', 'Delete', 'Open', 'Duplicate'])
+            if (labels.includes(banned)) throw new Error('the root menu offers ' + banned);
+        await page.keyboard.press('Escape');
+    });
+
+    await check('explorer: double clicking a name edits it like Rename', async () => {
+        const name = page.locator('.gb-tree-children.root > .gb-tree-group > .gb-tree-row.file .gb-tree-name').first();
+        await name.dblclick();
+        await page.getByLabel('New name').waitFor({ timeout: 5000 });
+        await page.keyboard.press('Escape');
+        await page.getByLabel('New name').waitFor({ state: 'detached', timeout: 5000 });
+    });
+
+    await check('explorer: the Find button opens the editor find like Ctrl+F', async () => {
+        await page.locator('.gb-tree-children.root > .gb-tree-group > .gb-tree-row.file button').first().click();
+        await page.locator('.monaco-editor .view-line').first().waitFor({ timeout: 30000 });
+        await page.getByRole('button', { name: 'Find', exact: true }).click();
+        await page.locator('.monaco-editor .find-widget.visible').waitFor({ timeout: 5000 });
+        await page.keyboard.press('Escape');
+    });
+
     await check('explorer: an empty area clears the selection, delete removes the selected set', async () => {
         await page.locator('.gb-tree').evaluate((element) => element.parentElement.click());
         if (await isSelected(a)) throw new Error('selection not cleared');

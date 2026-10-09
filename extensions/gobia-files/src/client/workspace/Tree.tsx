@@ -145,6 +145,8 @@ interface TreeProps {
     /** Called when a drag starts on `path`; returns the paths that travel (the selection, or just that path). */
     onDragSelect: (path: string) => string[];
     onOpen: (entry: TreeEntry) => void;
+    /** Double click on a name: edit it in place, like Rename. */
+    onRename?: (entry: TreeEntry) => void;
     /** A right click, the menu key or the three dot button; `entry` is null for the root. */
     onMenu: (entry: TreeEntry | null, x: number, y: number) => void;
     onMove: (from: string[], toDirectory: string) => void;
@@ -162,6 +164,7 @@ interface Handlers {
     click: (entry: TreeEntry | null, event: MouseEvent) => void;
     menu: (entry: TreeEntry | null, x: number, y: number) => void;
     dragStart: (path: string) => string[];
+    rename: (entry: TreeEntry) => void;
     move: TreeProps['onMove'];
     dropFiles: TreeProps['onDropFiles'];
     crossDrop: (origin: string, paths: string[], directory: string, copy: boolean) => void;
@@ -314,7 +317,17 @@ const Row = memo(function Row({
                         <FileTypeIcon name={entry?.name ?? ''} />
                     </>
                 )}
-                <span className={'gb-tree-name' + (openFile ? ' open' : '')}>
+                <span
+                    className={'gb-tree-name' + (openFile ? ' open' : '')}
+                    onDoubleClick={
+                        entry
+                            ? (event) => {
+                                  event.preventDefault();
+                                  h.rename(entry);
+                              }
+                            : undefined
+                    }
+                >
                     {entry ? entry.name : '/home/container'}
                 </span>
                 {dirty && (
@@ -372,6 +385,7 @@ export default function Tree(props: TreeProps) {
                 current.onMenu(entry, x, y);
             },
             dragStart: (path) => latest.current.onDragSelect(path),
+            rename: (entry) => latest.current.onRename?.(entry),
             move: (from, to) => latest.current.onMove(from, to),
             dropFiles: (data, directory) => latest.current.onDropFiles(data, directory),
             crossDrop: (origin, paths, directory, copy) => latest.current.onCrossDrop?.(origin, paths, directory, copy),

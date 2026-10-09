@@ -32,6 +32,8 @@ export interface CodeEditorProps {
     problem?: Problem | null;
     /** Move the cursor to a position and scroll it into view; a new `nonce` repeats the request. */
     reveal?: { line: number; column: number; nonce: number } | null;
+    /** Changes each time the Find button is pressed; opens the editor's own find widget like Ctrl+F. */
+    find?: number;
 }
 
 const SNAPSHOT_MS = 150;
@@ -90,6 +92,7 @@ export default function CodeEditor({
     openPaths,
     problem = null,
     reveal = null,
+    find = 0,
 }: CodeEditorProps) {
     const host = useRef<HTMLDivElement>(null);
     const editor = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
@@ -257,6 +260,13 @@ export default function CodeEditor({
                 : []
         );
     }, [problem, owner, pane, path, content]);
+
+    useEffect(() => {
+        if (find === 0) return;
+        const instance = editor.current;
+        instance?.focus();
+        void instance?.getAction('actions.find')?.run();
+    }, [find]);
 
     useEffect(() => {
         const instance = editor.current;

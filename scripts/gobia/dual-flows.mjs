@@ -70,13 +70,16 @@ export async function dualFlows({ browser, context, login, scheme, baseUrl, root
             await page.waitForTimeout(100);
         }
     };
-    const doneCount = () => page.locator('.gb-transfer[data-status="done"]').count();
+    const doneCount = async () =>
+        Number((await page.locator('[data-transfers-finished]').getAttribute('data-transfers-finished')) ?? 0);
     /** Runs an action that starts a transfer and waits until the Panel has finished that job. */
     const afterJob = async (action) => {
         const before = await doneCount();
         await action();
         await page.waitForFunction(
-            (n) => document.querySelectorAll('.gb-transfer[data-status="done"]').length > n,
+            (n) =>
+                Number(document.querySelector('[data-transfers-finished]')?.getAttribute('data-transfers-finished')) >
+                n,
             before,
             { timeout: 40000 }
         );
@@ -517,16 +520,14 @@ export async function dualFlows({ browser, context, login, scheme, baseUrl, root
             const source = treeRow('a', 'plugin.jar');
             await source.waitFor();
             const started = Date.now();
-            await page.keyboard.down('Control');
-            await source.locator('button').first().dragTo(treeRow('b', 'inbox'));
-            await page.keyboard.up('Control');
-            await page.getByRole('region', { name: 'Transfers between servers' }).waitFor({ timeout: 10000 });
+            await afterJob(async () => {
+                await page.keyboard.down('Control');
+                await source.locator('button').first().dragTo(treeRow('b', 'inbox'));
+                await page.keyboard.up('Control');
+            });
             timings.transferInitiateMs = Date.now() - started;
-            await page
-                .getByRole('region', { name: 'Transfers between servers' })
-                .getByText('Done')
-                .first()
-                .waitFor({ timeout: 30000 });
+            if ((await page.getByRole('region', { name: 'Transfers between servers' }).count()) > 0)
+                throw new Error('a progress list is shown for a transfer that succeeded');
             if (!readFileSync(disk(uuidB, dir, 'inbox', 'plugin.jar')).equals(bytes))
                 throw new Error('the bytes differ');
             if (!readFileSync(disk(uuidA, dir, 'plugin.jar')).equals(bytes)) throw new Error('the original changed');
@@ -568,16 +569,26 @@ export async function dualFlows({ browser, context, login, scheme, baseUrl, root
         async () => {
             await refresh('a');
             await refresh('b');
-            await treeRow('a', 'pack').click({ button: 'right' });
-            await afterJob(() => page.getByRole('menuitem', { name: /Copy pack to/ }).click());
+            await afterJob(async () => {
+                await page.keyboard.down('Control');
+                await treeRow('a', 'pack')
+                    .locator('button')
+                    .first()
+                    .dragTo(explorer('b').locator('.gb-tree-row.root').first());
+                await page.keyboard.up('Control');
+            });
             if (readFileSync(disk(uuidB, 'pack', 'sub', 'two.yml'), 'utf8') !== 'two: 2\n')
                 throw new Error('nested file missing');
             if (!existsSync(disk(uuidA, dir, 'pack', 'one.json'))) throw new Error('copy removed the original');
             // Move: right click, Move to.
             rmSync(disk(uuidB, 'pack'), { recursive: true });
             await refresh('b');
-            await treeRow('a', 'pack').click({ button: 'right' });
-            await afterJob(() => page.getByRole('menuitem', { name: /Move pack to/ }).click());
+            await afterJob(() =>
+                treeRow('a', 'pack')
+                    .locator('button')
+                    .first()
+                    .dragTo(explorer('b').locator('.gb-tree-row.root').first())
+            );
             await until(
                 () => existsSync(disk(uuidB, 'pack', 'sub', 'two.yml')) && !existsSync(disk(uuidA, dir, 'pack'))
             ).catch(() => undefined);
@@ -666,12 +677,17 @@ export async function dualFlows({ browser, context, login, scheme, baseUrl, root
                     }),
                 })
             );
-            await treeRow('a', 'stuck.txt').click({ button: 'right' });
-            await page.getByRole('menuitem', { name: /Move stuck.txt to/ }).click();
+            await treeRow('a', 'stuck.txt')
+                .locator('button')
+                .first()
+                .dragTo(explorer('b').locator('.gb-tree-row.root').first());
             await page.getByRole('button', { name: /Finish transfer/ }).waitFor({ timeout: 15000 });
             await page.locator('.gb-transfer-error').first().waitFor({ timeout: 5000 });
             await page.unroute('**/extensions/gobia-files/transfers');
-            await page.getByRole('button', { name: 'Clear list' }).click();
+            await page
+                .getByRole('button', { name: 'Clear list' })
+                .click()
+                .catch(() => undefined);
             rmSync(disk(uuidB, 'stuck.txt'), { force: true });
         }
     );
@@ -687,8 +703,12 @@ export async function dualFlows({ browser, context, login, scheme, baseUrl, root
                 body: '{"errors":[{"detail":"The server could not be reached."}]}',
             })
         );
-        await treeRow('a', 'retry.txt').click({ button: 'right' });
-        await page.getByRole('menuitem', { name: /Copy retry.txt to/ }).click();
+        await page.keyboard.down('Control');
+        await treeRow('a', 'retry.txt')
+            .locator('button')
+            .first()
+            .dragTo(explorer('b').locator('.gb-tree-row.root').first());
+        await page.keyboard.up('Control');
         await page.locator('.gb-transfer-error').first().waitFor({ timeout: 15000 });
         if (!existsSync(disk(uuidA, dir, 'retry.txt'))) throw new Error('the original is gone');
         if (existsSync(disk(uuidB, 'retry.txt'))) throw new Error('something arrived despite the failure');

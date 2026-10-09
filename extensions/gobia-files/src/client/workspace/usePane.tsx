@@ -207,6 +207,7 @@ export function usePane(config: PaneConfig) {
     const [wrap, setWrap] = useState(() => readStored(WRAP_KEY, 0) === 1);
     const [problemsOpen, setProblemsOpen] = useState(false);
     const [problem, setProblem] = useState<Problem | null>(null);
+    const [findRequest, setFindRequest] = useState(0);
     const [reveal, setReveal] = useState<{ line: number; column: number; nonce: number } | null>(null);
     // Bumped when a tab's text is replaced from outside the editor (reload), so the editor is rebuilt for it.
     const filePicker = useRef<HTMLInputElement>(null);
@@ -934,7 +935,8 @@ export function usePane(config: PaneConfig) {
         if (entry && !entry.directory) {
             items.push({ key: 'open', label: 'Open', icon: Pencil, onSelect: () => openFile(entry) });
         }
-        if (permissions.create) {
+        // Creating and uploading belong to the root and to folders; a file's menu is about that file only.
+        if (permissions.create && (!entry || entry.directory)) {
             items.push({
                 key: 'new-file',
                 label: 'New file',
@@ -980,27 +982,6 @@ export function usePane(config: PaneConfig) {
                     icon: ArchiveRestore,
                     onSelect: () => void extract(entry),
                 });
-            }
-        }
-        if (entry && config.peer && config.onTransfer) {
-            const peer = config.peer;
-            const paths = selectedSet.has(entry.path) ? dragSelect(entry.path) : [entry.path];
-            const plural = paths.length > 1 ? `${paths.length} items` : entry.name;
-            if (peer.canWrite) {
-                items.push({
-                    key: 'transfer-copy',
-                    label: `Copy ${plural} to ${peer.name}`,
-                    icon: Copy,
-                    onSelect: () => config.onTransfer?.(paths, 'copy'),
-                });
-                if (permissions.delete) {
-                    items.push({
-                        key: 'transfer-move',
-                        label: `Move ${plural} to ${peer.name}`,
-                        icon: MoveRight,
-                        onSelect: () => config.onTransfer?.(paths, 'move'),
-                    });
-                }
             }
         }
         items.push({ key: 'path', label: 'Copy path', icon: Link2, onSelect: () => void copyPath(entry) });
@@ -1226,6 +1207,7 @@ export function usePane(config: PaneConfig) {
                         onDragSelect={dragSelect}
                         onOpen={openFile}
                         onMenu={openMenu}
+                        onRename={permissions.update ? (entry) => setInline({ kind: 'rename', entry }) : undefined}
                         onMove={moveInto}
                         onDropFiles={(data, directory) => void dropFiles(data, directory)}
                         inline={inline}
@@ -1351,6 +1333,13 @@ export function usePane(config: PaneConfig) {
                             />
                             Word wrap
                         </label>
+                        <button
+                            type={'button'}
+                            className={'gb-btn gb-btn-sm'}
+                            onClick={() => setFindRequest((n) => n + 1)}
+                        >
+                            Find
+                        </button>
                         <span
                             className={'gb-save-state ' + saveState(active)}
                             role={'status'}
@@ -1450,6 +1439,7 @@ export function usePane(config: PaneConfig) {
                         openPaths={editorPaths}
                         problem={problem}
                         reveal={reveal}
+                        find={findRequest}
                         onDirtyChange={(path, dirty) => dispatch({ type: 'dirty', path, dirty })}
                         onSnapshot={(path, content) => dispatch({ type: 'snapshot', path, content })}
                         onSave={() => void save(active.path)}

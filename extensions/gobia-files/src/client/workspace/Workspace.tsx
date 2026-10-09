@@ -252,6 +252,7 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
 
     // ---- transfers between the two servers ----------------------------------------------------------------------
     const handleOf = (pane: PaneId) => panes.current[pane];
+    const [finishedJobs, setFinishedJobs] = useState(0);
     const transfers = useTransfers({
         onItem: (job, result) => {
             const destination = handleOf(job.destination.pane);
@@ -277,6 +278,7 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
             const failed = job.results.filter(
                 (result) => result.status === 'failed' || result.status === 'partial'
             ).length;
+            setFinishedJobs((count) => count + 1);
             const kept = job.results.filter((result) => result.status === 'move_incomplete').length;
             const done = job.results.filter((result) => result.status === 'copied' || result.status === 'moved').length;
             if (job.status === 'cancelled') toast.message('Transfer cancelled.');
@@ -285,6 +287,8 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
                     `${kept} item${kept === 1 ? ' was' : 's were'} copied and verified, but the original${kept === 1 ? ' is' : 's are'} still on ${job.source.name}. Nothing was lost: use Finish in the transfer list.`
                 );
             else if (failed > 0) toast.error(`${failed} of ${job.items.length} could not be transferred.`);
+            else if (done === 0 && job.results.some((result) => result.status === 'skipped'))
+                toast.message('Skipped: it already exists in the destination.');
             else if (done > 0)
                 toast.success(
                     `${job.mode === 'move' ? 'Moved' : 'Copied'} ${done} item${done === 1 ? '' : 's'} to ${job.destination.name}.`
@@ -754,8 +758,13 @@ export default function Workspace({ model }: ReplacementProps<'server.files.mana
 
             {pane.overlays}
 
+            <output className={'sr-only'} data-transfers-finished={finishedJobs} />
             <TransferPanel
-                jobs={transfers.jobs}
+                jobs={transfers.jobs.filter(
+                    (job) =>
+                        job.status === 'cancelled' ||
+                        job.results.some((result) => ['failed', 'partial', 'move_incomplete'].includes(result.status))
+                )}
                 onCancel={transfers.cancel}
                 onRetry={transfers.retry}
                 onClear={transfers.clear}
