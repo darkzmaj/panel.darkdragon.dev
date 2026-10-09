@@ -235,9 +235,9 @@ test('the stream cipher round trips every size and refuses truncated, altered an
 });
 
 test('a host key fingerprint is the OpenSSH one', function (): void {
-    // ssh-keygen -lf on this public key prints SHA256:bLAUh1j3pYEXUvJrdK9vkZKdYfc2FNmCYSCAkcA9rlM.
-    $blob = base64_encode(str_repeat("\x01", 51));
-    expect(StorageBoxStore::fingerprintOf('ssh-ed25519 '.$blob.' comment'))->toBe('SHA256:'.mb_rtrim(base64_encode(hash('sha256', str_repeat("\x01", 51), true)), '='));
+    // A throwaway public key and what `ssh-keygen -lf` printed for it on 2026-10-09.
+    $key = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICQ7GQ9gnWqKfFiiXRVYfW+S1PMq0w0uprJu+hGVQfgB gobia-test';
+    expect(StorageBoxStore::fingerprintOf($key))->toBe('SHA256:ZSV/QpX/9LNlDR/33ewRcvHOFlasX/XTj0Nfjt1ihc8');
     expect(fn () => StorageBoxStore::fingerprintOf('not a key'))->toThrow(RuntimeException::class);
 });
 
