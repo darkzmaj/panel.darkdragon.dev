@@ -299,3 +299,28 @@ Operator and release guide: `docs/gobia-updates.md`. Recorded end to end run: `d
 7. *Release tags are `gobia-v<version>`* so a Gobia tag can never collide with an upstream `v2.x` tag in the same repository.
 
 **Contract additions** (all optional for an older frontend): `check` also returns `checked_at`, `error` and `active_update_id` and accepts `?refresh=1`; `progress` also returns `type`, `steps`, `failure_step` and `rollback.failed`; `rollback-eligibility` also returns `update_id`; `rollback` needs `confirm_database_restore: true` when the mode is `requires-db-restore`. The Updates screen gained a "Check for updates" button, follows a run that is already in flight after a reload, shows the log, and asks again before a database restore.
+
+## 16. Release 2.0.0 (2026-10-10): signing key, how it was built, what to do next
+
+* **Signing key.** The Gobia 1.x release secret key was no longer available, so a new Ed25519 key pair was generated for Gobia 2.0 on a
+  trusted Linux machine (WSL2 Ubuntu 24.04). The public key (`U/2XlTOgdzsn2lebHDxjkh7HFSNqmYLkm+Hj+3MdVJI=`) is the default in
+  `extensions/gobia-core/config/gobia_updater.php`. The secret key lives only in a 0600 file on that machine and was never printed, committed,
+  uploaded or put in the CI mirror. **Majcek: take over custody.** Make an offline backup, and put it in the `GOBIA_RELEASE_SIGNING_KEY`
+  secret of `Cryvex-Dev/panel.gobia.cloud` once GitHub Actions works for the organisation. A lost key means installations that trust this
+  public key can never update again. 1.x installations keep trusting their own key and reject 2.x releases (1.x to 2.x is the import in
+  `docs/gobia-upgrade-from-1x.md`, never an in-place update).
+* **Build.** `gobia-release.json` says 2.0.0. Build was `npm ci`, `npm --prefix extensions/gobia-files ci`, `npm run build:production`,
+  `node scripts/gobia/run.mjs build`, `scripts/release/build-release.sh dist` on Linux from the exact tagged commit, with
+  `GOBIA_RELEASE_SIGNING_KEY_FILE` pointing at the key file. Three files are attached to the GitHub release `gobia-v2.0.0`: the package,
+  `release.json` (signed manifest) and the `.sha256`. The release notes state the exact source SHA.
+* **Verified.** Signature, checksum and size against the committed key; negative tests (edited manifest, edited checksum or extension map,
+  invalid and missing signature, another key, the old 1.x key, a tampered and a truncated archive) all rejected; archive audit (no links,
+  traversal, `.env`, `.git`, tests, tools, mock Wings, keys or tokens). A disposable install on Linux ran discovery, preflight, update,
+  automatic rollback of a failed migration and manual rollback (`docs/gobia-updater-e2e.md`, second run).
+* **Not verified, still required before production:** real Wings and Docker (section 13 and 15), the GitHub release provider against the
+  live API with this release, PHP-FPM and systemd restarts and the release directory layout, the Updates screen in a browser against a
+  real update, a real Hetzner Storage Box (section 14), load and security testing on the production stack. The organisation's GitHub
+  Actions were still unavailable (billing), so the release was built by hand and CI ran on the private mirror.
+* **Next steps for the next release.** Keep the CI mirror green on the exact release SHA, add the key to the repository secret, then publish
+  with `.github/workflows/gobia-release.yaml` (tag `gobia-v<version>`); decide whether releases are published as pre-releases first
+  (`GOBIA_UPDATE_PRERELEASE`).

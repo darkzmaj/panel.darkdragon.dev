@@ -47,3 +47,29 @@ The scripts are not in the repository (they create users and databases inside a 
 step 1, unpack one into an empty directory owned by an unprivileged user, configure `.env` with `GOBIA_UPDATE_PROVIDER=directory`,
 `GOBIA_UPDATE_DIRECTORY` and the matching `GOBIA_UPDATE_PUBLIC_KEY`, copy a newer release folder into that directory and run
 `php artisan gobia-core:update:check --preflight`, then `php artisan gobia-core:update:run --force`.
+
+# Second recorded run: the Gobia Panel 2.0.0 release package (2026-10-10)
+
+Environment: WSL2 Ubuntu 24.04 on Windows (a real Linux kernel, not a container image), PHP 8.3.6 CLI, MariaDB 10.11.14, the PHP built-in web
+server, the Panel owned by an unprivileged user `panel`, queue driver `database`, `GOBIA_UPDATE_PROVIDER=directory`. No PHP-FPM, no
+systemd, no Wings node.
+
+What differs from the first run: the base install is the **real 2.0.0 release package** built by `scripts/release/build-release.sh` from the
+exact release commit and signed with the **real Gobia 2.0 release key**; the trusted public key is the one committed in
+`extensions/gobia-core/config/gobia_updater.php` (no `GOBIA_UPDATE_PUBLIC_KEY` override). The newer packages used as update targets (2.0.1
+with an additive migration and a marker file, 2.0.2 with a migration that creates a table and then throws) were the same tree with a bumped
+version, signed with the same real key; they exist only on the test machine and were never published.
+
+| Scenario | Result |
+| --- | --- |
+| Discovery and preflight for 2.0.1 | Signed by the trusted Gobia release key; 17 checks passed, 3 skipped (node runtime, Redis, Wings: none configured); "Ready to update" |
+| A release whose manifest was edited after signing (offered alone) | Rejected by `update:check` and by `update:run`; installed version unchanged |
+| `update:run` 2.0.0 to 2.0.1 | Completed; migration ran, marker file served, `.env` key, storage file, third party extension `acme-notes`, custom theme and the database row all survived; health `ok: true`; code owned by `panel` |
+| `update:run` 2.0.1 to 2.0.2 (broken migration) | Failed at `migrate`, rolled back by itself (files and database dump restored), site answering 200, health `ok: true` |
+| `update:rollback` without `--restore-database` | Refused with the explicit data loss warning |
+| `update:rollback --restore-database` | Back on 2.0.0, marker table gone, third party extension still present, site answering 200 |
+| Secrets in `storage/updater` | The database password was not found in any updater log or run record |
+
+Still not exercised in this run (unchanged from the first run): the GitHub release provider against the real API, PHP-FPM reloads, systemd
+restarts, the release directory layout end to end, an update with real Wings nodes connected, a full disk while unpacking, the Updates
+screen in a browser against a real update.
