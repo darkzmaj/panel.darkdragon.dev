@@ -145,6 +145,14 @@ function admin(): User
 beforeEach(function (): void {
     $this->installGobia(['gobia-core']);
     $this->setUpReleases();
+    // The tests describe an installation older than every release they publish, whatever version the repository itself carries.
+    $this->app->singleton(CompatibilityReport::class, function ($app): CompatibilityReport {
+        $report = Mockery::mock(CompatibilityReport::class, [$app->make(ExtensionRepository::class), $app->make(\Pterodactyl\Services\Extensions\ExtensionCompatibility::class)])->makePartial();
+        $real = json_decode((string) file_get_contents(base_path('gobia-release.json')), true);
+        $report->shouldReceive('release')->andReturn(array_replace($real, ['gobia_version' => '2.0.0-dev']));
+
+        return $report;
+    });
     Http::fake();
     Cache::forget(UpdateOrchestrator::LATEST_CACHE_KEY);
 });
