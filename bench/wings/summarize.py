@@ -1,47 +1,23 @@
 #!/usr/bin/env python3
-"""Turn run.sh artifacts into per-stage timings.
+"""Aggregate lifecycle.py output.
 
-    summarize.py OUT_DIR [--label direct-min] > stages.json    
+    summarize.py OUT_DIR [OUT_DIR ...]      prints a table per label (median / p95 / min / max, ms) and writes nothing
+    summarize.py OUT_DIR --json             same data as JSON
     summarize.py selftest
 
-Stages (ms, relative to T0 = just before the start command):
-  docker_start   T5  Docker `start` event
-  paper_done     T8  first console line matching "Done (" (Docker's own log timestamp)
-  tcp            T9  first successful TCP connect
-  status_ready   T10 first valid Server List Ping reply   <- the readiness definition used for every comparison
-  dispatch_ms        client-side curl time_starttransfer (wings only: HTTP request until Wings answered)
-  stop_exit      container `die` event after the stop request
-A missing artifact yields null, never a guess.
+Only `measured` rows (warm-up cycles are excluded). Percentiles use the nearest-rank method; p99 is reported only with
+n >= 100 so a small sample never pretends to have a tail estimate.
 """
 import json, re, statistics, sys
+from datetime import datetime, timezone
 from pathlib import Path
 
-
-def rd(p):
-    try:
-        return Path(p).read_text().strip()
-    except OSError:
-        return None
-
-
-def events(p):
-    out = []
-    for line in (rd(p) or "").splitlines():
-        try:
-            out.append(json.loads(line))
-        except ValueError:
-            pass
-    return out
-
-
-def first_event(evs, action, after_ns=0):
-    for e in evs:
-        if e.get("Action", "").split(":")[0] == action and e.get("timeNano", 0) >= after_ns:
-            return e["timeNano"]
+METRICS = ["api_return_ms", "wings_lock_ms", "wings_preflight_done_ms", "docker_destroy_ms", "docker_create_ms",
+           "docker_start_ms", "paper_starting_ms", "paper_done_ms", "wings_running_ms", "ready_ms", "restart_old_exit_ms",
+           "stop_exit_ms", "stop_die_ms"]
 
 
 def iso_ns(ts):
-    from datetime import datetime, timezone
     m = re.match(r"(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)(?:\.(\d+))?Z", ts)
     if not m:
         return None
@@ -49,67 +25,70 @@ def iso_ns(ts):
     return base * 10**9 + int((m[2] or "0").ljust(9, "0")[:9])
 
 
-def paper_done_ns(console):
-    for line in (console or "").splitlines():
-        if re.search(r"Done \(\d", line):
-            return iso_ns(line.split(" ", 1)[0])
-
-
-def run_stages(r):
-    r = Path(r)
-    t0 = int(rd(r / "t0_ns") or 0)
-    if not t0:
-        return None
-    ms = lambda ns: None if ns is None else round((ns - t0) / 1e6, 2)
-    probe = json.loads(rd(r / "probe.json") or "{}")
-    disp = (rd(r / "dispatch.json") or "").split()
-    s0 = int(rd(r / "stop_t0_ns") or 0)
-    die = first_event(events(r / "stop_events.jsonl"), "die", s0)
-    return {
-        "docker_start": ms(first_event(events(r / "events.jsonl"), "start", t0)),
-        "paper_done": ms(paper_done_ns(rd(r / "console.log"))),
-        "tcp": ms(probe.get("tcp_ns")),
-        "status_ready": ms(probe.get("status_ns")),
-        "dispatch_ms": round(float(disp[2]) * 1000, 2) if len(disp) == 4 else None,
-        "stop_exit": round((die - s0) / 1e6, 2) if die and s0 else None,
-    }
-
-
 def pct(v, p):
     v = sorted(v)
-    return v[min(len(v) - 1, max(0, round(p / 100 * len(v) + 0.5) - 1))]
+    return v[min(len(v) - 1, max(0, -(-p * len(v) // 100) - 1))]
 
 
-def summarize(out):
-    runs = [x for x in (run_stages(d) for d in sorted(Path(out).glob("run-*"))) if x]
-    res = {"n": len(runs), "env": json.loads(rd(Path(out) / "env.json") or "{}"), "stages": {}, "runs": runs}
-    for k in runs[0] if runs else []:
-        v = [x[k] for x in runs if x[k] is not None]
-        if v:
-            res["stages"][k] = {"n": len(v), "min": min(v), "median": statistics.median(v), "p95": pct(v, 95),
-                                "p99": pct(v, 99) if len(v) >= 100 else None, "max": max(v)}
-    return res
+def load(*dirs):
+    rows = {}
+    for d in dirs:
+        f = Path(d) / "runs.jsonl"
+        if f.exists():
+            for line in f.read_text().splitlines():
+                if line.strip():
+                    r = json.loads(line)
+                    if r.get("measured"):
+                        rows.setdefault(r["label"], []).append(r)
+    return rows
+
+
+def stats(vals):
+    return {"n": len(vals), "min": round(min(vals), 1), "median": round(statistics.median(vals), 1),
+            "mean": round(statistics.fmean(vals), 1), "p95": round(pct(vals, 95), 1),
+            "p99": round(pct(vals, 99), 1) if len(vals) >= 100 else None, "max": round(max(vals), 1)}
+
+
+def summarize(*dirs):
+    out = {}
+    for label, rs in load(*dirs).items():
+        m = {}
+        for k in METRICS:
+            v = [r[k] for r in rs if r.get(k) is not None]
+            if v:
+                m[k] = stats(v)
+        out[label] = {"n": len(rs), "metrics": m}
+    return out
+
+
+def table(s):
+    lines = []
+    for label in sorted(s):
+        lines.append(f"\n{label}  (n={s[label]['n']})")
+        lines.append(f"  {'metric':26}{'median':>9}{'p95':>9}{'min':>9}{'max':>9}")
+        for k, v in s[label]["metrics"].items():
+            lines.append(f"  {k:26}{v['median']:>9}{v['p95']:>9}{v['min']:>9}{v['max']:>9}")
+    return "\n".join(lines)
 
 
 def selftest():
     assert iso_ns("2026-01-01T00:00:01.5Z") - iso_ns("2026-01-01T00:00:00Z") == 1_500_000_000
-    assert pct([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 95) == 10 and pct([5], 95) == 5
+    assert pct(list(range(1, 21)), 95) == 19 and pct([5], 95) == 5 and pct(list(range(1, 11)), 95) == 10
     import tempfile
     with tempfile.TemporaryDirectory() as d:
-        r = Path(d) / "run-1"
-        r.mkdir()
-        (r / "t0_ns").write_text("1000000000")
-        (r / "probe.json").write_text(json.dumps({"tcp_ns": 3_000_000_000, "status_ns": 4_000_000_000}))
-        (r / "events.jsonl").write_text(json.dumps({"Action": "start", "timeNano": 1_500_000_000}) + "\n")
-        s = run_stages(r)
-        assert s["status_ready"] == 3000.0 and s["docker_start"] == 500.0 and s["paper_done"] is None
+        rows = [{"label": "x", "measured": i > 0, "ready_ms": 1000.0 * (i + 1)} for i in range(6)]
+        (Path(d) / "runs.jsonl").write_text("\n".join(json.dumps(r) for r in rows))
+        s = summarize(d)["x"]
+        assert s["n"] == 5 and s["metrics"]["ready_ms"]["median"] == 4000.0 and s["metrics"]["ready_ms"]["min"] == 2000.0
     print("selftest ok")
 
 
 if __name__ == "__main__":
-    if sys.argv[1:] == ["selftest"]:
+    a = [x for x in sys.argv[1:] if x != "--json"]
+    if a == ["selftest"]:
         selftest()
-    elif len(sys.argv) >= 2:
-        print(json.dumps(summarize(sys.argv[1]), indent=1))
+    elif a:
+        s = summarize(*a)
+        print(json.dumps(s, indent=1) if "--json" in sys.argv else table(s))
     else:
         sys.exit(__doc__)

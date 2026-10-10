@@ -1,0 +1,7 @@
+PASS 1 reuse - container id 00637dd851c7 then 00637dd851c7
+PASS 2 limits - container 00637dd851c7 -> bbd6405212d4, memory limit 2952790016
+PASS 3 data - persist.txt intact, level.dat mtime advanced by 8.5s
+PASS 4 ownership - 0 entries not owned by 988:988
+PASS 5 wings restart - container running=True, Wings state=running
+PASS 6 backup - create HTTP 200, completed=True
+PASS 7 isolation - {'ReadonlyRootfs': True, 'NoNewPrivileges': True, 'CapDrop': 10, 'PidsLimit': 512, 'Memory': 2469606195}

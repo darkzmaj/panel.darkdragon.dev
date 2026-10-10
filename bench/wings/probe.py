@@ -76,6 +76,40 @@ def status(host, port, timeout=1.0, proto=767):
         return doc
 
 
+def login(host, port, name="bench", proto=774, timeout=5.0):
+    """Offline-mode login up to Login Success (what 'a player can join' means before the configuration phase).
+
+    Returns seconds from first connect to Login Success. Raises if the server disconnects the player or answers badly.
+    Needs online-mode=false. Handles the optional Set Compression packet."""
+    import uuid, zlib
+    t0 = time.perf_counter()
+    with socket.create_connection((host, port), timeout=timeout) as s:
+        s.settimeout(timeout)
+        h = host.encode()
+        s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        nb = name.encode()  # a real client sends both packets back to back; one write avoids a Nagle/delayed-ACK stall
+        s.sendall(packet(0x00, varint(proto) + varint(len(h)) + h + struct.pack(">H", port) + varint(2)) +
+                  packet(0x00, varint(len(nb)) + nb + uuid.uuid3(uuid.NAMESPACE_DNS, "OfflinePlayer:" + name).bytes))
+        compressed = False
+        while True:
+            body = read_exact(s, read_varint(s))
+            if compressed:  # leading data-length varint; 0 means the rest is not compressed
+                n = i = 0
+                while True:
+                    b = body[i]
+                    n |= (b & 0x7F) << (7 * i)
+                    i += 1
+                    if not b & 0x80:
+                        break
+                body = zlib.decompress(body[i:]) if n else body[i:]
+            if body[0] == 0x03:
+                compressed = True
+            elif body[0] == 0x02:
+                return time.perf_counter() - t0
+            else:
+                raise ValueError(f"login refused or unexpected packet 0x{body[0]:02x}: {body[1:200]!r}")
+
+
 def wait(host, port, timeout=120.0, interval=0.005):
     t0 = time.time_ns()
     tcp = None
@@ -101,17 +135,18 @@ def selftest():
     port = srv.getsockname()[1]
 
     def serve():
-        for _ in range(2):  # wait() makes a bare TCP connect first, then the real status exchange
+        while True:  # wait() makes a bare TCP connect first, then the real status exchange
             c, _addr = srv.accept()
-            c.settimeout(0.5)
             try:
-                c.recv(4096)
+                c.settimeout(0.5)
+                if not c.recv(4096):
+                    continue
+                body = json.dumps({"version": {"name": "fake", "protocol": 767}, "players": {"max": 20}}).encode()
+                c.sendall(packet(0x00, varint(len(body)) + body))
             except OSError:
+                pass
+            finally:
                 c.close()
-                continue
-            body = json.dumps({"version": {"name": "fake", "protocol": 767}, "players": {"max": 20}}).encode()
-            c.sendall(packet(0x00, varint(len(body)) + body))
-            c.close()
 
     threading.Thread(target=serve, daemon=True).start()
     r = wait("127.0.0.1", port, timeout=5)
