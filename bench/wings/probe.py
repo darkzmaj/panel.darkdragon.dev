@@ -40,7 +40,12 @@ def packet(pid, payload=b""):
     return varint(len(body)) + body
 
 
+MAX_FRAME = 1 << 21  # a status/login/config frame is never this large; refuse to wait for garbage lengths
+
+
 def read_exact(sock, n):
+    if n < 0 or n > MAX_FRAME:
+        raise ValueError(f"implausible frame length {n}")
     buf = b""
     while len(buf) < n:
         chunk = sock.recv(n - len(buf))
@@ -154,6 +159,7 @@ def join(host, port, name="bench", proto=774, timeout=15.0, vhost=None):
     Packet ids are those of 1.21.9+ (protocol 773/774) for the configuration state."""
     import uuid
     t0 = time.perf_counter()
+    deadline = t0 + timeout  # `timeout` is also the TOTAL budget: a trickling server cannot extend it packet by packet
     r = {}
     with socket.create_connection((host, port), timeout=timeout) as s:
         s.settimeout(timeout)
@@ -168,6 +174,8 @@ def join(host, port, name="bench", proto=774, timeout=15.0, vhost=None):
         while True:
             pid, p = next(it)
             now = time.perf_counter() - t0
+            if time.perf_counter() > deadline:
+                raise TimeoutError(f"join exceeded {timeout}s")
             if state == "login":
                 if pid == 0x03:
                     st["compressed"] = True
@@ -198,11 +206,14 @@ def join(host, port, name="bench", proto=774, timeout=15.0, vhost=None):
                 return r
 
 
-def wait(host, port, timeout=120.0, interval=0.005):
+def wait(host, port, timeout=120.0, interval=0.005, cancel=None):
+    """`cancel`: optional threading.Event; when set, wait returns promptly with error=cancelled."""
     t0 = time.time_ns()
     tcp = None
     end = time.monotonic() + timeout
     while time.monotonic() < end:
+        if cancel is not None and cancel.is_set():
+            return {"probe_start_ns": t0, "tcp_ns": tcp, "status_ns": None, "error": "cancelled"}
         try:
             if tcp is None:
                 socket.create_connection((host, port), timeout=0.25).close()

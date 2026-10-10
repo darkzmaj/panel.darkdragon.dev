@@ -15,37 +15,52 @@ sys.path.insert(0, str(Path(__file__).parent))
 import probe  # noqa: E402
 from summarize import iso_ns  # noqa: E402
 
-ap = argparse.ArgumentParser()
-ap.add_argument("--mode", required=True, choices=["direct", "wings"])
-ap.add_argument("--label", required=True)
-ap.add_argument("--scenario", default="start", choices=["start", "restart"])
-ap.add_argument("--n", type=int, default=20)
-ap.add_argument("--out", required=True)
-ap.add_argument("--template", default="/bench/wings-opt/templates/world-min")
-ap.add_argument("--uuid", default=None, help="wings: server uuid (= container name and data dir name)")
-ap.add_argument("--wings-url", default="127.0.0.1:19090")
-ap.add_argument("--wings-token-file", default="/bench/wings-opt/wdev-token")
-ap.add_argument("--wings-container", default="wdev-wings-1")
-ap.add_argument("--volumes", default="/srv/wings/wdev/lib/volumes")
-ap.add_argument("--host-ip", default="172.18.0.1")
-ap.add_argument("--port", type=int, default=25565)
-ap.add_argument("--image", default="ghcr.io/pterodactyl/yolks:java_21")
-ap.add_argument("--startup", default=None, help="direct mode: replace the java command line (default = the Paper egg's)")
-ap.add_argument("--drop-caches", action="store_true")
-ap.add_argument("--warmup", type=int, default=1, help="discarded cycles before the measured ones")
-ap.add_argument("--settle", type=float, default=3.0, help="seconds to idle after ready before stopping/restarting")
-A = ap.parse_args()
+def build_parser():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--mode", required=True, choices=["direct", "wings"])
+    ap.add_argument("--label", required=True)
+    ap.add_argument("--scenario", default="start", choices=["start", "restart"])
+    ap.add_argument("--n", type=int, default=20)
+    ap.add_argument("--out", required=True)
+    ap.add_argument("--template", default="/bench/wings-opt/templates/world-min")
+    ap.add_argument("--uuid", default=None, help="wings: server uuid (= container name and data dir name)")
+    ap.add_argument("--wings-url", default="127.0.0.1:19090")
+    ap.add_argument("--wings-token-file", default="/bench/wings-opt/wdev-token")
+    ap.add_argument("--wings-container", default="wdev-wings-1")
+    ap.add_argument("--volumes", default="/srv/wings/wdev/lib/volumes")
+    ap.add_argument("--host-ip", default="172.18.0.1")
+    ap.add_argument("--port", type=int, default=25565)
+    ap.add_argument("--image", default="ghcr.io/pterodactyl/yolks:java_21")
+    ap.add_argument("--startup", default=None, help="direct mode: replace the java command line (default = the Paper egg's)")
+    ap.add_argument("--drop-caches", action="store_true")
+    ap.add_argument("--warmup", type=int, default=1, help="discarded cycles before the measured ones")
+    ap.add_argument("--settle", type=float, default=3.0, help="seconds to idle after ready before stopping/restarting")
+    return ap
 
-OUT = Path(A.out)
-OUT.mkdir(parents=True, exist_ok=True)
-NAME = A.uuid if A.mode == "wings" else f"wdev-direct-{A.label}"
-VOL = Path(A.volumes) / A.uuid if A.mode == "wings" else Path("/bench/wings-opt/direct-vol") / A.label
-STARTUP = A.startup or ("java -Xms128M -XX:MaxRAMPercentage=95.0 -Dterminal.jline=false -Dterminal.ansi=true "
-                        "-jar server.jar")
-TOKEN = Path(A.wings_token_file).read_text().strip()
+
+A = OUT = NAME = VOL = STARTUP = TOKEN = TL = None
 LOCK = threading.Lock()
-TL = open(OUT / "timeline.jsonl", "a")
 FIRST = True
+
+
+def init(argv=None):
+    """Parse arguments and derive the module state. Separate from import so the pure logic is unit-testable."""
+    global A, OUT, NAME, VOL, STARTUP, TOKEN, TL, FIRST
+    A = build_parser().parse_args(argv)
+    if A.mode == "wings" and not A.uuid:
+        raise SystemExit("--uuid is required in wings mode")
+    FIRST = True
+    OUT = Path(A.out)
+    OUT.mkdir(parents=True, exist_ok=True)
+    NAME = A.uuid if A.mode == "wings" else f"wdev-direct-{A.label}"
+    VOL = Path(A.volumes) / A.uuid if A.mode == "wings" else Path("/bench/wings-opt/direct-vol") / A.label
+    STARTUP = A.startup or ("java -Xms128M -XX:MaxRAMPercentage=95.0 -Dterminal.jline=false -Dterminal.ansi=true "
+                            "-jar server.jar")
+    tf = Path(A.wings_token_file)  # direct mode also needs it: ensure_offline() may have to stop a Wings-managed server
+    TOKEN = tf.read_text().strip() if tf.exists() else ""
+    if A.mode == "wings" and not TOKEN:
+        raise SystemExit(f"wings mode needs a token in {tf}")
+    TL = open(OUT / "timeline.jsonl", "a")
 
 
 def sh(*a, check=True):
@@ -233,6 +248,31 @@ def wings_log_marks(after, since):
 
 
 # ---- one cycle ---------------------------------------------------------------------------------------------------
+IMMUTABLE = ("jvm.args", "server.jar", "app.aot", "app.jsa")
+
+
+def fingerprint(d):
+    """What identifies a startup variant on disk: jvm.args content and the size of the jar / archive files. Nothing a running
+    server legitimately rewrites (world, logs, configs) is included, so it is stable across restarts of the same variant."""
+    import hashlib
+    d = Path(d)
+    fp = {}
+    for f in IMMUTABLE:
+        p = d / f
+        if p.exists():
+            fp[f] = hashlib.sha256(p.read_bytes()).hexdigest()[:16] if f == "jvm.args" else p.stat().st_size
+    return fp
+
+
+def assert_variant_files(expected_dir=None):
+    """Fail loudly if this run's volume does not hold exactly the template variant it was started for. A restart series that
+    silently ran on another variant's files (shared volume) would produce plausible but meaningless numbers."""
+    want, got = fingerprint(expected_dir or A.template), fingerprint(VOL)
+    if want != got:
+        raise RuntimeError(f"volume {VOL} does not match template {A.template}: expected {want}, found {got}")
+    return got
+
+
 def reset_files():
     if VOL.exists():
         shutil.rmtree(VOL)
@@ -247,7 +287,7 @@ def wait_for(fn, timeout, step=0.01):
         if v:
             return v
         time.sleep(step)
-    raise TimeoutError
+    raise TimeoutError(f"condition not met within {timeout}s")
 
 
 def start_cmd(att_box):
@@ -266,20 +306,29 @@ def stop_cmd(att_box):
         att_box[0].send("stop")
 
 
+def needs_reset():
+    """start: every cycle begins from the pristine template. restart: the series accumulates server state on purpose, but the
+    FIRST cycle of every invocation still resets, so two variants that share one Wings volume never see each other's files."""
+    global FIRST
+    r = A.scenario == "start" or FIRST
+    FIRST = False
+    return r
+
+
 def cycle(i, measured):
     run = f"{A.label}-{i}"
     att = []
-    global FIRST
-    if A.scenario == "start" or FIRST:  # restart runs reset once per invocation, so a run never inherits another variant's files
-        FIRST = False
+    if needs_reset():  # restart runs reset once per invocation, so a run never inherits another variant's files
         if A.mode == "wings":
             assert wings_state() == "offline", "server must be offline"
         reset_files()
+        assert_variant_files()
         if A.drop_caches:
             sh("sync")
             Path("/proc/sys/vm/drop_caches").write_text("3")
+    row = {"label": A.label, "run": i, "mode": A.mode, "scenario": A.scenario, "measured": measured,
+           "files_fp": assert_variant_files()}  # checked before every cycle, not only after a reset
     w = Watch(run)
-    row = {"label": A.label, "run": i, "mode": A.mode, "scenario": A.scenario, "measured": measured}
     try:
         if A.scenario == "restart":  # get a running server first, then restart it
             since0 = time.time_ns()
@@ -385,4 +434,6 @@ def main():
             print(A.label, i, "ready", round(row["ready_ms"]), "ms", flush=True)
 
 
-main()
+if __name__ == "__main__":
+    init()
+    main()
