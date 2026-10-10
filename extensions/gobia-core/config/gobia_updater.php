@@ -28,7 +28,7 @@ return [
     'prerelease' => (bool) env('GOBIA_UPDATE_PRERELEASE', false),
 
     // Base64 Ed25519 public key every release manifest must be signed with.
-    'public_key' => env('GOBIA_UPDATE_PUBLIC_KEY', 'L5SyQHI6Wj+7N4kaIHUgqUmnIzqxQZ6kpXl37KK5Nu0='),
+    'public_key' => env('GOBIA_UPDATE_PUBLIC_KEY', 'U/2XlTOgdzsn2lebHDxjkh7HFSNqmYLkm+Hj+3MdVJI='),
 
     // Development only: accept a release that carries no signature at all. The SHA-256 is still enforced.
     'allow_unsigned' => (bool) env('GOBIA_UPDATE_ALLOW_UNSIGNED', false),

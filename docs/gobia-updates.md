@@ -160,8 +160,12 @@ unless `GOBIA_UPDATE_PRERELEASE` is on.
 2. Put the **secret** key in the repository secret `GOBIA_RELEASE_SIGNING_KEY` and the **public** key in
    `extensions/gobia-core/config/gobia_updater.php` (`public_key`). Never commit the secret key.
 
-The public key in the configuration file today is the Gobia 1.x release key. Keep using it only if its secret key is still under your
-control; otherwise replace it before the first 2.x release.
+The public key in the configuration file is the **Gobia 2.0 release key** (`U/2XlTOgdzsn2lebHDxjkh7HFSNqmYLkm+Hj+3MdVJI=`), generated on
+2026-10-10 because the 1.x release secret key was no longer available. The secret half is kept only on the maintainer's trusted Linux build
+machine (a 0600 file outside any repository) and, once GitHub Actions is available again, in the `GOBIA_RELEASE_SIGNING_KEY` repository
+secret. The 1.x branch keeps its own default key (`config/gobia.php` on `gobia-1.x-preserved`); a 1.x installation therefore rejects 2.x
+releases, which is intended: 1.x to 2.x is the separate import described in `docs/gobia-upgrade-from-1x.md`, never an in-place update.
+Back up the secret key offline: a lost key means installations that trust this public key can never update again.
 
 ### Publishing a release
 
