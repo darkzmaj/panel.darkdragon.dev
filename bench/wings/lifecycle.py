@@ -45,6 +45,7 @@ STARTUP = A.startup or ("java -Xms128M -XX:MaxRAMPercentage=95.0 -Dterminal.jlin
 TOKEN = Path(A.wings_token_file).read_text().strip()
 LOCK = threading.Lock()
 TL = open(OUT / "timeline.jsonl", "a")
+FIRST = True
 
 
 def sh(*a, check=True):
@@ -268,7 +269,9 @@ def stop_cmd(att_box):
 def cycle(i, measured):
     run = f"{A.label}-{i}"
     att = []
-    if A.scenario == "start" or not (VOL / "server.jar").exists():
+    global FIRST
+    if A.scenario == "start" or FIRST:  # restart runs reset once per invocation, so a run never inherits another variant's files
+        FIRST = False
         if A.mode == "wings":
             assert wings_state() == "offline", "server must be offline"
         reset_files()
@@ -323,6 +326,9 @@ def cycle(i, measured):
         else:
             row["stop_exit_ms"] = (wait_for(lambda: att[0].exit_ns, 60, 0.002) - s0) / 1e6
         # ---- stage extraction
+        fin = sh("docker", "inspect", "-f", "{{.State.FinishedAt}}", NAME, check=False).strip()
+        if fin.startswith("20"):
+            row["stop_finished_ms"] = (iso_ns(fin) - s0) / 1e6  # process really exited (die event + teardown come later)
         for k, name in (("docker_destroy_ms", "destroy"), ("docker_create_ms", "create"), ("docker_start_ms", "start")):
             n = ev_first(w, name, t0)
             if n:
@@ -353,7 +359,7 @@ def ensure_offline():
         power("stop")
         wait_for(lambda: wings_state() == "offline", 120, 0.05)
     if A.mode == "direct":  # the Wings-managed server shares the published port: it must not be running
-        other = Path("/bench/wings-opt/wdev-uuid").read_text().strip()
+        other = A.uuid or Path("/bench/wings-opt/wdev-uuid").read_text().strip()
         if sh("docker", "ps", "-q", "--filter", f"name={other}", check=False).strip():
             A.uuid = other
             power("stop")
