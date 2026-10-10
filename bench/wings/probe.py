@@ -110,6 +110,94 @@ def login(host, port, name="bench", proto=774, timeout=5.0):
                 raise ValueError(f"login refused or unexpected packet 0x{body[0]:02x}: {body[1:200]!r}")
 
 
+def _frames(s, state):
+    """Yield (packet_id, payload) from a socket, handling the optional compression set by Set Compression."""
+    import zlib
+
+    def gen():
+        while True:
+            body = read_exact(s, read_varint(s))
+            if state["compressed"]:
+                n = i = 0
+                while True:
+                    b = body[i]
+                    n |= (b & 0x7F) << (7 * i)
+                    i += 1
+                    if not b & 0x80:
+                        break
+                body = zlib.decompress(body[i:]) if n else body[i:]
+            i = 0
+            pid = 0
+            shift = 0
+            while True:
+                b = body[i]
+                pid |= (b & 0x7F) << shift
+                i += 1
+                shift += 7
+                if not b & 0x80:
+                    break
+            yield pid, body[i:]
+    return gen()
+
+
+def _send(s, state, pid, payload=b""):
+    body = varint(pid) + payload
+    if state["compressed"]:
+        body = varint(0) + body  # below the threshold: data length 0 = not compressed (the server's threshold is >= 256)
+    s.sendall(varint(len(body)) + body)
+
+
+def join(host, port, name="bench", proto=774, timeout=15.0, vhost=None):
+    """Offline-mode join as far as the PLAY state: login, configuration, then the first Play packet (Paper sends
+    the join-game packet first). Returns seconds from connect for each step. A real client does more after this
+    (chunks), so "joined" here means: the server accepted the player, completed configuration and entered Play.
+    Packet ids are those of 1.21.9+ (protocol 773/774) for the configuration state."""
+    import uuid
+    t0 = time.perf_counter()
+    r = {}
+    with socket.create_connection((host, port), timeout=timeout) as s:
+        s.settimeout(timeout)
+        s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        st = {"compressed": False}
+        h = (vhost or host).encode()
+        nb = name.encode()
+        s.sendall(packet(0x00, varint(proto) + varint(len(h)) + h + struct.pack(">H", port) + varint(2)) +
+                  packet(0x00, varint(len(nb)) + nb + uuid.uuid3(uuid.NAMESPACE_DNS, "OfflinePlayer:" + name).bytes))
+        it = _frames(s, st)
+        state = "login"
+        while True:
+            pid, p = next(it)
+            now = time.perf_counter() - t0
+            if state == "login":
+                if pid == 0x03:
+                    st["compressed"] = True
+                elif pid == 0x02:
+                    r["login_success"] = now
+                    _send(s, st, 0x03)  # Login Acknowledged
+                    state = "config"
+                    # Client Information
+                    loc = b"en_us"
+                    _send(s, st, 0x00, varint(len(loc)) + loc + b"\x08" + varint(0) + b"\x01" + b"\x7f" + varint(1) + b"\x00" + b"\x01" + varint(0))
+                else:
+                    raise ValueError(f"login refused or unexpected packet 0x{pid:02x}: {p[:120]!r}")
+            elif state == "config":
+                if pid == 0x03:  # Finish Configuration
+                    r["config_done"] = now
+                    _send(s, st, 0x03)
+                    state = "play"
+                elif pid == 0x0E:  # Clientbound Known Packs: a vanilla client owns the core pack, so echo the list back
+                    _send(s, st, 0x07, p)  # (the server then skips the bulky registry data a pack-less client would need)
+                elif pid == 0x04:  # Keep Alive
+                    _send(s, st, 0x04, p[:8])
+                elif pid == 0x05:  # Ping
+                    _send(s, st, 0x05, p[:4])
+                elif pid == 0x02:
+                    raise ValueError(f"disconnected during configuration: {p[:120]!r}")
+            else:
+                r["play_first_packet"] = now
+                return r
+
+
 def wait(host, port, timeout=120.0, interval=0.005):
     t0 = time.time_ns()
     tcp = None
