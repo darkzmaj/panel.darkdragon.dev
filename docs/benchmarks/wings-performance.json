@@ -1,0 +1,2507 @@
+{
+ "baseline:direct-start-warm": {
+  "n": 20,
+  "metrics": {
+   "api_return_ms": {
+    "n": 20,
+    "min": 368.6,
+    "median": 464.5,
+    "mean": 474.9,
+    "p95": 640.4,
+    "p99": null,
+    "max": 689.5
+   },
+   "docker_create_ms": {
+    "n": 20,
+    "min": 367.0,
+    "median": 462.8,
+    "mean": 473.4,
+    "p95": 639.0,
+    "p99": null,
+    "max": 687.9
+   },
+   "docker_start_ms": {
+    "n": 20,
+    "min": 620.0,
+    "median": 751.0,
+    "mean": 762.8,
+    "p95": 971.0,
+    "p99": null,
+    "max": 1000.6
+   },
+   "paper_starting_ms": {
+    "n": 20,
+    "min": 5154.6,
+    "median": 5419.2,
+    "mean": 5416.7,
+    "p95": 5668.4,
+    "p99": null,
+    "max": 5688.2
+   },
+   "paper_done_ms": {
+    "n": 20,
+    "min": 6353.8,
+    "median": 6647.0,
+    "mean": 6656.1,
+    "p95": 6955.4,
+    "p99": null,
+    "max": 7016.3
+   },
+   "ready_ms": {
+    "n": 20,
+    "min": 6407.0,
+    "median": 6698.1,
+    "mean": 6707.4,
+    "p95": 7019.1,
+    "p99": null,
+    "max": 7081.6
+   },
+   "stop_exit_ms": {
+    "n": 20,
+    "min": 775.6,
+    "median": 895.5,
+    "mean": 892.6,
+    "p95": 944.1,
+    "p99": null,
+    "max": 948.4
+   },
+   "stop_die_ms": {
+    "n": 20,
+    "min": 779.2,
+    "median": 900.7,
+    "mean": 898.6,
+    "p95": 950.5,
+    "p99": null,
+    "max": 954.9
+   }
+  }
+ },
+ "baseline:stock-start-warm": {
+  "n": 20,
+  "metrics": {
+   "api_return_ms": {
+    "n": 20,
+    "min": 0.5,
+    "median": 0.6,
+    "mean": 0.6,
+    "p95": 0.7,
+    "p99": null,
+    "max": 0.8
+   },
+   "wings_lock_ms": {
+    "n": 20,
+    "min": 0.5,
+    "median": 0.5,
+    "mean": 0.6,
+    "p95": 0.7,
+    "p99": null,
+    "max": 0.7
+   },
+   "wings_preflight_done_ms": {
+    "n": 20,
+    "min": 29.8,
+    "median": 40.0,
+    "mean": 40.5,
+    "p95": 47.3,
+    "p99": null,
+    "max": 48.3
+   },
+   "docker_destroy_ms": {
+    "n": 20,
+    "min": 46.7,
+    "median": 70.2,
+    "mean": 65.9,
+    "p95": 79.9,
+    "p99": null,
+    "max": 80.8
+   },
+   "docker_create_ms": {
+    "n": 20,
+    "min": 1091.6,
+    "median": 1342.3,
+    "mean": 1281.7,
+    "p95": 1398.3,
+    "p99": null,
+    "max": 1608.3
+   },
+   "docker_start_ms": {
+    "n": 20,
+    "min": 1200.9,
+    "median": 1474.5,
+    "mean": 1416.8,
+    "p95": 1546.4,
+    "p99": null,
+    "max": 1794.0
+   },
+   "paper_starting_ms": {
+    "n": 20,
+    "min": 5656.1,
+    "median": 6097.3,
+    "mean": 6093.7,
+    "p95": 6504.4,
+    "p99": null,
+    "max": 6532.3
+   },
+   "paper_done_ms": {
+    "n": 20,
+    "min": 6885.3,
+    "median": 7289.9,
+    "mean": 7312.1,
+    "p95": 7667.9,
+    "p99": null,
+    "max": 7836.6
+   },
+   "wings_running_ms": {
+    "n": 20,
+    "min": 6889.2,
+    "median": 7296.7,
+    "mean": 7317.6,
+    "p95": 7675.5,
+    "p99": null,
+    "max": 7841.6
+   },
+   "ready_ms": {
+    "n": 20,
+    "min": 6935.4,
+    "median": 7343.0,
+    "mean": 7365.5,
+    "p95": 7719.7,
+    "p99": null,
+    "max": 7885.9
+   },
+   "stop_exit_ms": {
+    "n": 20,
+    "min": 600.2,
+    "median": 633.0,
+    "mean": 631.1,
+    "p95": 652.9,
+    "p99": null,
+    "max": 659.1
+   },
+   "stop_die_ms": {
+    "n": 20,
+    "min": 791.0,
+    "median": 900.7,
+    "mean": 895.2,
+    "p95": 963.5,
+    "p99": null,
+    "max": 964.9
+   }
+  }
+ },
+ "baseline:direct-start-cold": {
+  "n": 20,
+  "metrics": {
+   "api_return_ms": {
+    "n": 20,
+    "min": 310.3,
+    "median": 348.3,
+    "mean": 359.1,
+    "p95": 426.6,
+    "p99": null,
+    "max": 438.3
+   },
+   "docker_create_ms": {
+    "n": 20,
+    "min": 308.3,
+    "median": 346.1,
+    "mean": 357.1,
+    "p95": 424.5,
+    "p99": null,
+    "max": 436.2
+   },
+   "docker_start_ms": {
+    "n": 20,
+    "min": 561.7,
+    "median": 632.9,
+    "mean": 649.4,
+    "p95": 753.3,
+    "p99": null,
+    "max": 789.5
+   },
+   "paper_starting_ms": {
+    "n": 20,
+    "min": 5247.2,
+    "median": 5443.8,
+    "mean": 5521.7,
+    "p95": 5873.1,
+    "p99": null,
+    "max": 5911.1
+   },
+   "paper_done_ms": {
+    "n": 20,
+    "min": 6432.6,
+    "median": 6655.4,
+    "mean": 6729.4,
+    "p95": 7094.2,
+    "p99": null,
+    "max": 7163.6
+   },
+   "ready_ms": {
+    "n": 20,
+    "min": 6489.2,
+    "median": 6708.0,
+    "mean": 6780.0,
+    "p95": 7141.5,
+    "p99": null,
+    "max": 7222.2
+   },
+   "stop_exit_ms": {
+    "n": 20,
+    "min": 834.4,
+    "median": 916.7,
+    "mean": 918.3,
+    "p95": 964.2,
+    "p99": null,
+    "max": 1000.5
+   },
+   "stop_die_ms": {
+    "n": 20,
+    "min": 841.0,
+    "median": 923.5,
+    "mean": 925.3,
+    "p95": 970.8,
+    "p99": null,
+    "max": 1008.4
+   }
+  }
+ },
+ "baseline:stock-start-cold": {
+  "n": 20,
+  "metrics": {
+   "api_return_ms": {
+    "n": 20,
+    "min": 0.6,
+    "median": 0.7,
+    "mean": 0.8,
+    "p95": 1.1,
+    "p99": null,
+    "max": 1.2
+   },
+   "wings_lock_ms": {
+    "n": 20,
+    "min": 0.5,
+    "median": 0.7,
+    "mean": 0.8,
+    "p95": 1.1,
+    "p99": null,
+    "max": 1.3
+   },
+   "wings_preflight_done_ms": {
+    "n": 20,
+    "min": 104.0,
+    "median": 128.0,
+    "mean": 126.9,
+    "p95": 139.8,
+    "p99": null,
+    "max": 142.2
+   },
+   "docker_destroy_ms": {
+    "n": 20,
+    "min": 122.1,
+    "median": 153.4,
+    "mean": 155.0,
+    "p95": 172.3,
+    "p99": null,
+    "max": 176.5
+   },
+   "docker_create_ms": {
+    "n": 20,
+    "min": 1094.7,
+    "median": 1269.5,
+    "mean": 1235.5,
+    "p95": 1345.7,
+    "p99": null,
+    "max": 1346.9
+   },
+   "docker_start_ms": {
+    "n": 20,
+    "min": 1218.0,
+    "median": 1423.7,
+    "mean": 1378.1,
+    "p95": 1495.7,
+    "p99": null,
+    "max": 1517.6
+   },
+   "paper_starting_ms": {
+    "n": 20,
+    "min": 5819.6,
+    "median": 6159.9,
+    "mean": 6159.2,
+    "p95": 6467.3,
+    "p99": null,
+    "max": 6651.6
+   },
+   "paper_done_ms": {
+    "n": 20,
+    "min": 6979.1,
+    "median": 7361.4,
+    "mean": 7363.3,
+    "p95": 7718.7,
+    "p99": null,
+    "max": 7921.8
+   },
+   "wings_running_ms": {
+    "n": 20,
+    "min": 6987.4,
+    "median": 7372.3,
+    "mean": 7368.9,
+    "p95": 7726.7,
+    "p99": null,
+    "max": 7929.4
+   },
+   "ready_ms": {
+    "n": 20,
+    "min": 7032.8,
+    "median": 7411.5,
+    "mean": 7414.7,
+    "p95": 7767.6,
+    "p99": null,
+    "max": 7972.7
+   },
+   "stop_exit_ms": {
+    "n": 20,
+    "min": 551.8,
+    "median": 626.5,
+    "mean": 627.9,
+    "p95": 651.0,
+    "p99": null,
+    "max": 658.4
+   },
+   "stop_die_ms": {
+    "n": 20,
+    "min": 765.0,
+    "median": 905.6,
+    "mean": 900.8,
+    "p95": 968.5,
+    "p99": null,
+    "max": 973.7
+   }
+  }
+ },
+ "baseline:direct-restart-warm": {
+  "n": 20,
+  "metrics": {
+   "api_return_ms": {
+    "n": 20,
+    "min": 859.2,
+    "median": 922.4,
+    "mean": 926.7,
+    "p95": 979.2,
+    "p99": null,
+    "max": 1007.1
+   },
+   "docker_start_ms": {
+    "n": 20,
+    "min": 1129.3,
+    "median": 1208.8,
+    "mean": 1215.2,
+    "p95": 1297.0,
+    "p99": null,
+    "max": 1305.5
+   },
+   "paper_starting_ms": {
+    "n": 20,
+    "min": 5519.1,
+    "median": 5881.6,
+    "mean": 5882.5,
+    "p95": 6256.9,
+    "p99": null,
+    "max": 6315.2
+   },
+   "paper_done_ms": {
+    "n": 20,
+    "min": 6686.0,
+    "median": 7131.4,
+    "mean": 7107.0,
+    "p95": 7549.8,
+    "p99": null,
+    "max": 7587.4
+   },
+   "ready_ms": {
+    "n": 20,
+    "min": 6737.9,
+    "median": 7176.8,
+    "mean": 7160.0,
+    "p95": 7620.1,
+    "p99": null,
+    "max": 7646.1
+   },
+   "restart_old_exit_ms": {
+    "n": 20,
+    "min": 865.3,
+    "median": 929.0,
+    "mean": 932.1,
+    "p95": 983.2,
+    "p99": null,
+    "max": 1013.4
+   },
+   "stop_exit_ms": {
+    "n": 20,
+    "min": 862.5,
+    "median": 937.4,
+    "mean": 929.4,
+    "p95": 992.6,
+    "p99": null,
+    "max": 998.0
+   },
+   "stop_die_ms": {
+    "n": 20,
+    "min": 868.9,
+    "median": 944.2,
+    "mean": 936.5,
+    "p95": 999.2,
+    "p99": null,
+    "max": 1004.9
+   }
+  }
+ },
+ "baseline:stock-restart-warm": {
+  "n": 20,
+  "metrics": {
+   "api_return_ms": {
+    "n": 20,
+    "min": 0.4,
+    "median": 0.5,
+    "mean": 0.5,
+    "p95": 0.6,
+    "p99": null,
+    "max": 0.7
+   },
+   "wings_lock_ms": {
+    "n": 20,
+    "min": 0.4,
+    "median": 0.5,
+    "mean": 0.6,
+    "p95": 0.7,
+    "p99": null,
+    "max": 1.3
+   },
+   "wings_preflight_done_ms": {
+    "n": 20,
+    "min": 856.6,
+    "median": 937.8,
+    "mean": 937.4,
+    "p95": 994.3,
+    "p99": null,
+    "max": 1018.4
+   },
+   "docker_destroy_ms": {
+    "n": 20,
+    "min": 875.8,
+    "median": 966.7,
+    "mean": 965.7,
+    "p95": 1029.6,
+    "p99": null,
+    "max": 1050.8
+   },
+   "docker_create_ms": {
+    "n": 20,
+    "min": 1851.2,
+    "median": 2089.5,
+    "mean": 2058.9,
+    "p95": 2156.5,
+    "p99": null,
+    "max": 2188.0
+   },
+   "docker_start_ms": {
+    "n": 20,
+    "min": 1953.7,
+    "median": 2235.7,
+    "mean": 2194.6,
+    "p95": 2308.6,
+    "p99": null,
+    "max": 2329.6
+   },
+   "paper_starting_ms": {
+    "n": 20,
+    "min": 6360.3,
+    "median": 6774.9,
+    "mean": 6799.9,
+    "p95": 7145.1,
+    "p99": null,
+    "max": 7240.9
+   },
+   "paper_done_ms": {
+    "n": 20,
+    "min": 7576.3,
+    "median": 7945.2,
+    "mean": 8010.0,
+    "p95": 8327.0,
+    "p99": null,
+    "max": 8397.8
+   },
+   "wings_running_ms": {
+    "n": 20,
+    "min": 7586.6,
+    "median": 7951.1,
+    "mean": 8015.6,
+    "p95": 8332.9,
+    "p99": null,
+    "max": 8400.9
+   },
+   "ready_ms": {
+    "n": 20,
+    "min": 7626.4,
+    "median": 7992.0,
+    "mean": 8060.8,
+    "p95": 8386.6,
+    "p99": null,
+    "max": 8440.5
+   },
+   "restart_old_exit_ms": {
+    "n": 20,
+    "min": 831.4,
+    "median": 902.8,
+    "mean": 907.6,
+    "p95": 967.0,
+    "p99": null,
+    "max": 982.4
+   },
+   "stop_exit_ms": {
+    "n": 20,
+    "min": 575.6,
+    "median": 626.0,
+    "mean": 622.8,
+    "p95": 653.0,
+    "p99": null,
+    "max": 661.3
+   },
+   "stop_die_ms": {
+    "n": 20,
+    "min": 826.2,
+    "median": 885.6,
+    "mean": 892.2,
+    "p95": 935.4,
+    "p99": null,
+    "max": 967.1
+   }
+  }
+ },
+ "baseline:direct-restart-cold": {
+  "n": 20,
+  "metrics": {
+   "api_return_ms": {
+    "n": 20,
+    "min": 813.6,
+    "median": 862.2,
+    "mean": 866.1,
+    "p95": 915.5,
+    "p99": null,
+    "max": 917.7
+   },
+   "docker_start_ms": {
+    "n": 20,
+    "min": 1044.5,
+    "median": 1112.9,
+    "mean": 1115.0,
+    "p95": 1173.3,
+    "p99": null,
+    "max": 1185.1
+   },
+   "paper_starting_ms": {
+    "n": 20,
+    "min": 5424.9,
+    "median": 5569.1,
+    "mean": 5623.8,
+    "p95": 5848.8,
+    "p99": null,
+    "max": 5890.6
+   },
+   "paper_done_ms": {
+    "n": 20,
+    "min": 6558.9,
+    "median": 6768.0,
+    "mean": 6816.8,
+    "p95": 7096.3,
+    "p99": null,
+    "max": 7181.4
+   },
+   "ready_ms": {
+    "n": 20,
+    "min": 6603.3,
+    "median": 6821.9,
+    "mean": 6868.3,
+    "p95": 7149.2,
+    "p99": null,
+    "max": 7239.4
+   },
+   "restart_old_exit_ms": {
+    "n": 20,
+    "min": 816.2,
+    "median": 863.8,
+    "mean": 868.0,
+    "p95": 917.7,
+    "p99": null,
+    "max": 919.7
+   },
+   "stop_exit_ms": {
+    "n": 20,
+    "min": 812.1,
+    "median": 877.2,
+    "mean": 874.1,
+    "p95": 904.7,
+    "p99": null,
+    "max": 909.2
+   },
+   "stop_die_ms": {
+    "n": 20,
+    "min": 815.2,
+    "median": 880.0,
+    "mean": 877.1,
+    "p95": 907.6,
+    "p99": null,
+    "max": 912.5
+   }
+  }
+ },
+ "baseline:stock-restart-cold": {
+  "n": 20,
+  "metrics": {
+   "api_return_ms": {
+    "n": 20,
+    "min": 0.4,
+    "median": 0.4,
+    "mean": 0.5,
+    "p95": 0.5,
+    "p99": null,
+    "max": 0.6
+   },
+   "wings_lock_ms": {
+    "n": 20,
+    "min": 0.4,
+    "median": 0.5,
+    "mean": 0.5,
+    "p95": 0.5,
+    "p99": null,
+    "max": 0.7
+   },
+   "wings_preflight_done_ms": {
+    "n": 20,
+    "min": 838.7,
+    "median": 872.6,
+    "mean": 876.2,
+    "p95": 906.0,
+    "p99": null,
+    "max": 908.2
+   },
+   "docker_destroy_ms": {
+    "n": 20,
+    "min": 855.8,
+    "median": 892.1,
+    "mean": 893.9,
+    "p95": 922.7,
+    "p99": null,
+    "max": 925.4
+   },
+   "docker_create_ms": {
+    "n": 20,
+    "min": 1812.8,
+    "median": 1853.4,
+    "mean": 1858.1,
+    "p95": 1893.6,
+    "p99": null,
+    "max": 1903.5
+   },
+   "docker_start_ms": {
+    "n": 20,
+    "min": 1924.3,
+    "median": 1968.6,
+    "mean": 1976.8,
+    "p95": 2020.8,
+    "p99": null,
+    "max": 2022.8
+   },
+   "paper_starting_ms": {
+    "n": 20,
+    "min": 6358.2,
+    "median": 6459.3,
+    "mean": 6520.6,
+    "p95": 6754.3,
+    "p99": null,
+    "max": 6829.6
+   },
+   "paper_done_ms": {
+    "n": 20,
+    "min": 7517.1,
+    "median": 7618.9,
+    "mean": 7701.5,
+    "p95": 8001.7,
+    "p99": null,
+    "max": 8129.4
+   },
+   "wings_running_ms": {
+    "n": 20,
+    "min": 7527.7,
+    "median": 7622.0,
+    "mean": 7707.5,
+    "p95": 8002.7,
+    "p99": null,
+    "max": 8134.3
+   },
+   "ready_ms": {
+    "n": 20,
+    "min": 7572.3,
+    "median": 7668.0,
+    "mean": 7752.5,
+    "p95": 8058.3,
+    "p99": null,
+    "max": 8186.3
+   },
+   "restart_old_exit_ms": {
+    "n": 20,
+    "min": 814.5,
+    "median": 846.4,
+    "mean": 851.6,
+    "p95": 882.6,
+    "p99": null,
+    "max": 882.8
+   },
+   "stop_exit_ms": {
+    "n": 20,
+    "min": 569.9,
+    "median": 615.8,
+    "mean": 613.0,
+    "p95": 632.8,
+    "p99": null,
+    "max": 636.8
+   },
+   "stop_die_ms": {
+    "n": 20,
+    "min": 816.9,
+    "median": 872.2,
+    "mean": 867.4,
+    "p95": 902.2,
+    "p99": null,
+    "max": 909.5
+   }
+  }
+ },
+ "final:direct-start-warm": {
+  "n": 20,
+  "metrics": {
+   "api_return_ms": {
+    "n": 20,
+    "min": 334.4,
+    "median": 438.6,
+    "mean": 422.4,
+    "p95": 464.5,
+    "p99": null,
+    "max": 467.8
+   },
+   "docker_create_ms": {
+    "n": 20,
+    "min": 332.8,
+    "median": 437.1,
+    "mean": 420.7,
+    "p95": 462.9,
+    "p99": null,
+    "max": 466.3
+   },
+   "docker_start_ms": {
+    "n": 20,
+    "min": 557.0,
+    "median": 676.2,
+    "mean": 660.6,
+    "p95": 718.8,
+    "p99": null,
+    "max": 719.4
+   },
+   "paper_starting_ms": {
+    "n": 20,
+    "min": 4696.9,
+    "median": 4811.7,
+    "mean": 4810.2,
+    "p95": 4873.2,
+    "p99": null,
+    "max": 4977.6
+   },
+   "paper_done_ms": {
+    "n": 20,
+    "min": 5775.0,
+    "median": 5897.6,
+    "mean": 5899.1,
+    "p95": 5982.0,
+    "p99": null,
+    "max": 6042.0
+   },
+   "ready_ms": {
+    "n": 20,
+    "min": 5819.9,
+    "median": 5941.0,
+    "mean": 5942.7,
+    "p95": 6021.6,
+    "p99": null,
+    "max": 6084.6
+   },
+   "stop_exit_ms": {
+    "n": 20,
+    "min": 761.0,
+    "median": 852.3,
+    "mean": 836.4,
+    "p95": 882.0,
+    "p99": null,
+    "max": 899.5
+   },
+   "stop_die_ms": {
+    "n": 20,
+    "min": 763.9,
+    "median": 859.5,
+    "mean": 842.9,
+    "p95": 889.1,
+    "p99": null,
+    "max": 906.7
+   }
+  }
+ },
+ "final:stock-start-warm": {
+  "n": 20,
+  "metrics": {
+   "api_return_ms": {
+    "n": 20,
+    "min": 0.4,
+    "median": 0.7,
+    "mean": 0.8,
+    "p95": 1.4,
+    "p99": null,
+    "max": 1.6
+   },
+   "wings_lock_ms": {
+    "n": 20,
+    "min": 0.5,
+    "median": 0.7,
+    "mean": 0.8,
+    "p95": 1.4,
+    "p99": null,
+    "max": 1.5
+   },
+   "wings_preflight_done_ms": {
+    "n": 20,
+    "min": 30.5,
+    "median": 38.7,
+    "mean": 40.1,
+    "p95": 46.6,
+    "p99": null,
+    "max": 47.1
+   },
+   "docker_destroy_ms": {
+    "n": 20,
+    "min": 47.9,
+    "median": 69.8,
+    "mean": 70.4,
+    "p95": 78.3,
+    "p99": null,
+    "max": 103.0
+   },
+   "docker_create_ms": {
+    "n": 20,
+    "min": 1098.0,
+    "median": 1340.0,
+    "mean": 1335.0,
+    "p95": 1535.1,
+    "p99": null,
+    "max": 1590.7
+   },
+   "docker_start_ms": {
+    "n": 20,
+    "min": 1215.9,
+    "median": 1483.0,
+    "mean": 1477.7,
+    "p95": 1696.1,
+    "p99": null,
+    "max": 1787.5
+   },
+   "paper_starting_ms": {
+    "n": 20,
+    "min": 5412.0,
+    "median": 5673.0,
+    "mean": 5656.9,
+    "p95": 5882.7,
+    "p99": null,
+    "max": 5897.0
+   },
+   "paper_done_ms": {
+    "n": 20,
+    "min": 6508.0,
+    "median": 6779.2,
+    "mean": 6758.3,
+    "p95": 6971.4,
+    "p99": null,
+    "max": 7001.5
+   },
+   "wings_running_ms": {
+    "n": 20,
+    "min": 6512.4,
+    "median": 6784.4,
+    "mean": 6764.6,
+    "p95": 6976.7,
+    "p99": null,
+    "max": 7010.2
+   },
+   "ready_ms": {
+    "n": 20,
+    "min": 6550.9,
+    "median": 6824.8,
+    "mean": 6803.3,
+    "p95": 7023.0,
+    "p99": null,
+    "max": 7048.9
+   },
+   "stop_exit_ms": {
+    "n": 20,
+    "min": 566.0,
+    "median": 611.6,
+    "mean": 615.9,
+    "p95": 652.3,
+    "p99": null,
+    "max": 671.4
+   },
+   "stop_die_ms": {
+    "n": 20,
+    "min": 789.3,
+    "median": 853.6,
+    "mean": 860.2,
+    "p95": 912.5,
+    "p99": null,
+    "max": 942.1
+   }
+  }
+ },
+ "final:gobia-p1-start-warm": {
+  "n": 20,
+  "metrics": {
+   "api_return_ms": {
+    "n": 20,
+    "min": 0.4,
+    "median": 0.7,
+    "mean": 0.8,
+    "p95": 1.2,
+    "p99": null,
+    "max": 1.4
+   },
+   "wings_lock_ms": {
+    "n": 20,
+    "min": 0.5,
+    "median": 0.7,
+    "mean": 0.7,
+    "p95": 1.2,
+    "p99": null,
+    "max": 1.3
+   },
+   "wings_preflight_done_ms": {
+    "n": 20,
+    "min": 24.1,
+    "median": 29.1,
+    "mean": 29.0,
+    "p95": 38.2,
+    "p99": null,
+    "max": 40.0
+   },
+   "docker_destroy_ms": {
+    "n": 20,
+    "min": 40.6,
+    "median": 59.6,
+    "mean": 54.8,
+    "p95": 69.0,
+    "p99": null,
+    "max": 72.3
+   },
+   "docker_create_ms": {
+    "n": 20,
+    "min": 180.2,
+    "median": 282.6,
+    "mean": 254.5,
+    "p95": 313.8,
+    "p99": null,
+    "max": 314.6
+   },
+   "docker_start_ms": {
+    "n": 20,
+    "min": 286.4,
+    "median": 400.4,
+    "mean": 376.9,
+    "p95": 448.3,
+    "p99": null,
+    "max": 452.2
+   },
+   "paper_starting_ms": {
+    "n": 20,
+    "min": 4443.8,
+    "median": 4551.2,
+    "mean": 4552.6,
+    "p95": 4656.3,
+    "p99": null,
+    "max": 4748.8
+   },
+   "paper_done_ms": {
+    "n": 20,
+    "min": 5513.8,
+    "median": 5632.1,
+    "mean": 5656.6,
+    "p95": 5782.6,
+    "p99": null,
+    "max": 5828.3
+   },
+   "wings_running_ms": {
+    "n": 20,
+    "min": 5521.1,
+    "median": 5638.8,
+    "mean": 5662.7,
+    "p95": 5790.0,
+    "p99": null,
+    "max": 5838.9
+   },
+   "ready_ms": {
+    "n": 20,
+    "min": 5560.8,
+    "median": 5675.9,
+    "mean": 5701.8,
+    "p95": 5828.4,
+    "p99": null,
+    "max": 5874.0
+   },
+   "stop_exit_ms": {
+    "n": 20,
+    "min": 780.0,
+    "median": 847.4,
+    "mean": 851.7,
+    "p95": 911.9,
+    "p99": null,
+    "max": 950.9
+   },
+   "stop_die_ms": {
+    "n": 20,
+    "min": 776.6,
+    "median": 840.6,
+    "mean": 845.7,
+    "p95": 901.8,
+    "p99": null,
+    "max": 948.3
+   }
+  }
+ },
+ "final:gobia-p2-start-warm": {
+  "n": 20,
+  "metrics": {
+   "api_return_ms": {
+    "n": 20,
+    "min": 0.4,
+    "median": 0.6,
+    "mean": 0.7,
+    "p95": 1.0,
+    "p99": null,
+    "max": 1.1
+   },
+   "wings_lock_ms": {
+    "n": 20,
+    "min": 0.5,
+    "median": 0.6,
+    "mean": 0.7,
+    "p95": 1.0,
+    "p99": null,
+    "max": 1.2
+   },
+   "wings_preflight_done_ms": {
+    "n": 20,
+    "min": 24.1,
+    "median": 27.8,
+    "mean": 27.9,
+    "p95": 33.3,
+    "p99": null,
+    "max": 36.0
+   },
+   "docker_start_ms": {
+    "n": 20,
+    "min": 158.4,
+    "median": 177.5,
+    "mean": 181.8,
+    "p95": 207.0,
+    "p99": null,
+    "max": 208.1
+   },
+   "paper_starting_ms": {
+    "n": 20,
+    "min": 4301.0,
+    "median": 4372.8,
+    "mean": 4373.9,
+    "p95": 4431.2,
+    "p99": null,
+    "max": 4518.9
+   },
+   "paper_done_ms": {
+    "n": 20,
+    "min": 5390.7,
+    "median": 5457.5,
+    "mean": 5471.3,
+    "p95": 5542.0,
+    "p99": null,
+    "max": 5620.0
+   },
+   "wings_running_ms": {
+    "n": 20,
+    "min": 5393.7,
+    "median": 5461.7,
+    "mean": 5476.5,
+    "p95": 5548.6,
+    "p99": null,
+    "max": 5621.6
+   },
+   "ready_ms": {
+    "n": 20,
+    "min": 5440.2,
+    "median": 5501.4,
+    "mean": 5517.7,
+    "p95": 5587.5,
+    "p99": null,
+    "max": 5666.8
+   },
+   "stop_exit_ms": {
+    "n": 20,
+    "min": 876.2,
+    "median": 957.9,
+    "mean": 960.8,
+    "p95": 1036.4,
+    "p99": null,
+    "max": 1046.4
+   },
+   "stop_die_ms": {
+    "n": 20,
+    "min": 870.6,
+    "median": 949.3,
+    "mean": 954.2,
+    "p95": 1028.3,
+    "p99": null,
+    "max": 1045.3
+   }
+  }
+ },
+ "final:direct-restart-warm": {
+  "n": 20,
+  "metrics": {
+   "api_return_ms": {
+    "n": 20,
+    "min": 814.0,
+    "median": 856.1,
+    "mean": 859.6,
+    "p95": 910.9,
+    "p99": null,
+    "max": 911.4
+   },
+   "docker_start_ms": {
+    "n": 20,
+    "min": 1021.1,
+    "median": 1101.2,
+    "mean": 1098.1,
+    "p95": 1156.7,
+    "p99": null,
+    "max": 1163.0
+   },
+   "paper_starting_ms": {
+    "n": 20,
+    "min": 5169.5,
+    "median": 5279.1,
+    "mean": 5266.9,
+    "p95": 5330.0,
+    "p99": null,
+    "max": 5342.5
+   },
+   "paper_done_ms": {
+    "n": 20,
+    "min": 6260.3,
+    "median": 6369.0,
+    "mean": 6361.5,
+    "p95": 6418.8,
+    "p99": null,
+    "max": 6427.4
+   },
+   "ready_ms": {
+    "n": 20,
+    "min": 6304.1,
+    "median": 6411.4,
+    "mean": 6405.6,
+    "p95": 6460.3,
+    "p99": null,
+    "max": 6471.9
+   },
+   "restart_old_exit_ms": {
+    "n": 20,
+    "min": 818.5,
+    "median": 863.1,
+    "mean": 865.2,
+    "p95": 916.5,
+    "p99": null,
+    "max": 917.4
+   },
+   "stop_exit_ms": {
+    "n": 20,
+    "min": 773.7,
+    "median": 839.1,
+    "mean": 840.8,
+    "p95": 882.5,
+    "p99": null,
+    "max": 894.9
+   },
+   "stop_die_ms": {
+    "n": 20,
+    "min": 776.4,
+    "median": 844.1,
+    "mean": 846.9,
+    "p95": 889.3,
+    "p99": null,
+    "max": 901.9
+   }
+  }
+ },
+ "final:stock-restart-warm": {
+  "n": 20,
+  "metrics": {
+   "api_return_ms": {
+    "n": 20,
+    "min": 0.3,
+    "median": 0.4,
+    "mean": 0.5,
+    "p95": 0.8,
+    "p99": null,
+    "max": 0.9
+   },
+   "wings_lock_ms": {
+    "n": 20,
+    "min": 0.4,
+    "median": 0.5,
+    "mean": 0.5,
+    "p95": 0.6,
+    "p99": null,
+    "max": 0.9
+   },
+   "wings_preflight_done_ms": {
+    "n": 20,
+    "min": 864.6,
+    "median": 914.1,
+    "mean": 914.2,
+    "p95": 943.1,
+    "p99": null,
+    "max": 951.0
+   },
+   "docker_destroy_ms": {
+    "n": 20,
+    "min": 894.7,
+    "median": 945.1,
+    "mean": 945.1,
+    "p95": 976.8,
+    "p99": null,
+    "max": 981.6
+   },
+   "docker_create_ms": {
+    "n": 20,
+    "min": 2009.6,
+    "median": 2055.5,
+    "mean": 2057.1,
+    "p95": 2094.4,
+    "p99": null,
+    "max": 2109.6
+   },
+   "docker_start_ms": {
+    "n": 20,
+    "min": 2140.4,
+    "median": 2187.4,
+    "mean": 2193.6,
+    "p95": 2232.7,
+    "p99": null,
+    "max": 2241.1
+   },
+   "paper_starting_ms": {
+    "n": 20,
+    "min": 6267.4,
+    "median": 6348.1,
+    "mean": 6352.2,
+    "p95": 6398.1,
+    "p99": null,
+    "max": 6466.2
+   },
+   "paper_done_ms": {
+    "n": 20,
+    "min": 7355.4,
+    "median": 7439.1,
+    "mean": 7441.1,
+    "p95": 7502.3,
+    "p99": null,
+    "max": 7581.0
+   },
+   "wings_running_ms": {
+    "n": 20,
+    "min": 7359.1,
+    "median": 7442.8,
+    "mean": 7446.6,
+    "p95": 7512.6,
+    "p99": null,
+    "max": 7583.6
+   },
+   "ready_ms": {
+    "n": 20,
+    "min": 7405.3,
+    "median": 7481.1,
+    "mean": 7486.2,
+    "p95": 7547.3,
+    "p99": null,
+    "max": 7625.1
+   },
+   "restart_old_exit_ms": {
+    "n": 20,
+    "min": 836.6,
+    "median": 887.5,
+    "mean": 887.3,
+    "p95": 917.7,
+    "p99": null,
+    "max": 919.4
+   },
+   "stop_exit_ms": {
+    "n": 20,
+    "min": 575.9,
+    "median": 609.5,
+    "mean": 618.0,
+    "p95": 652.6,
+    "p99": null,
+    "max": 665.5
+   },
+   "stop_die_ms": {
+    "n": 20,
+    "min": 797.0,
+    "median": 852.9,
+    "mean": 855.5,
+    "p95": 902.1,
+    "p99": null,
+    "max": 928.0
+   }
+  }
+ },
+ "final:gobia-p1-restart-warm": {
+  "n": 20,
+  "metrics": {
+   "api_return_ms": {
+    "n": 20,
+    "min": 0.3,
+    "median": 0.4,
+    "mean": 0.4,
+    "p95": 0.5,
+    "p99": null,
+    "max": 0.6
+   },
+   "wings_lock_ms": {
+    "n": 20,
+    "min": 0.4,
+    "median": 0.4,
+    "mean": 0.4,
+    "p95": 0.5,
+    "p99": null,
+    "max": 0.6
+   },
+   "wings_preflight_done_ms": {
+    "n": 20,
+    "min": 831.0,
+    "median": 901.6,
+    "mean": 894.1,
+    "p95": 934.4,
+    "p99": null,
+    "max": 939.0
+   },
+   "docker_destroy_ms": {
+    "n": 20,
+    "min": 860.3,
+    "median": 931.2,
+    "mean": 925.0,
+    "p95": 965.0,
+    "p99": null,
+    "max": 969.4
+   },
+   "docker_create_ms": {
+    "n": 20,
+    "min": 940.7,
+    "median": 1012.1,
+    "mean": 1006.6,
+    "p95": 1049.1,
+    "p99": null,
+    "max": 1050.7
+   },
+   "docker_start_ms": {
+    "n": 20,
+    "min": 1067.5,
+    "median": 1148.5,
+    "mean": 1144.9,
+    "p95": 1187.3,
+    "p99": null,
+    "max": 1190.9
+   },
+   "paper_starting_ms": {
+    "n": 20,
+    "min": 5247.9,
+    "median": 5310.9,
+    "mean": 5352.5,
+    "p95": 5401.0,
+    "p99": null,
+    "max": 6006.1
+   },
+   "paper_done_ms": {
+    "n": 20,
+    "min": 6342.8,
+    "median": 6414.5,
+    "mean": 6456.6,
+    "p95": 6502.0,
+    "p99": null,
+    "max": 7199.6
+   },
+   "wings_running_ms": {
+    "n": 20,
+    "min": 6347.3,
+    "median": 6419.1,
+    "mean": 6462.4,
+    "p95": 6507.2,
+    "p99": null,
+    "max": 7207.2
+   },
+   "ready_ms": {
+    "n": 20,
+    "min": 6385.9,
+    "median": 6458.6,
+    "mean": 6501.0,
+    "p95": 6552.2,
+    "p99": null,
+    "max": 7245.1
+   },
+   "restart_old_exit_ms": {
+    "n": 20,
+    "min": 813.7,
+    "median": 884.5,
+    "mean": 876.6,
+    "p95": 917.4,
+    "p99": null,
+    "max": 921.4
+   },
+   "stop_exit_ms": {
+    "n": 20,
+    "min": 805.9,
+    "median": 851.7,
+    "mean": 857.9,
+    "p95": 908.6,
+    "p99": null,
+    "max": 909.4
+   },
+   "stop_die_ms": {
+    "n": 20,
+    "min": 800.4,
+    "median": 845.4,
+    "mean": 852.4,
+    "p95": 903.7,
+    "p99": null,
+    "max": 906.5
+   }
+  }
+ },
+ "final:gobia-p2-restart-warm": {
+  "n": 20,
+  "metrics": {
+   "api_return_ms": {
+    "n": 20,
+    "min": 0.3,
+    "median": 0.4,
+    "mean": 0.4,
+    "p95": 0.8,
+    "p99": null,
+    "max": 0.9
+   },
+   "wings_lock_ms": {
+    "n": 20,
+    "min": 0.4,
+    "median": 0.5,
+    "mean": 0.5,
+    "p95": 0.6,
+    "p99": null,
+    "max": 0.6
+   },
+   "wings_preflight_done_ms": {
+    "n": 20,
+    "min": 853.6,
+    "median": 892.2,
+    "mean": 895.4,
+    "p95": 930.6,
+    "p99": null,
+    "max": 951.0
+   },
+   "docker_start_ms": {
+    "n": 20,
+    "min": 1019.0,
+    "median": 1058.3,
+    "mean": 1061.9,
+    "p95": 1100.3,
+    "p99": null,
+    "max": 1112.5
+   },
+   "paper_starting_ms": {
+    "n": 20,
+    "min": 5169.8,
+    "median": 5239.5,
+    "mean": 5261.0,
+    "p95": 5422.9,
+    "p99": null,
+    "max": 5434.4
+   },
+   "paper_done_ms": {
+    "n": 20,
+    "min": 6253.0,
+    "median": 6336.8,
+    "mean": 6350.7,
+    "p95": 6493.7,
+    "p99": null,
+    "max": 6519.0
+   },
+   "wings_running_ms": {
+    "n": 20,
+    "min": 6255.0,
+    "median": 6343.0,
+    "mean": 6357.1,
+    "p95": 6503.4,
+    "p99": null,
+    "max": 6527.6
+   },
+   "ready_ms": {
+    "n": 20,
+    "min": 6294.5,
+    "median": 6384.5,
+    "mean": 6395.7,
+    "p95": 6542.9,
+    "p99": null,
+    "max": 6561.8
+   },
+   "restart_old_exit_ms": {
+    "n": 20,
+    "min": 837.8,
+    "median": 874.8,
+    "mean": 878.0,
+    "p95": 910.4,
+    "p99": null,
+    "max": 932.5
+   },
+   "stop_exit_ms": {
+    "n": 20,
+    "min": 815.7,
+    "median": 873.7,
+    "mean": 879.2,
+    "p95": 926.4,
+    "p99": null,
+    "max": 963.9
+   },
+   "stop_die_ms": {
+    "n": 20,
+    "min": 809.6,
+    "median": 866.4,
+    "mean": 873.2,
+    "p95": 924.0,
+    "p99": null,
+    "max": 955.7
+   }
+  }
+ },
+ "control:stock-start-warm": {
+  "n": 15,
+  "metrics": {
+   "api_return_ms": {
+    "n": 15,
+    "min": 0.4,
+    "median": 0.8,
+    "mean": 0.7,
+    "p95": 1.0,
+    "p99": null,
+    "max": 1.0
+   },
+   "wings_lock_ms": {
+    "n": 15,
+    "min": 0.5,
+    "median": 0.7,
+    "mean": 0.7,
+    "p95": 1.0,
+    "p99": null,
+    "max": 1.0
+   },
+   "wings_preflight_done_ms": {
+    "n": 15,
+    "min": 29.1,
+    "median": 30.2,
+    "mean": 31.6,
+    "p95": 37.9,
+    "p99": null,
+    "max": 37.9
+   },
+   "docker_destroy_ms": {
+    "n": 15,
+    "min": 46.7,
+    "median": 48.0,
+    "mean": 49.5,
+    "p95": 58.2,
+    "p99": null,
+    "max": 58.2
+   },
+   "docker_create_ms": {
+    "n": 15,
+    "min": 1097.2,
+    "median": 1115.3,
+    "mean": 1118.9,
+    "p95": 1165.1,
+    "p99": null,
+    "max": 1165.1
+   },
+   "docker_start_ms": {
+    "n": 15,
+    "min": 1210.8,
+    "median": 1229.9,
+    "mean": 1236.2,
+    "p95": 1302.2,
+    "p99": null,
+    "max": 1302.2
+   },
+   "paper_starting_ms": {
+    "n": 15,
+    "min": 5361.3,
+    "median": 5464.1,
+    "mean": 5460.8,
+    "p95": 5577.7,
+    "p99": null,
+    "max": 5577.7
+   },
+   "paper_done_ms": {
+    "n": 15,
+    "min": 6492.8,
+    "median": 6575.2,
+    "mean": 6563.0,
+    "p95": 6653.7,
+    "p99": null,
+    "max": 6653.7
+   },
+   "wings_running_ms": {
+    "n": 15,
+    "min": 6499.3,
+    "median": 6577.4,
+    "mean": 6569.4,
+    "p95": 6654.4,
+    "p99": null,
+    "max": 6654.4
+   },
+   "ready_ms": {
+    "n": 15,
+    "min": 6534.5,
+    "median": 6620.3,
+    "mean": 6607.4,
+    "p95": 6696.0,
+    "p99": null,
+    "max": 6696.0
+   },
+   "stop_exit_ms": {
+    "n": 15,
+    "min": 571.2,
+    "median": 593.9,
+    "mean": 593.6,
+    "p95": 634.4,
+    "p99": null,
+    "max": 634.4
+   },
+   "stop_die_ms": {
+    "n": 15,
+    "min": 774.8,
+    "median": 818.1,
+    "mean": 823.8,
+    "p95": 897.0,
+    "p99": null,
+    "max": 897.0
+   }
+  }
+ },
+ "control:base-start-warm": {
+  "n": 15,
+  "metrics": {
+   "api_return_ms": {
+    "n": 15,
+    "min": 0.5,
+    "median": 0.8,
+    "mean": 0.8,
+    "p95": 1.1,
+    "p99": null,
+    "max": 1.1
+   },
+   "wings_lock_ms": {
+    "n": 15,
+    "min": 0.5,
+    "median": 0.7,
+    "mean": 0.8,
+    "p95": 1.1,
+    "p99": null,
+    "max": 1.1
+   },
+   "wings_preflight_done_ms": {
+    "n": 15,
+    "min": 28.3,
+    "median": 29.8,
+    "mean": 31.6,
+    "p95": 37.1,
+    "p99": null,
+    "max": 37.1
+   },
+   "docker_destroy_ms": {
+    "n": 15,
+    "min": 58.2,
+    "median": 61.9,
+    "mean": 62.8,
+    "p95": 68.1,
+    "p99": null,
+    "max": 68.1
+   },
+   "docker_create_ms": {
+    "n": 15,
+    "min": 1299.0,
+    "median": 1322.6,
+    "mean": 1338.8,
+    "p95": 1382.7,
+    "p99": null,
+    "max": 1382.7
+   },
+   "docker_start_ms": {
+    "n": 15,
+    "min": 1447.3,
+    "median": 1475.0,
+    "mean": 1479.7,
+    "p95": 1523.5,
+    "p99": null,
+    "max": 1523.5
+   },
+   "paper_starting_ms": {
+    "n": 15,
+    "min": 5625.5,
+    "median": 5702.6,
+    "mean": 5701.7,
+    "p95": 5763.1,
+    "p99": null,
+    "max": 5763.1
+   },
+   "paper_done_ms": {
+    "n": 15,
+    "min": 6711.5,
+    "median": 6788.4,
+    "mean": 6798.7,
+    "p95": 6873.4,
+    "p99": null,
+    "max": 6873.4
+   },
+   "wings_running_ms": {
+    "n": 15,
+    "min": 6720.6,
+    "median": 6798.7,
+    "mean": 6805.1,
+    "p95": 6881.4,
+    "p99": null,
+    "max": 6881.4
+   },
+   "ready_ms": {
+    "n": 15,
+    "min": 6753.8,
+    "median": 6833.3,
+    "mean": 6842.9,
+    "p95": 6916.0,
+    "p99": null,
+    "max": 6916.0
+   },
+   "stop_exit_ms": {
+    "n": 15,
+    "min": 847.1,
+    "median": 875.7,
+    "mean": 876.3,
+    "p95": 913.2,
+    "p99": null,
+    "max": 913.2
+   },
+   "stop_die_ms": {
+    "n": 15,
+    "min": 837.7,
+    "median": 870.6,
+    "mean": 870.8,
+    "p95": 910.9,
+    "p99": null,
+    "max": 910.9
+   }
+  }
+ },
+ "control:p1-start-warm": {
+  "n": 15,
+  "metrics": {
+   "api_return_ms": {
+    "n": 15,
+    "min": 0.5,
+    "median": 0.7,
+    "mean": 0.7,
+    "p95": 1.2,
+    "p99": null,
+    "max": 1.2
+   },
+   "wings_lock_ms": {
+    "n": 15,
+    "min": 0.5,
+    "median": 0.7,
+    "mean": 0.7,
+    "p95": 1.4,
+    "p99": null,
+    "max": 1.4
+   },
+   "wings_preflight_done_ms": {
+    "n": 15,
+    "min": 28.4,
+    "median": 29.6,
+    "mean": 30.4,
+    "p95": 36.4,
+    "p99": null,
+    "max": 36.4
+   },
+   "docker_destroy_ms": {
+    "n": 15,
+    "min": 59.0,
+    "median": 60.5,
+    "mean": 61.7,
+    "p95": 67.3,
+    "p99": null,
+    "max": 67.3
+   },
+   "docker_create_ms": {
+    "n": 15,
+    "min": 290.0,
+    "median": 303.3,
+    "mean": 305.7,
+    "p95": 330.6,
+    "p99": null,
+    "max": 330.6
+   },
+   "docker_start_ms": {
+    "n": 15,
+    "min": 423.5,
+    "median": 438.3,
+    "mean": 440.3,
+    "p95": 460.8,
+    "p99": null,
+    "max": 460.8
+   },
+   "paper_starting_ms": {
+    "n": 15,
+    "min": 4568.0,
+    "median": 4658.7,
+    "mean": 4650.9,
+    "p95": 4735.0,
+    "p99": null,
+    "max": 4735.0
+   },
+   "paper_done_ms": {
+    "n": 15,
+    "min": 5647.4,
+    "median": 5756.0,
+    "mean": 5745.0,
+    "p95": 5819.5,
+    "p99": null,
+    "max": 5819.5
+   },
+   "wings_running_ms": {
+    "n": 15,
+    "min": 5652.7,
+    "median": 5761.9,
+    "mean": 5750.7,
+    "p95": 5829.6,
+    "p99": null,
+    "max": 5829.6
+   },
+   "ready_ms": {
+    "n": 15,
+    "min": 5690.6,
+    "median": 5801.6,
+    "mean": 5789.1,
+    "p95": 5869.3,
+    "p99": null,
+    "max": 5869.3
+   },
+   "stop_exit_ms": {
+    "n": 15,
+    "min": 828.6,
+    "median": 872.3,
+    "mean": 876.6,
+    "p95": 932.6,
+    "p99": null,
+    "max": 932.6
+   },
+   "stop_die_ms": {
+    "n": 15,
+    "min": 827.8,
+    "median": 868.2,
+    "mean": 871.2,
+    "p95": 922.5,
+    "p99": null,
+    "max": 922.5
+   }
+  }
+ },
+ "control:p2-start-warm": {
+  "n": 15,
+  "metrics": {
+   "api_return_ms": {
+    "n": 15,
+    "min": 0.4,
+    "median": 0.7,
+    "mean": 0.8,
+    "p95": 1.5,
+    "p99": null,
+    "max": 1.5
+   },
+   "wings_lock_ms": {
+    "n": 15,
+    "min": 0.5,
+    "median": 0.6,
+    "mean": 0.7,
+    "p95": 1.3,
+    "p99": null,
+    "max": 1.3
+   },
+   "wings_preflight_done_ms": {
+    "n": 15,
+    "min": 28.8,
+    "median": 29.8,
+    "mean": 30.9,
+    "p95": 36.7,
+    "p99": null,
+    "max": 36.7
+   },
+   "docker_start_ms": {
+    "n": 15,
+    "min": 189.5,
+    "median": 197.2,
+    "mean": 198.4,
+    "p95": 213.0,
+    "p99": null,
+    "max": 213.0
+   },
+   "paper_starting_ms": {
+    "n": 15,
+    "min": 4364.6,
+    "median": 4413.4,
+    "mean": 4417.1,
+    "p95": 4491.4,
+    "p99": null,
+    "max": 4491.4
+   },
+   "paper_done_ms": {
+    "n": 15,
+    "min": 5439.9,
+    "median": 5497.9,
+    "mean": 5507.4,
+    "p95": 5578.4,
+    "p99": null,
+    "max": 5578.4
+   },
+   "wings_running_ms": {
+    "n": 15,
+    "min": 5449.6,
+    "median": 5499.8,
+    "mean": 5513.6,
+    "p95": 5583.4,
+    "p99": null,
+    "max": 5583.4
+   },
+   "ready_ms": {
+    "n": 15,
+    "min": 5482.9,
+    "median": 5546.6,
+    "mean": 5552.8,
+    "p95": 5623.5,
+    "p99": null,
+    "max": 5623.5
+   },
+   "stop_exit_ms": {
+    "n": 15,
+    "min": 968.2,
+    "median": 1052.0,
+    "mean": 1043.0,
+    "p95": 1093.5,
+    "p99": null,
+    "max": 1093.5
+   },
+   "stop_die_ms": {
+    "n": 15,
+    "min": 959.9,
+    "median": 1047.3,
+    "mean": 1037.8,
+    "p95": 1085.3,
+    "p99": null,
+    "max": 1085.3
+   }
+  }
+ },
+ "control:stock-restart-warm": {
+  "n": 15,
+  "metrics": {
+   "api_return_ms": {
+    "n": 15,
+    "min": 0.3,
+    "median": 0.4,
+    "mean": 0.5,
+    "p95": 0.9,
+    "p99": null,
+    "max": 0.9
+   },
+   "wings_lock_ms": {
+    "n": 15,
+    "min": 0.4,
+    "median": 0.5,
+    "mean": 0.5,
+    "p95": 0.6,
+    "p99": null,
+    "max": 0.6
+   },
+   "wings_preflight_done_ms": {
+    "n": 15,
+    "min": 836.6,
+    "median": 909.8,
+    "mean": 906.5,
+    "p95": 1004.0,
+    "p99": null,
+    "max": 1004.0
+   },
+   "docker_destroy_ms": {
+    "n": 15,
+    "min": 871.3,
+    "median": 940.8,
+    "mean": 938.0,
+    "p95": 1035.8,
+    "p99": null,
+    "max": 1035.8
+   },
+   "docker_create_ms": {
+    "n": 15,
+    "min": 1988.1,
+    "median": 2053.2,
+    "mean": 2056.2,
+    "p95": 2175.7,
+    "p99": null,
+    "max": 2175.7
+   },
+   "docker_start_ms": {
+    "n": 15,
+    "min": 2109.8,
+    "median": 2191.4,
+    "mean": 2201.9,
+    "p95": 2325.6,
+    "p99": null,
+    "max": 2325.6
+   },
+   "paper_starting_ms": {
+    "n": 15,
+    "min": 6308.2,
+    "median": 6410.7,
+    "mean": 6415.8,
+    "p95": 6629.4,
+    "p99": null,
+    "max": 6629.4
+   },
+   "paper_done_ms": {
+    "n": 15,
+    "min": 7430.4,
+    "median": 7484.4,
+    "mean": 7508.4,
+    "p95": 7743.0,
+    "p99": null,
+    "max": 7743.0
+   },
+   "wings_running_ms": {
+    "n": 15,
+    "min": 7434.3,
+    "median": 7495.4,
+    "mean": 7515.5,
+    "p95": 7749.3,
+    "p99": null,
+    "max": 7749.3
+   },
+   "ready_ms": {
+    "n": 15,
+    "min": 7471.7,
+    "median": 7529.4,
+    "mean": 7554.2,
+    "p95": 7796.6,
+    "p99": null,
+    "max": 7796.6
+   },
+   "restart_old_exit_ms": {
+    "n": 15,
+    "min": 807.7,
+    "median": 885.1,
+    "mean": 879.4,
+    "p95": 977.2,
+    "p99": null,
+    "max": 977.2
+   },
+   "stop_exit_ms": {
+    "n": 15,
+    "min": 574.9,
+    "median": 617.0,
+    "mean": 621.9,
+    "p95": 658.4,
+    "p99": null,
+    "max": 658.4
+   },
+   "stop_die_ms": {
+    "n": 15,
+    "min": 794.1,
+    "median": 875.7,
+    "mean": 876.0,
+    "p95": 953.8,
+    "p99": null,
+    "max": 953.8
+   }
+  }
+ },
+ "control:base-restart-warm": {
+  "n": 15,
+  "metrics": {
+   "api_return_ms": {
+    "n": 15,
+    "min": 0.3,
+    "median": 0.4,
+    "mean": 0.5,
+    "p95": 0.9,
+    "p99": null,
+    "max": 0.9
+   },
+   "wings_lock_ms": {
+    "n": 15,
+    "min": 0.4,
+    "median": 0.5,
+    "mean": 0.5,
+    "p95": 0.6,
+    "p99": null,
+    "max": 0.6
+   },
+   "wings_preflight_done_ms": {
+    "n": 15,
+    "min": 847.0,
+    "median": 897.2,
+    "mean": 896.1,
+    "p95": 928.8,
+    "p99": null,
+    "max": 928.8
+   },
+   "docker_destroy_ms": {
+    "n": 15,
+    "min": 878.1,
+    "median": 928.0,
+    "mean": 927.6,
+    "p95": 958.9,
+    "p99": null,
+    "max": 958.9
+   },
+   "docker_create_ms": {
+    "n": 15,
+    "min": 1962.6,
+    "median": 2051.4,
+    "mean": 2045.3,
+    "p95": 2113.0,
+    "p99": null,
+    "max": 2113.0
+   },
+   "docker_start_ms": {
+    "n": 15,
+    "min": 2095.0,
+    "median": 2190.5,
+    "mean": 2184.8,
+    "p95": 2244.4,
+    "p99": null,
+    "max": 2244.4
+   },
+   "paper_starting_ms": {
+    "n": 15,
+    "min": 6296.0,
+    "median": 6414.7,
+    "mean": 6396.1,
+    "p95": 6458.3,
+    "p99": null,
+    "max": 6458.3
+   },
+   "paper_done_ms": {
+    "n": 15,
+    "min": 7377.8,
+    "median": 7517.6,
+    "mean": 7495.8,
+    "p95": 7577.3,
+    "p99": null,
+    "max": 7577.3
+   },
+   "wings_running_ms": {
+    "n": 15,
+    "min": 7386.2,
+    "median": 7521.6,
+    "mean": 7501.5,
+    "p95": 7585.8,
+    "p99": null,
+    "max": 7585.8
+   },
+   "ready_ms": {
+    "n": 15,
+    "min": 7422.6,
+    "median": 7560.4,
+    "mean": 7541.0,
+    "p95": 7619.4,
+    "p99": null,
+    "max": 7619.4
+   },
+   "restart_old_exit_ms": {
+    "n": 15,
+    "min": 831.1,
+    "median": 879.5,
+    "mean": 877.5,
+    "p95": 912.9,
+    "p99": null,
+    "max": 912.9
+   },
+   "stop_exit_ms": {
+    "n": 15,
+    "min": 811.2,
+    "median": 876.9,
+    "mean": 873.1,
+    "p95": 919.0,
+    "p99": null,
+    "max": 919.0
+   },
+   "stop_die_ms": {
+    "n": 15,
+    "min": 807.6,
+    "median": 870.8,
+    "mean": 868.7,
+    "p95": 914.4,
+    "p99": null,
+    "max": 914.4
+   }
+  }
+ },
+ "control:p1-restart-warm": {
+  "n": 15,
+  "metrics": {
+   "api_return_ms": {
+    "n": 15,
+    "min": 0.3,
+    "median": 0.4,
+    "mean": 0.5,
+    "p95": 0.9,
+    "p99": null,
+    "max": 0.9
+   },
+   "wings_lock_ms": {
+    "n": 15,
+    "min": 0.4,
+    "median": 0.5,
+    "mean": 0.5,
+    "p95": 0.7,
+    "p99": null,
+    "max": 0.7
+   },
+   "wings_preflight_done_ms": {
+    "n": 15,
+    "min": 834.1,
+    "median": 890.6,
+    "mean": 885.8,
+    "p95": 943.6,
+    "p99": null,
+    "max": 943.6
+   },
+   "docker_destroy_ms": {
+    "n": 15,
+    "min": 850.9,
+    "median": 925.7,
+    "mean": 912.4,
+    "p95": 975.1,
+    "p99": null,
+    "max": 975.1
+   },
+   "docker_create_ms": {
+    "n": 15,
+    "min": 908.3,
+    "median": 1006.0,
+    "mean": 987.2,
+    "p95": 1061.5,
+    "p99": null,
+    "max": 1061.5
+   },
+   "docker_start_ms": {
+    "n": 15,
+    "min": 1011.8,
+    "median": 1155.9,
+    "mean": 1116.9,
+    "p95": 1218.3,
+    "p99": null,
+    "max": 1218.3
+   },
+   "paper_starting_ms": {
+    "n": 15,
+    "min": 5210.4,
+    "median": 5364.5,
+    "mean": 5349.7,
+    "p95": 5506.7,
+    "p99": null,
+    "max": 5506.7
+   },
+   "paper_done_ms": {
+    "n": 15,
+    "min": 6324.7,
+    "median": 6472.5,
+    "mean": 6449.6,
+    "p95": 6608.0,
+    "p99": null,
+    "max": 6608.0
+   },
+   "wings_running_ms": {
+    "n": 15,
+    "min": 6330.7,
+    "median": 6483.4,
+    "mean": 6456.1,
+    "p95": 6614.6,
+    "p99": null,
+    "max": 6614.6
+   },
+   "ready_ms": {
+    "n": 15,
+    "min": 6368.3,
+    "median": 6515.9,
+    "mean": 6494.8,
+    "p95": 6655.0,
+    "p99": null,
+    "max": 6655.0
+   },
+   "restart_old_exit_ms": {
+    "n": 15,
+    "min": 818.8,
+    "median": 871.1,
+    "mean": 868.2,
+    "p95": 927.2,
+    "p99": null,
+    "max": 927.2
+   },
+   "stop_exit_ms": {
+    "n": 15,
+    "min": 783.6,
+    "median": 848.9,
+    "mean": 847.7,
+    "p95": 921.6,
+    "p99": null,
+    "max": 921.6
+   },
+   "stop_die_ms": {
+    "n": 15,
+    "min": 776.7,
+    "median": 840.4,
+    "mean": 842.3,
+    "p95": 917.4,
+    "p99": null,
+    "max": 917.4
+   }
+  }
+ },
+ "control:p2-restart-warm": {
+  "n": 15,
+  "metrics": {
+   "api_return_ms": {
+    "n": 15,
+    "min": 0.3,
+    "median": 0.4,
+    "mean": 0.5,
+    "p95": 1.0,
+    "p99": null,
+    "max": 1.0
+   },
+   "wings_lock_ms": {
+    "n": 15,
+    "min": 0.4,
+    "median": 0.5,
+    "mean": 0.5,
+    "p95": 0.6,
+    "p99": null,
+    "max": 0.6
+   },
+   "wings_preflight_done_ms": {
+    "n": 15,
+    "min": 817.6,
+    "median": 847.1,
+    "mean": 858.7,
+    "p95": 938.0,
+    "p99": null,
+    "max": 938.0
+   },
+   "docker_start_ms": {
+    "n": 15,
+    "min": 958.3,
+    "median": 989.5,
+    "mean": 1002.8,
+    "p95": 1122.5,
+    "p99": null,
+    "max": 1122.5
+   },
+   "paper_starting_ms": {
+    "n": 15,
+    "min": 5127.4,
+    "median": 5223.4,
+    "mean": 5218.7,
+    "p95": 5318.8,
+    "p99": null,
+    "max": 5318.8
+   },
+   "paper_done_ms": {
+    "n": 15,
+    "min": 6234.5,
+    "median": 6332.7,
+    "mean": 6331.7,
+    "p95": 6434.6,
+    "p99": null,
+    "max": 6434.6
+   },
+   "wings_running_ms": {
+    "n": 15,
+    "min": 6245.3,
+    "median": 6333.5,
+    "mean": 6337.6,
+    "p95": 6440.4,
+    "p99": null,
+    "max": 6440.4
+   },
+   "ready_ms": {
+    "n": 15,
+    "min": 6275.5,
+    "median": 6376.2,
+    "mean": 6376.2,
+    "p95": 6481.2,
+    "p99": null,
+    "max": 6481.2
+   },
+   "restart_old_exit_ms": {
+    "n": 15,
+    "min": 799.0,
+    "median": 828.7,
+    "mean": 840.4,
+    "p95": 920.1,
+    "p99": null,
+    "max": 920.1
+   },
+   "stop_exit_ms": {
+    "n": 15,
+    "min": 773.1,
+    "median": 813.2,
+    "mean": 819.1,
+    "p95": 922.0,
+    "p99": null,
+    "max": 922.0
+   },
+   "stop_die_ms": {
+    "n": 15,
+    "min": 764.5,
+    "median": 803.9,
+    "mean": 812.4,
+    "p95": 915.1,
+    "p99": null,
+    "max": 915.1
+   }
+  }
+ }
+}

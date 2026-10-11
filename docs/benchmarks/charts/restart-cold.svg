@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 178" font-family="system-ui,sans-serif" font-size="13">
+<rect width="900" height="178" fill="#fff"/>
+<text x="12" y="24" font-size="15" font-weight="600">restart-cold: median stage timings (ms), n=20/20</text>
+<text x="12" y="59">baseline:direct-restart-cold</text>
+<rect x="230.0" y="44" width="84.2" height="22" fill="#2563eb"><title>to container start: 1113 ms</title></rect>
+<rect x="314.2" y="44" width="337.1" height="22" fill="#d97706"><title>JVM + Paperclip: 4456 ms</title></rect>
+<rect x="651.2" y="44" width="90.7" height="22" fill="#16a34a"><title>Paper init: 1199 ms</title></rect>
+<rect x="741.9" y="44" width="4.1" height="22" fill="#9333ea"><title>Done -> protocol ready: 54 ms</title></rect>
+<text x="752.0" y="60">6.82 s</text>
+<text x="12" y="93">baseline:stock-restart-cold</text>
+<rect x="230.0" y="78" width="148.9" height="22" fill="#2563eb"><title>to container start: 1969 ms</title></rect>
+<rect x="378.9" y="78" width="339.7" height="22" fill="#d97706"><title>JVM + Paperclip: 4491 ms</title></rect>
+<rect x="718.6" y="78" width="87.7" height="22" fill="#16a34a"><title>Paper init: 1160 ms</title></rect>
+<rect x="806.3" y="78" width="3.7" height="22" fill="#9333ea"><title>Done -> protocol ready: 49 ms</title></rect>
+<text x="816.0" y="94">7.67 s</text>
+<rect x="12" y="122" width="12" height="12" fill="#2563eb"/><text x="30" y="133">to container start</text>
+<rect x="312" y="122" width="12" height="12" fill="#d97706"/><text x="330" y="133">JVM + Paperclip</text>
+<rect x="12" y="142" width="12" height="12" fill="#16a34a"/><text x="30" y="153">Paper init</text>
+<rect x="312" y="142" width="12" height="12" fill="#9333ea"/><text x="330" y="153">Done -> protocol ready</text>
+</svg>

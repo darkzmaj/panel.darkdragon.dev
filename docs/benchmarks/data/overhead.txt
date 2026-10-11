@@ -1,0 +1,2 @@
+stock idle: 0.02% 9.594MiB / 2GiB | with running server: 0.02% 9.91MiB / 2GiB
+p2 idle: 0.00% 7.961MiB / 2GiB | with running server: 0.02% 8.762MiB / 2GiB

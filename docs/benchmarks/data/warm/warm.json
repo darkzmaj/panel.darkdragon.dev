@@ -1,0 +1,22 @@
+{
+ "n": 30,
+ "claim_ms": {
+  "median": 0.6,
+  "p95": 0.72,
+  "min": 0.5,
+  "max": 0.73
+ },
+ "login_ms": {
+  "median": 49.32,
+  "p95": 54.75,
+  "min": 33.48,
+  "max": 72.45
+ },
+ "request_to_login_success_ms": {
+  "median": 49.94,
+  "p95": 55.27,
+  "min": 34.02,
+  "max": 73.01
+ },
+ "definition": "ready instance already running; claim = Wings status lookup; login = connect to Login Success (offline mode)"
+}

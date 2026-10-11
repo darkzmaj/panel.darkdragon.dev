@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 450" font-family="system-ui,sans-serif" font-size="13">
+<rect width="900" height="450" fill="#fff"/>
+<text x="12" y="24" font-size="15" font-weight="600">restart-warm: median stage timings (ms), n=20/20/15/15/15/15/20/20/20/20</text>
+<text x="12" y="59">baseline:direct-restart-warm</text>
+<rect x="230.0" y="44" width="87.7" height="22" fill="#2563eb"><title>to container start: 1209 ms</title></rect>
+<rect x="317.7" y="44" width="339.1" height="22" fill="#d97706"><title>JVM + Paperclip: 4673 ms</title></rect>
+<rect x="656.8" y="44" width="90.7" height="22" fill="#16a34a"><title>Paper init: 1250 ms</title></rect>
+<rect x="747.5" y="44" width="3.3" height="22" fill="#9333ea"><title>Done -> protocol ready: 45 ms</title></rect>
+<text x="756.8" y="60">7.18 s</text>
+<text x="12" y="93">baseline:stock-restart-warm</text>
+<rect x="230.0" y="78" width="162.3" height="22" fill="#2563eb"><title>to container start: 2236 ms</title></rect>
+<rect x="392.3" y="78" width="329.4" height="22" fill="#d97706"><title>JVM + Paperclip: 4539 ms</title></rect>
+<rect x="721.7" y="78" width="84.9" height="22" fill="#16a34a"><title>Paper init: 1170 ms</title></rect>
+<rect x="806.6" y="78" width="3.4" height="22" fill="#9333ea"><title>Done -> protocol ready: 47 ms</title></rect>
+<text x="816.0" y="94">7.99 s</text>
+<text x="12" y="127">control:base-restart-warm</text>
+<rect x="230.0" y="112" width="159.0" height="22" fill="#2563eb"><title>to container start: 2190 ms</title></rect>
+<rect x="389.0" y="112" width="306.6" height="22" fill="#d97706"><title>JVM + Paperclip: 4224 ms</title></rect>
+<rect x="695.5" y="112" width="80.0" height="22" fill="#16a34a"><title>Paper init: 1103 ms</title></rect>
+<rect x="775.6" y="112" width="3.1" height="22" fill="#9333ea"><title>Done -> protocol ready: 43 ms</title></rect>
+<text x="784.7" y="128">7.56 s</text>
+<text x="12" y="161">control:p1-restart-warm</text>
+<rect x="230.0" y="146" width="83.9" height="22" fill="#2563eb"><title>to container start: 1156 ms</title></rect>
+<rect x="313.9" y="146" width="305.4" height="22" fill="#d97706"><title>JVM + Paperclip: 4209 ms</title></rect>
+<rect x="619.3" y="146" width="80.4" height="22" fill="#16a34a"><title>Paper init: 1108 ms</title></rect>
+<rect x="699.7" y="146" width="3.1" height="22" fill="#9333ea"><title>Done -> protocol ready: 43 ms</title></rect>
+<text x="708.9" y="162">6.52 s</text>
+<text x="12" y="195">control:p2-restart-warm</text>
+<rect x="230.0" y="180" width="71.8" height="22" fill="#2563eb"><title>to container start: 990 ms</title></rect>
+<rect x="301.8" y="180" width="307.3" height="22" fill="#d97706"><title>JVM + Paperclip: 4234 ms</title></rect>
+<rect x="609.1" y="180" width="80.5" height="22" fill="#16a34a"><title>Paper init: 1109 ms</title></rect>
+<rect x="689.6" y="180" width="3.2" height="22" fill="#9333ea"><title>Done -> protocol ready: 44 ms</title></rect>
+<text x="698.7" y="196">6.38 s</text>
+<text x="12" y="229">control:stock-restart-warm</text>
+<rect x="230.0" y="214" width="159.0" height="22" fill="#2563eb"><title>to container start: 2191 ms</title></rect>
+<rect x="389.0" y="214" width="306.2" height="22" fill="#d97706"><title>JVM + Paperclip: 4219 ms</title></rect>
+<rect x="695.2" y="214" width="77.9" height="22" fill="#16a34a"><title>Paper init: 1074 ms</title></rect>
+<rect x="773.2" y="214" width="3.3" height="22" fill="#9333ea"><title>Done -> protocol ready: 45 ms</title></rect>
+<text x="782.4" y="230">7.53 s</text>
+<text x="12" y="263">final:direct-restart-warm</text>
+<rect x="230.0" y="248" width="79.9" height="22" fill="#2563eb"><title>to container start: 1101 ms</title></rect>
+<rect x="309.9" y="248" width="303.2" height="22" fill="#d97706"><title>JVM + Paperclip: 4178 ms</title></rect>
+<rect x="613.1" y="248" width="79.1" height="22" fill="#16a34a"><title>Paper init: 1090 ms</title></rect>
+<rect x="692.2" y="248" width="3.1" height="22" fill="#9333ea"><title>Done -> protocol ready: 42 ms</title></rect>
+<text x="701.3" y="264">6.41 s</text>
+<text x="12" y="297">final:gobia-p1-restart-warm</text>
+<rect x="230.0" y="282" width="83.3" height="22" fill="#2563eb"><title>to container start: 1148 ms</title></rect>
+<rect x="313.3" y="282" width="302.1" height="22" fill="#d97706"><title>JVM + Paperclip: 4162 ms</title></rect>
+<rect x="615.4" y="282" width="80.1" height="22" fill="#16a34a"><title>Paper init: 1104 ms</title></rect>
+<rect x="695.5" y="282" width="3.2" height="22" fill="#9333ea"><title>Done -> protocol ready: 44 ms</title></rect>
+<text x="704.7" y="298">6.46 s</text>
+<text x="12" y="331">final:gobia-p2-restart-warm</text>
+<rect x="230.0" y="316" width="76.8" height="22" fill="#2563eb"><title>to container start: 1058 ms</title></rect>
+<rect x="306.8" y="316" width="303.4" height="22" fill="#d97706"><title>JVM + Paperclip: 4181 ms</title></rect>
+<rect x="610.2" y="316" width="79.6" height="22" fill="#16a34a"><title>Paper init: 1097 ms</title></rect>
+<rect x="689.9" y="316" width="3.5" height="22" fill="#9333ea"><title>Done -> protocol ready: 48 ms</title></rect>
+<text x="699.3" y="332">6.38 s</text>
+<text x="12" y="365">final:stock-restart-warm</text>
+<rect x="230.0" y="350" width="158.7" height="22" fill="#2563eb"><title>to container start: 2187 ms</title></rect>
+<rect x="388.7" y="350" width="302.0" height="22" fill="#d97706"><title>JVM + Paperclip: 4161 ms</title></rect>
+<rect x="690.7" y="350" width="79.2" height="22" fill="#16a34a"><title>Paper init: 1091 ms</title></rect>
+<rect x="769.9" y="350" width="3.0" height="22" fill="#9333ea"><title>Done -> protocol ready: 42 ms</title></rect>
+<text x="778.9" y="366">7.48 s</text>
+<rect x="12" y="394" width="12" height="12" fill="#2563eb"/><text x="30" y="405">to container start</text>
+<rect x="312" y="394" width="12" height="12" fill="#d97706"/><text x="330" y="405">JVM + Paperclip</text>
+<rect x="12" y="414" width="12" height="12" fill="#16a34a"/><text x="30" y="425">Paper init</text>
+<rect x="312" y="414" width="12" height="12" fill="#9333ea"/><text x="330" y="425">Done -> protocol ready</text>
+</svg>
