@@ -1,3 +1,9 @@
+**Infrastructure sponsored by [NCSE Network](https://ncse.tw/).**
+
+Supporting free and open-source projects.
+
+---
+
 # panel.gobia.cloud
 
 A customized game-server management panel derived from [Pterodactyl Panel](https://github.com/pterodactyl/panel).
